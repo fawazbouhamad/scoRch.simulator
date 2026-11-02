@@ -11,7 +11,7 @@
 # writes the file with write_tmax() (16-bit integers, 0.01 degC) and records the
 # checksums of the source files in docs/development/data-raw/arco_na_manifest.txt.
 #
-# Run from the package root, with the package installed:
+# Run from the repository root, with the package installed:
 #   Rscript docs/development/data-raw/make_demo_data.R path/to/raw_daily_nc
 suppressPackageStartupMessages({library(ncdf4); library(scoRch.simulator)})
 dir <- commandArgs(trailingOnly = TRUE)[1]

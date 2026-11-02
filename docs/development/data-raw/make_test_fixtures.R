@@ -1,7 +1,7 @@
 # Build the small test fixtures in tests/testthat/fixtures from the study's
 # reproducibility repository (github.com/fawazbouhamad/compound-heatwave-typologies-SCORCH)
 # with the processed temperature file placed at input/tmax_processed.nc.
-# Run from the package root:
+# Run from the repository root:
 #   Rscript docs/development/data-raw/make_test_fixtures.R path/to/compound-heatwave-typologies-SCORCH
 library(ncdf4)
 ref <- commandArgs(trailingOnly = TRUE)[1]
