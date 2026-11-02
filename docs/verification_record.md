@@ -240,3 +240,49 @@ On Windows 11 with R 4.5.1:
   in the NetCDF files is preserved.
 - Parsed the software JSON and citation metadata and checked the new name,
   version and repository links. No new release or software DOI was created.
+
+## Local input and figure verification on 1 November 2026
+
+- Built scoRch.simulator 1.0.1 and ran R CMD check --no-manual on Windows
+  11 with R 4.5.1: Status OK; 530 passed expectations, 0 failures, 0 test
+  warnings and 3 optional skips (long bootstrap and the two external study
+  reference audits). The end-to-end local ERA5 test saves its processed
+  temperatures, reruns from that prepared file and compares every workbook
+  sheet and generated PNG, with identical results.
+- Removed the CDS downloader, credential handling, its exports and optional
+  HTTP/CDS dependencies. Both configuration input routes now use local
+  files: prepared daily Tmax or ERA5 requiring preprocessing. Added an
+  optional saved processed file in double precision; its temperatures read
+  back identically, avoiding new rounding of percentile ties.
+- Ran the complete 30-year prepared demonstration with 5000 bootstrap
+  repetitions. Every sheet of all eight workbooks matched the retained
+  numerical references at the comparison script's declared tolerances.
+  Counts remain 65,790 local heatwaves, 140 selected days, 376 ellipses and
+  29 compound events (Types 1-4: 1/4/20/4). The README matches after updating
+  its configuration listing for the simplified input settings.
+- Compared all nine figures visually with the reproducibility repository's
+  figure scripts and outputs. Matched fonts, the distinct snapshot and
+  statistics palettes, panel letters, date placement and clipped ellipse
+  meshes. Geographic extent and data differ between the US demonstration
+  and the EMME research figures; pixel identity is not expected. All nine
+  refreshed figures are included as demonstration references.
+- Inspected the maintainer's OneDrive Coding/NA/raw_daily_nc files. These
+  contain daily Tmax_C at 0.25 degrees, not hourly temperature. Aggregating
+  1996-2025 gives temperatures within 0.005 C of the compact bundled data.
+  Without the historical 0.01 C packing, changed percentile ties yield
+  65,404 local heatwaves, 379 ellipses and 30 compound events (1/5/20/4).
+  This is a precision difference, not a change to the detection method.
+- Prepared a separate genuine hourly example from the public Google
+  ARCO-ERA5 archive: all 744 hours of July 2012, 25-50 N and 130-58 W,
+  101 by 289 native points at 0.25 degrees, kelvin. The source subset is
+  47,074,246 bytes, SHA256
+  0347d8dbf39137748e1f6e8adac1f008ec7f49062a2c2d3c5fac2acc1d340752.
+  read_era5() produces 31 daily UTC Tmax fields on 1800 one-degree cells
+  in Celsius. A separately implemented NumPy maximum and 4-by-4 block mean
+  gives zero numerical difference. The paired double-precision NetCDF and
+  the demo runner's prepared-file round trip preserve the values exactly.
+- The prepared dataset deposit includes that hourly month, its matching
+  processed month, and the separate 30-year quick-demo file with provenance,
+  validation, metadata and checksums. It is under 60 MB. One month illustrates
+  processing rather than defining a long-term heatwave percentile baseline.
+  No new Zenodo record, DOI or tagged software release has been published.

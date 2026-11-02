@@ -161,13 +161,18 @@ test_that("raw ERA5 named in the configuration gives the same analysis as its da
   seconds <- as.numeric(rep(daily$dates, each = 4)) * 86400 + rep(c(0, 6, 12, 18) * 3600, n_days)
   file <- write_era5(file.path(folder, "era5_t2m.nc"), values, seconds, lon, lat, prec = "double")
 
-  config <- list(input = list(file = file), output = list(directory = file.path(folder, "era5")),
+  saved <- file.path(folder, "prepared.nc")
+  config <- list(input = list(file = file, processed_file = saved), output = list(directory = file.path(folder, "era5")),
                  power_law = list(bootstrap_repetitions = 20))
   expect_equal(scoRch.simulator:::detect_input_format(file), "era5")
   era5 <- suppressMessages(run_scorch(config))
   reference <- tmax_from_array(grid, daily$dates, lon, lat, units = "K", months = 4:9)
-  baseline <- suppressMessages(run_scorch(list(output = list(directory = file.path(folder, "daily")),
-                                               power_law = list(bootstrap_repetitions = 20)), tmax = reference))
+  decoded <- suppressMessages(read_era5(file))
+  expect_identical(read_tmax(saved)$tmax, decoded$tmax)
+  expect_equal(decoded$tmax, reference$tmax, tolerance = 1e-12)
+  baseline <- suppressMessages(run_scorch(list(input = list(file = saved, format = "daily_tmax"),
+                                               output = list(directory = file.path(folder, "daily")),
+                                               power_law = list(bootstrap_repetitions = 20))))
   a_dir <- file.path(folder, "era5")
   b_dir <- file.path(folder, "daily")
   files <- sort(list.files(a_dir, recursive = TRUE))

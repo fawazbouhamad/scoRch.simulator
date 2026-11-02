@@ -34,7 +34,7 @@ Conclusions), with the code metadata table below.
 | C2 | Permanent link to code/repository used for this code version | https://github.com/fawazbouhamad/scoRch.simulator (renamed package on `main`; use the tested commit URL until a new release is tagged; `v1.0.0` retains the original package name) |
 | C3 | Legal code license | GNU General Public License v3.0 or later (GPL-3.0-or-later) |
 | C4 | Code versioning system used | git |
-| C5 | Software code languages, tools and services used | R (>= 4.1); packages dbscan, ncdf4, spatstat.geom, spatstat.model, maps, yaml; optionally ecmwfr and httr for the download path from the Copernicus Climate Data Store; testthat for tests; GitHub Actions for continuous integration |
+| C5 | Software code languages, tools and services used | R (>= 4.1); packages dbscan, ncdf4, spatstat.geom, spatstat.model, maps, yaml; testthat for tests; GitHub Actions for continuous integration |
 | C6 | Compilation requirements, operating environments and dependencies | pure R, no compilation; Windows, Linux and macOS (checked by `R CMD check` on all three in continuous integration); dependencies installed automatically by `remotes::install_github()` |
 | C7 | If available, link to developer documentation/manual | https://github.com/fawazbouhamad/scoRch.simulator/blob/main/README.md (plus the R help pages, `?run_scorch`, and `demo/`) |
 | C8 | Support email for questions | the corresponding author's address (entered in the submission) |
@@ -48,9 +48,7 @@ temperature on 1,800 one-degree cells between 25 N and 50 N and 130 W and
 region other than the study's), one configuration file, one command, the
 printed Table 1, one real heat wave (28 June to 4 July 2012) traced from the
 temperature data through the five catalogs to its figure, and the result
-figures in `demo/expected_output/`. `demo/cds_processing_example.R` shows
-the from-scratch path (a Climate Data Store download reduced to 1-degree
-cells) on a shipped CDS file, without a CDS account.
+figures in `demo/expected_output/`. `demo/run_hourly_demo.R` demonstrates hourly-to-daily Tmax and spatial aggregation on a genuine full-US month, paired with its processed file. The month illustrates preprocessing; the 30-year file supports the full analysis. `demo/check_input_options.R` checks local-file preprocessing on the small shipped daily ERA5 sample without an account.
 
 ## Points to state in the article
 

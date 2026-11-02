@@ -68,12 +68,7 @@ run_scorch <- function(config = NULL, tmax = NULL) {
   step <- function(...) message(format(Sys.time(), "%H:%M:%S "), sprintf(...))
 
   if (is.null(tmax)) {
-    if (identical(cfg$input$source, "cds")) {
-      step("Obtaining ERA5 daily maximum temperature from the CDS for %s (cache %s)",
-           format_area(cfg$input$cds$area), cfg$input$cds$cache_directory)
-    } else {
-      step("Reading %s", paste(cfg$input$file, collapse = ", "))
-    }
+    step("Reading %s", paste(cfg$input$file, collapse = ", "))
     tmax <- read_configured_input(cfg)
   } else if (!inherits(tmax, "scorch_tmax")) {
     fail("`tmax` must come from read_tmax() or tmax_from_array().")

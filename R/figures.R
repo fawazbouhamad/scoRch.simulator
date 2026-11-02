@@ -44,7 +44,9 @@ scorch_figure <- function(result, name = NULL, file = NULL, dpi = NULL, number =
     # Draw beside the requested file. A skipped or failed plot must not leave
     # a blank or partial PNG, or replace a plot from an earlier successful run.
     temporary <- tempfile(".scorch-plot-", tmpdir = dirname(file), fileext = ".png")
-    grDevices::png(temporary, width = size[1], height = size[2], units = "in", res = dpi)
+    grDevices::png(temporary, width = size[1], height = size[2], units = "in", res = dpi,
+                    bg = "white", type = if (capabilities("cairo")) "cairo" else getOption("bitmapType"))
+    graphics::par(family = figure_font(id))
     device_open <- TRUE
     on.exit({
       if (device_open) grDevices::dev.off()
@@ -61,6 +63,7 @@ scorch_figure <- function(result, name = NULL, file = NULL, dpi = NULL, number =
   }
   old <- graphics::par(no.readonly = TRUE)
   on.exit(graphics::par(old), add = TRUE)
+  graphics::par(family = figure_font(id))
   tryCatch(invisible(spec$draw(result)), error = function(e) {
     if (grepl("margins too large|plot region", conditionMessage(e))) {
       fail(sprintf("The graphics device is too small for %s; write it with `file = ` or open a device of about %.1f x %.1f inches.",
@@ -109,7 +112,7 @@ figure_specs <- function() {
       }),
     "ellipse_geometry_by_type" = list(draw = draw_ellipse_geometry_by_type, dpi = 500, size = function(result) c(12.2, 9.8)),
     "event_geometry_distributions" = list(draw = draw_event_geometry_distributions, dpi = 600, size = function(result) c(13.5, 4.8)),
-    "annual_event_counts_and_duration" = list(draw = draw_annual_event_counts_and_duration, dpi = 600, size = function(result) c(9.4, 6.5)),
+    "annual_event_counts_and_duration" = list(draw = draw_annual_event_counts_and_duration, dpi = 600, size = function(result) c(9.4, 6.45)),
     "ellipse_area_power_law" = list(draw = draw_ellipse_area_power_law, dpi = 600, size = function(result) c(10, 8.4)),
     "centroid_concentration" = list(draw = draw_centroid_concentration, dpi = 600,
       size = function(result) c(6.4 + MAP_MAI[2] + MAP_MAI[4] + CBAR_WIDTH, 6.4 * extent_ratio(result) + MAP_MAI[1] + MAP_MAI[3] + 0.5)))
@@ -164,6 +167,10 @@ map_frame <- function(extent, cex_axis = 0.75, mai = MAP_MAI, style = c("filled"
     map_layer("lakes", usr, fill = TRUE, col = "#eaf3f7", border = NA)
   } else {
     graphics::rect(usr[1], usr[3], usr[2], usr[4], col = "white", border = NA)
+    map_layer("world", usr, fill = TRUE, col = "grey96", border = NA)
+    map_layer("lakes", usr, fill = TRUE, col = "white", border = NA)
+    graphics::abline(v = pretty(usr[1:2]), h = pretty(usr[3:4]),
+                       col = grDevices::adjustcolor("black", 0.18), lwd = 0.28)
   }
   map_outlines(usr, style)
   degree_axes(usr, cex_axis)
@@ -298,6 +305,7 @@ draw_ellipse_spatial_patterns <- function(result) {
   legend_below_map(usr, legend = c(expression(L[1]), expression(L[2]), "Centroid"),
                    col = c("red", "darkorange", "black"), lty = c(1, 1, NA), pch = c(NA, NA, 16),
                    lwd = 2, cex = 0.75, box.lwd = 0.6)
+  panel_label("a")
   graphics::plot.new()
   # ellipse footprints per point of a fine grid, in quantile classes
   g <- result$input$grid
@@ -311,13 +319,17 @@ draw_ellipse_spatial_patterns <- function(result) {
   class_image(fine_lon, fine_lat, counts, levels, grDevices::adjustcolor(colours, 0.78))
   map_outlines(usr)
   graphics::box()
+  panel_label("b")
   colour_bar(levels, colours, "Ellipse footprints per grid point", tick_labels = formatC(levels, format = "fg", digits = 3),
              mai = first_row)
   # axis ratio, area and orientation of the major axis, with their colour bars
+  next_letter <- 2L
   scatter_map <- function(values, breaks, colours, label) {
     map_frame(extent)
     graphics::points(e$centroid_lon_weighted, e$centroid_lat_weighted, pch = 16, cex = 0.9,
                      col = grDevices::adjustcolor(colour_of(values, breaks, colours), 0.72))
+    next_letter <<- next_letter + 1L
+    panel_label(letters[next_letter])
     colour_bar(breaks, colours, label, ticks = round_ticks(breaks))
   }
   scatter_map(e$axis_ratio, continuous_breaks(robust_limits(e$axis_ratio)),
@@ -427,7 +439,7 @@ representative_events <- function(result, type) {
 
 # One day of an event: heatwave cells, cluster ellipses and centroids, in
 # the plain style of the study's event figures. The date and the time label
-# sit in the margin above the map, never on the data.
+# follow the reference snapshot layout.
 draw_snapshot <- function(result, date, time_label = NULL) {
   extent <- map_extent(result)
   g <- result$input$grid
@@ -443,6 +455,7 @@ draw_snapshot <- function(result, date, time_label = NULL) {
   draw_cells(cells[cells$dbscan_label != NOISE_LABEL, ], "orange", 0.92, 0.24)
   map_outlines(usr, "plain")
   for (i in seq_len(nrow(e))) {
+    draw_ellipse_mesh(e[i, ], g)
     graphics::lines(ellipse_outline(e[i, ]), lwd = 2, col = "black")
     ax <- ellipse_axes(e[i, ])
     graphics::lines(ax$major, lwd = 2.4)
@@ -450,8 +463,15 @@ draw_snapshot <- function(result, date, time_label = NULL) {
   }
   graphics::points(e$centroid_lon_weighted, e$centroid_lat_weighted, pch = 21, bg = "black", cex = 1.3)
   graphics::box()
-  graphics::mtext(format(date), side = 3, line = 0.35, adj = 1, font = 2, cex = 0.9)
-  if (!is.null(time_label)) graphics::mtext(time_label, side = 3, line = 0.35, font = 2, cex = 1.2)
+  # Date at the upper-left inside the map, on a white backing.
+  label <- format(date)
+  x <- usr[1] + 0.025 * diff(usr[1:2]); y <- usr[4] - 0.03 * diff(usr[3:4])
+  date_cex <- 1 / graphics::par("cex")
+  graphics::rect(x - 0.006 * diff(usr[1:2]), y - graphics::strheight(label, cex = date_cex) - 0.008 * diff(usr[3:4]),
+                   x + graphics::strwidth(label, cex = date_cex, font = 2) + 0.006 * diff(usr[1:2]),
+                   y + 0.008 * diff(usr[3:4]), col = grDevices::adjustcolor("white", 0.75), border = NA)
+  graphics::text(x, y, label, adj = c(0, 1), font = 2, cex = date_cex)
+  if (!is.null(time_label)) graphics::mtext(time_label, side = 3, line = 0.35, font = 2, cex = 1.25)
   invisible(usr)
 }
 
@@ -460,13 +480,14 @@ snapshot_legend <- function() {
   graphics::plot.new()
   graphics::legend("center", legend = c(expression(L[1]), expression(L[2]), "Centroid"),
                    lwd = c(2.4, 1.5, NA), pch = c(NA, NA, 16), col = "black", horiz = TRUE,
-                   pt.cex = 1.4, box.lwd = 0.8, cex = 1.1, x.intersp = 1.2)
+                   pt.cex = 1.4, box.lwd = 0.8, cex = 1 / graphics::par("cex"), x.intersp = 1.2)
 }
 
-type_heading <- function(type, cex = 2.4) {
+type_heading <- function(type, cex = 26 / 12) {
   graphics::par(mai = c(0, 0, 0, 0))
   graphics::plot.new()
-  graphics::text(0.5, 0.5, paste("Type", type), col = TYPE_COLOURS[type], font = 2, cex = cex)
+  graphics::text(0.5, 0.5, paste("Type", type), col = SNAPSHOT_TYPE_COLOURS[type], font = 2,
+                  cex = cex / graphics::par("cex"), family = "Arial")
 }
 
 # One day of a Type 1 and of a Type 2 event, side by side (the study's Figure 5).
@@ -479,7 +500,7 @@ draw_single_day_events <- function(result) {
   n <- length(types)
   graphics::layout(matrix(c(seq_len(n), n + seq_len(n), rep(2 * n + 1, n)), 3, n, byrow = TRUE),
                    heights = c(0.7, 5.3 * extent_ratio(result) + SNAP_MAI[1] + SNAP_MAI[3], 0.5))
-  for (t in types) type_heading(t, cex = 2.2)
+  for (t in types) type_heading(t, cex = 2)
   for (t in types) draw_snapshot(result, representative_events(result, t)[[1]][1])
   snapshot_legend()
   invisible(TRUE)
@@ -496,10 +517,12 @@ draw_consistent_multiday_events <- function(result) {
   n <- length(shown)
   panel_height <- 4.6 * extent_ratio(result) + SNAP_MAI[1] + SNAP_MAI[3]
   widths <- rep(4.6 + SNAP_MAI[2] + SNAP_MAI[4], 2)
-  graphics::layout(rbind(c(1, 1), matrix(1 + seq_len(2 * n), n, 2, byrow = TRUE), c(2 * n + 2, 2 * n + 2)),
-                   widths = widths, heights = c(0.9, rep(panel_height, n), 0.5))
+  maps <- matrix(seq_len(3 * n) + 1L, n, 3, byrow = TRUE)
+  graphics::layout(rbind(c(1, 1, 1), maps, rep(3 * n + 2L, 3)),
+                   widths = c(0.4, widths), heights = c(0.9, rep(panel_height, n), 0.5))
   type_heading(3)
   for (k in seq_len(n)) {
+    row_label(letters[k])
     for (j in 1:2) {
       draw_snapshot(result, shown[[k]][j], time_label = if (k == 1) c("t", "t + 1")[j] else NULL)
     }

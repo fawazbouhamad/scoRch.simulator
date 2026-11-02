@@ -9,20 +9,72 @@
   "codeRepository": "https://github.com/fawazbouhamad/scoRch.simulator",
   "issueTracker": "https://github.com/fawazbouhamad/scoRch.simulator/issues",
   "readme": "https://github.com/fawazbouhamad/scoRch.simulator/blob/main/README.md",
-  "programmingLanguage": {"@type": "ComputerLanguage", "name": "R", "url": "https://r-project.org"},
+  "programmingLanguage": {
+    "@type": "ComputerLanguage",
+    "name": "R",
+    "url": "https://r-project.org"
+  },
   "runtimePlatform": "R version 4.1.0 or newer",
-  "operatingSystem": ["Windows", "Linux", "macOS"],
-  "softwareRequirements": ["dbscan", "maps", "ncdf4", "spatstat.geom", "spatstat.model", "yaml"],
-  "softwareSuggestions": ["ecmwfr", "httr", "testthat"],
-  "developmentStatus": "active",
-  "keywords": ["compound heatwaves", "heatwave typology", "spatiotemporal clustering", "DBSCAN",
-               "principal-component ellipses", "log-Gaussian Cox process", "ERA5 reanalysis", "R package"],
-  "author": [
-    {"@type": "Person", "@id": "https://orcid.org/0009-0009-4138-6126", "givenName": "Fawaz", "familyName": "Bouhamad",
-     "affiliation": {"@type": "Organization", "name": "Department of Agricultural and Biological Engineering, University of Florida"}},
-    {"@type": "Person", "@id": "https://orcid.org/0000-0002-0515-7192", "givenName": "Nasser", "familyName": "Najibi",
-     "affiliation": {"@type": "Organization", "name": "Department of Agricultural and Biological Engineering, University of Florida"}}
+  "operatingSystem": [
+    "Windows",
+    "Linux",
+    "macOS"
   ],
-  "maintainer": {"@type": "Person", "@id": "https://orcid.org/0009-0009-4138-6126", "givenName": "Fawaz", "familyName": "Bouhamad", "email": "fawawaz@hotmail.com"},
-  "relatedLink": ["https://github.com/fawazbouhamad/compound-heatwave-typologies-SCORCH", "https://doi.org/10.5281/zenodo.21717874"]
+  "softwareRequirements": [
+    "dbscan",
+    "maps",
+    "ncdf4",
+    "openxlsx2",
+    "spatstat.geom",
+    "spatstat.model",
+    "yaml",
+    "zip"
+  ],
+  "softwareSuggestions": [
+    "testthat"
+  ],
+  "developmentStatus": "active",
+  "keywords": [
+    "compound heatwaves",
+    "heatwave typology",
+    "spatiotemporal clustering",
+    "DBSCAN",
+    "principal-component ellipses",
+    "log-Gaussian Cox process",
+    "ERA5 reanalysis",
+    "R package"
+  ],
+  "author": [
+    {
+      "@type": "Person",
+      "@id": "https://orcid.org/0009-0009-4138-6126",
+      "givenName": "Fawaz",
+      "familyName": "Bouhamad",
+      "affiliation": {
+        "@type": "Organization",
+        "name": "Department of Agricultural and Biological Engineering, University of Florida"
+      }
+    },
+    {
+      "@type": "Person",
+      "@id": "https://orcid.org/0000-0002-0515-7192",
+      "givenName": "Nasser",
+      "familyName": "Najibi",
+      "affiliation": {
+        "@type": "Organization",
+        "name": "Department of Agricultural and Biological Engineering, University of Florida"
+      }
+    }
+  ],
+  "maintainer": {
+    "@type": "Person",
+    "@id": "https://orcid.org/0009-0009-4138-6126",
+    "givenName": "Fawaz",
+    "familyName": "Bouhamad",
+    "email": "fawawaz@hotmail.com"
+  },
+  "relatedLink": [
+    "https://github.com/fawazbouhamad/compound-heatwave-typologies-SCORCH",
+    "https://doi.org/10.5281/zenodo.21717874"
+  ]
 }

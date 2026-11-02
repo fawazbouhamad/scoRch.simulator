@@ -26,8 +26,8 @@ The main branch is now **scoRch.simulator 1.0.1**, renamed from
 **scoRch.generator**. Install from the repository and use
 `library(scoRch.simulator)`. The existing `v1.0.0` tag and release
 preserve the original package name; version 1.0.1 has not yet been
-published as a tagged release. The analysis functions, configuration
-settings and scientific calculations are unchanged.
+published as a tagged release. The scientific calculations are unchanged. Input is now simplified to local
+prepared or ERA5 files; the built-in download service has been removed.
 
 ## Quick start
 
@@ -119,78 +119,46 @@ power-law analysis instead of the study's 5000; it is for learning and
 testing, not for results. A commented step-by-step walk-through of the same
 data with the study's settings, one real heat wave (28 June to 4 July 2012)
 traced from the temperature data through the catalogs to its figure, the
-expected output, and an offline example of the from-scratch path are in
+expected output, and an offline local-file preprocessing check are in
 [`demo/`](demo) (`Rscript demo/run_demo.R`, then
-`Rscript demo/cds_processing_example.R`).
+`Rscript demo/check_input_options.R`).
+
+The optional preprocessing demonstration uses a full-US month of genuine
+hourly ERA5, paired with its derived daily Tmax file. It demonstrates hourly
+to daily reduction, Celsius conversion and 0.25-degree to 1-degree aggregation,
+with exact agreement between the two input routes. See
+[`demo/run_hourly_demo.R`](demo/run_hourly_demo.R) and the
+[`demo instructions`](demo/README.md#demonstrate-the-hourly-processing).
+The month demonstrates preprocessing; the 30-year file supports the full analysis.
 
 ## Use your own data
 
 ### 1. Provide the temperature data
 
-There are two paths, chosen with `input: source` in the configuration:
-**from scratch** (`source: cds`), where the package downloads ERA5 from the
-Climate Data Store for your area and period, reduces it to 1-degree cells,
-saves the result and runs; or a **ready file** (`source: file`, the default),
-where `input: file` names a daily maximum temperature file, or raw ERA5
-files you downloaded yourself, and the package reads it.
+There are two input options, both using files already on your computer:
 
-#### From scratch: download ERA5 from the Climate Data Store
+| Input | What the package does |
+|---|---|
+| Prepared daily maximum temperature (`format: daily_tmax`) | Reads and validates one NetCDF file, keeping its existing grid |
+| Downloaded ERA5 temperature (`format: era5`) | Reads hourly or daily NetCDF files, calculates UTC daily maxima when needed, converts kelvin to Celsius, and averages to the configured grid (1 degree by default) |
 
-One-time setup on each computer:
+`format: auto` detects which of these two formats is present. Set `input: file`
+to a prepared file or to your downloaded ERA5 file, list of files, or folder.
+The package does not download climate data or ask for an API key.
 
-1. Create a free account at the
-   [Copernicus Climate Data Store](https://cds.climate.copernicus.eu), open
-   the dataset page of *ERA5 post-processed daily statistics on single
-   levels from 1940 to present* and accept its licence.
-2. Install the two optional packages, `install.packages(c("ecmwfr", "httr"))`,
-   then, in an interactive R session, run `ecmwfr::wf_set_key()` with no
-   arguments: it opens your CDS profile page and asks for the Personal
-   Access Token at a hidden prompt, so the token goes straight into the
-   operating system's keychain (Windows Credential Manager, macOS Keychain,
-   or an encrypted file on Linux after `options(keyring_backend = "file")`)
-   without passing through a script or the R command history. Do not type
-   the token as an argument in a script or at the console. It never goes
-   into a configuration file, the code, the logs or the run summary, and
-   nothing of it belongs in a repository.
-
-Then, in your configuration:
+The prepared demonstration is bundled with the package. The optional hourly
+preprocessing demonstration uses the paired July 2012 files and is run with
+`Rscript demo/run_hourly_demo.R path/to/extracted_archive`. It saves a reusable
+prepared NetCDF file in `results/processing_demo/`.
+See [`demo/README.md`](demo/README.md) for the two runs and dataset availability.
 
 ```yaml
 input:
-  source: cds
-  cds:
-    area: [50, -130, 25, -58]      # North, West, South, East, in degrees, multiples of 0.25
-    cache_directory: era5_cache    # downloaded files are kept and reused
-    request_period: month          # one CDS request per calendar month
-    processed_file: era5_tmax_1deg.nc   # the reduced file written before the analysis
-period:
-  warm_season_months: [4, 5, 6, 7, 8, 9]   # [11, 12, 1, 2, 3] for a season across the new year
-  start_date: "1996-01-01"
-  end_date: "2025-12-31"
+  file: 'my_downloaded_era5_folder'
+  format: era5
+  era5_cell_size_deg: 1
+  processed_file: 'results/processed_tmax.nc'  # optional; null skips saving it
 ```
-
-`run_scorch()` then requests, for every calendar month of the season, the
-CDS product *ERA5 post-processed daily statistics*: the daily maximum of the
-hourly 2-m temperature over each UTC calendar day on the native 0.25-degree
-grid. Every file is cached in `cache_directory` under a name that states the
-area and the requested dates, with a record of the complete request beside
-it, and is reused only when its name, its record and its actual grid and
-dates match: changing the area, the period or the months with the same
-cache folder never reuses an old file. An interrupted run resumes where it
-stopped, and a request still queued on the CDS is picked up again. The files are reduced to the daily maximum
-temperature on 1-degree cells (steps 2 and 3 below) and saved with
-`write_tmax()` as `processed_file`, a Celsius NetCDF file that later runs can
-use directly with `source: file`. The same can be done in R with
-`fetch_era5_daily_tmax()`, `read_era5()` and `write_tmax()`.
-
-What to expect from the CDS: each request waits in its queue before it runs,
-typically minutes and sometimes hours, and the CDS accepts one queued request
-per user for this product, so the months go one after another. A 30-year
-season of six months is 180 monthly requests, which can take days; leave the
-run going, or stop it and run again later. A request that the CDS refuses as
-too large (`request_period: year` with a big area) is reported with the
-advice to use monthly requests. The run summary records the area and period
-but no credential.
 
 #### ERA5 files you downloaded yourself
 
@@ -204,7 +172,7 @@ holds them. The package prepares it exactly as the SCORCH study did.
 | Product | *ERA5 hourly data on single levels*, variable *2m temperature* (`t2m`); or *ERA5 post-processed daily statistics*, daily maximum of *2m temperature* |
 | Format | NetCDF (`.nc`), as downloaded; GRIB is not read |
 | Time step | hourly, any step that divides a day (for example 3-hourly), or daily |
-| Region | the area to analyse, downloaded with its edges included (for the study: North 46, West 20, South 10, East 70; for the demonstration data: North 44, West -104, South 34, East -94); regular 0.25-degree ERA5 grid |
+| Region | the area to analyse, downloaded with its edges included (for the study: North 46, West 20, South 10, East 70; for the full-US demonstration: North 50, West -130, South 25, East -58); regular 0.25-degree ERA5 grid |
 | Files | one file, several files (for example one per year or month), or a folder of `.nc` files; each file holds whole days (UTC) on the same grid, and no date appears in two files |
 | Contents | `t2m` in Kelvin with the dimensions `longitude`, `latitude` and `valid_time` (current CDS) or `time` (older CDS files); packed values, missing values and the ERA5/ERA5T `expver` dimension are handled |
 
@@ -216,8 +184,8 @@ The package then, for the analysed months only:
 3. **averages the daily maxima to 1-degree cells** (`era5_cell_size_deg: 1`):
    a cell holds the points `k <= coordinate < k + 1` in both directions and
    only complete cells are kept, so a 20-70 E, 10-46 N download gives the
-   50 x 36 study cells and the demonstration's 104-94 W, 34-44 N download
-   gives its 10 x 10 cells. Longitudes from 0 to 360 are converted to -180 to 180,
+   50 x 36 study cells and the demonstration's 130-58 W, 25-50 N download
+   gives its 72 x 25 cells. Longitudes from 0 to 360 are converted to -180 to 180,
    and north-to-south latitudes are put in order.
 
 `README.txt` records this preprocessing. The R function behind it,
@@ -266,12 +234,11 @@ all the settings:
 
 | Setting | Meaning | Study default |
 |---|---|---|
-| `input: source` | `file` (the data named in `input: file`) or `cds` (download ERA5 from the Climate Data Store with the `cds` settings) | file |
 | `input: file` | your ERA5 file, list of files or folder, or a daily maximum temperature file | - |
 | `input: format` | `era5`, `daily_tmax`, or `auto` (ERA5 when the file has `t2m`) | auto |
 | `input: variable`, `longitude`, `latitude`, `time`, `units` | names in the file and temperature units; found automatically unless set | auto |
-| `input: era5_cell_size_deg` | ERA5 and CDS only: cell size (degrees) to which the daily maxima are averaged; `null` keeps the ERA5 grid | 1 |
-| `input: cds` | from scratch only: `area` [North, West, South, East], `cache_directory`, `request_period` (`month` or `year`), `processed_file` | - |
+| `input: era5_cell_size_deg` | ERA5 input: cell size (degrees) to which the daily maxima are averaged; `null` keeps the ERA5 grid | 1 |
+| `input: processed_file` | optional NetCDF path for saving prepared Tmax from ERA5 input; leave null for prepared input | null |
 | `output: directory` | folder for the results | `results` |
 | `period: warm_season_months` | months analysed; `start_date`, `end_date` limit the period | April-September |
 | `heatwaves` | local threshold percentile, minimum duration, minimum exceeding days | 95, 3, 3 |
@@ -338,7 +305,7 @@ and the cell and day tables, with a `README.txt` that marks the run
 incomplete; it replaces old package-generated output so stale
 results cannot appear to belong to the new run. `run_scorch()` also returns the
 results in R, where `scorch_figure(result, name = "mixed_multiday_events")` redraws a plot and the
-stage functions (`fetch_era5_daily_tmax()`, `read_era5()`, `read_tmax()`, `write_tmax()`,
+stage functions (`read_era5()`, `read_tmax()`, `write_tmax()`,
 `detect_heatwaves()`, `select_regional_days()`, `cluster_heatwaves()`, `fit_ellipses()`,
 `classify_events()`, `fit_power_law()`, `fit_lgcp()`) can be run one at a time.
 
@@ -418,11 +385,11 @@ Version 1.0.0 is the first public release ([`NEWS.md`](NEWS.md)). The
 scientific method, the R implementation of the five stages and the models,
 and their study-reproduction tests are the authors' work. The release
 packaging (citation and archiving metadata, checklists, verification
-record), the from-scratch input path, the demonstration data build from the
+record), the original input-download path, the demonstration data build from the
 authors' own ERA5-derived files, the demo with its traced event, the figure
 styling and the documentation were written with the assistance of an AI
 coding tool (Claude Code by Anthropic), operated and reviewed by Fawaz
-Bouhamad; the later package rename was implemented with Codex (OpenAI).
+Bouhamad; the later package rename, local-file input simplification and figure style update were implemented with Codex (OpenAI).
 The scientific calculations and results are the authors' own.
 [`docs/ai_assistance_record.md`](docs/ai_assistance_record.md) lists what the
 tool wrote. The repository's public history begins with this release in a

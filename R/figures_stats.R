@@ -21,11 +21,15 @@ draw_ellipse_geometry_by_type <- function(result) {
          xlab = expression(Area ~ (km^2 %*% 10^6)), xlim = area_range),
     list(values = e$azimuth_north_cw_deg, breaks = seq(-90, 90, 15), xlab = "Orientation (\u00b0)", xlim = c(-90, 90)))
   # Drawing order: histogram then box plot of every type, row by row.
-  cells <- matrix(0, 6, 4)
-  for (r in 1:3) for (t in 1:4) cells[2 * r - 1:0, t] <- 8 * (r - 1) + 2 * t - 1:0
-  graphics::layout(cells, heights = rep(c(4.1, 1.3), 3))
+  cells <- matrix(0, 6, 5)
+  for (r in 1:3) {
+    cells[2 * r - 1:0, 1] <- 9 * (r - 1) + 1L
+    for (t in 1:4) cells[2 * r - 1:0, t + 1] <- 9 * (r - 1) + 2 * t + 0:1
+  }
+  graphics::layout(cells, widths = c(0.45, rep((12.2 - 0.45) / 4, 4)), heights = rep(c(4.1, 1.3), 3))
   for (r in seq_along(rows)) {
     row <- rows[[r]]
+    row_label(letters[r])
     for (t in 1:4) {
       values <- row$values[e$event_type == t]
       graphics::par(mai = c(0.05, 0.55, if (r == 1) 0.4 else 0.25, 0.15))
@@ -85,7 +89,9 @@ draw_event_geometry_distributions <- function(result) {
   }
   by_type <- function(column) lapply(1:4, function(t) events[[column]][events$event_type == t])
   draw_cdf(by_type("mean_axis_ratio"), expression(Ratio ~ (L[2] / L[1])))
+  panel_label("a")
   draw_cdf(lapply(by_type("mean_area_km2"), function(v) v / 1e6), expression(Area ~ (km^2 %*% 10^6)))
+  panel_label("b")
   # kernel density of the axial mean orientation (Scott's bandwidth)
   x <- seq(-90, 90, length.out = 600)
   curves <- lapply(1:4, function(t) {
@@ -111,6 +117,7 @@ draw_event_geometry_distributions <- function(result) {
   graphics::axis(2, cex.axis = 0.8, mgp = c(2, 0.5, 0), tck = -0.02, lwd = 0.6, las = 1)
   graphics::mtext("Orientation (\u00b0)", side = 1, line = 2.2, cex = 0.9)
   graphics::mtext("Probability density", side = 2, line = 3.2, cex = 0.9)
+  panel_label("c")
   graphics::par(mai = c(0, 0, 0, 0))
   graphics::plot.new()
   graphics::legend("center", legend = type_label(types_present), col = TYPE_COLOURS[types_present], lwd = 2.2,
@@ -129,7 +136,8 @@ draw_annual_event_counts_and_duration <- function(result) {
   year_ticks <- pretty(years)
   year_ticks <- year_ticks[year_ticks == round(year_ticks)]
   if (length(year_ticks) < 2) year_ticks <- seq(min(years), max(years))
-  graphics::layout(matrix(1:2, 2), heights = c(1, 1.15))
+  graphics::layout(matrix(1:4, 2, 2, byrow = TRUE), widths = c(0.4, 9), heights = c(1, 1.15))
+  row_label("a")
   # (a) events per year and type; years without events are left out
   graphics::par(mai = c(0.45, 0.8, 0.4, 0.3))
   with_events <- counts[counts$all_events > 0, ]
@@ -151,6 +159,7 @@ draw_annual_event_counts_and_duration <- function(result) {
   graphics::axis(2, at = seq(0, max(counts$all_events) + 1), cex.axis = 0.85, las = 1, mgp = c(2, 0.5, 0), tck = -0.02)
   graphics::mtext("Number of events", side = 2, line = 2.4, cex = 0.9)
   graphics::legend("topleft", legend = type_label(1:4), fill = TYPE_COLOURS, border = NA, bty = "n", ncol = 2, cex = 0.8)
+  row_label("b")
   # mean duration of Type 3 and Type 4 events by start year
   longest <- max(c(events$duration_days[events$event_type %in% 3:4], 1))
   graphics::par(mai = c(0.7, 0.8, 0.4, 0.3))
@@ -204,6 +213,7 @@ draw_ellipse_area_power_law <- function(result) {
     graphics::axis(2, cex.axis = 0.8, mgp = c(2, 0.5, 0), tck = -0.02, las = 1)
     graphics::mtext(expression(Area ~ (km^2)), side = 1, line = 2.4, cex = 0.9)
     graphics::mtext(expression(italic(P)(area >= italic(A))), side = 2, line = 3.4, cex = 0.9)
+    panel_label(if (name == "daily_maxima") "a" else "c", adj = 0)
     # box plot of the bootstrap exponents (whiskers at the 2.5th and 97.5th percentiles)
     graphics::par(mai = c(0.75, 0.85, 0.5, 0.4))
     if (ok) {
@@ -220,6 +230,7 @@ draw_ellipse_area_power_law <- function(result) {
       graphics::plot.new()
       graphics::text(0.5, 0.5, "no bootstrap", cex = 0.9)
     }
+    panel_label(if (name == "daily_maxima") "b" else "d", adj = 0)
   }
   invisible(TRUE)
 }

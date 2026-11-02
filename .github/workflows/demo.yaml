@@ -28,8 +28,8 @@ jobs:
           needs: check
       - name: Run the demonstration
         run: Rscript demo/run_demo.R
-      - name: Run the from-scratch processing example (CDS sample to 1-degree cells)
-        run: Rscript demo/cds_processing_example.R
+      - name: Check the two local input options
+        run: Rscript demo/check_input_options.R
       - name: Compare the demo output with demo/expected_output
         run: Rscript demo/compare_output.R
       - uses: actions/upload-artifact@v4

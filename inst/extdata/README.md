@@ -42,13 +42,14 @@ which confirms the UTC day boundary and identical ERA5 values.
 | | |
 |---|---|
 | Product | *ERA5 post-processed daily statistics on single levels from 1940 to present* (`derived-era5-single-levels-daily-statistics`, [doi:10.24381/cds.4991cf48](https://doi.org/10.24381/cds.4991cf48)): daily maximum of the hourly 2-m temperature, time zone UTC+00:00, 1-hourly frequency |
-| Request | area North 44, West -104, South 34, East -94 (41 x 41 points at 0.25 degrees), April-September 2012, made on 11 October 2026 with the CDS API; `fetch_era5_daily_tmax(area = c(44, -104, 34, -94), start = "2012-04-01", end = "2012-09-30", period = "year")` makes the same request |
+| Request | area North 44, West -104, South 34, East -94 (41 x 41 points at 0.25 degrees), April-September 2012, downloaded from the CDS on 11 October 2026 |
 | Contents | variable `t2m` in kelvin, 183 daily values, as downloaded, unchanged |
 | File | 556,926 bytes, MD5 `d4a307cec120ca38ef41a1f753f8c194` |
 
-It is the input of `demo/cds_processing_example.R` and of the tests of the
-from-scratch path, which reduce it to 10 x 10 cells and compare them with the
-same cells of `north_america_tmax.nc`.
+It is the input of `demo/check_input_options.R` and local-file preprocessing
+tests, which reduce it to 10 x 10 cells and compare them with the same cells
+of `north_america_tmax.nc`. This sample is already daily Tmax; it demonstrates
+unit conversion and spatial aggregation, not hourly-to-daily calculation.
 
 ## Licence and attribution
 

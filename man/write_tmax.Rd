@@ -7,7 +7,7 @@
 write_tmax(
   tmax,
   file,
-  precision = c("int16", "float32"),
+  precision = c("int16", "float32", "float64"),
   title = NULL,
   source = NULL,
   licence = NULL,
@@ -21,8 +21,9 @@ write_tmax(
 \item{file}{Path of the NetCDF file to write.}
 
 \item{precision}{\code{"int16"} stores the values as 16-bit integers with a
-scale factor of 0.01 degrees Celsius (a third of the size of
-\code{"float32"}, rounded to 0.01); \code{"float32"} stores them unrounded.}
+scale factor of 0.01 degrees Celsius, rounded to 0.01; \code{"float32"}
+stores single-precision values; \code{"float64"} preserves the computed
+double-precision values exactly for subsequent analyses.}
 
 \item{title, source, licence, history}{Global attributes. \code{source} defaults to
 the input description of \code{tmax}, \code{history} to the package version and
@@ -38,8 +39,8 @@ Writes a \code{scorch_tmax} object (from \code{\link[=read_era5]{read_era5()}}, 
 \code{\link[=tmax_from_array]{tmax_from_array()}}) as one NetCDF file with the dimensions \code{lon}, \code{lat}
 and \code{time} and the variable \code{tmax} in degrees Celsius, the layout that
 \code{\link[=read_tmax]{read_tmax()}} and the \code{input: file} setting of \code{\link[=run_scorch]{run_scorch()}} accept. The
-from-scratch path of \code{\link[=run_scorch]{run_scorch()}} writes its processed input this way,
-so that the download and reduction need to be done only once.
+ERA5 path of \code{\link[=run_scorch]{run_scorch()}} can save its processed input this way with
+\code{input: processed_file}, so that the reduction needs to be done only once.
 }
 \examples{
 file <- system.file("extdata", "north_america_tmax.nc", package = "scoRch.simulator")

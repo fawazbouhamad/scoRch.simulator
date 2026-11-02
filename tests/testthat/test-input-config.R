@@ -89,10 +89,9 @@ test_that("the shipped SCORCH configuration is the source of the study settings"
   # The study settings, written out once more here so that a change to the
   # shipped file cannot pass unnoticed.
   study <- list(
-    input = list(source = "file", file = NULL, format = "auto", variable = "auto", longitude = "auto",
+    input = list(file = NULL, format = "auto", variable = "auto", longitude = "auto",
                  latitude = "auto", time = "auto", units = "auto", era5_cell_size_deg = 1,
-                 cds = list(area = NULL, cache_directory = "era5_cache", request_period = "month",
-                            processed_file = "era5_tmax_1deg.nc")),
+                 processed_file = NULL),
     output = list(directory = "results"),
     period = list(warm_season_months = 4:9, start_date = NULL, end_date = NULL),
     heatwaves = list(threshold_percentile = 95, min_duration_days = 3, min_exceeding_days = 3),

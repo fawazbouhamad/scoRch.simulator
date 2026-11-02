@@ -130,33 +130,11 @@ read_config <- function(config = NULL, input_required = TRUE) {
       cfg[[section]][key] <- list(yaml_vector(given[[section]][[key]]))
     }
   }
-  # The cds settings are a nested section: the ones left out keep their defaults.
-  if (!is.null(given$input$cds)) {
-    if (!is.list(given$input$cds) || (length(given$input$cds) && is.null(names(given$input$cds)))) {
-      fail("The configuration section 'input: cds' must contain named settings.")
-    }
-    cfg$input$cds <- utils::modifyList(defaults$input$cds, lapply(given$input$cds, yaml_vector))
+  if (input_required && is.null(cfg$input$file)) {
+    fail("No input file is set. Name your prepared daily Tmax NetCDF file or downloaded ERA5 files in ",
+         "'input: file' (write_scorch_config() writes an editable copy), or pass `tmax` to run_scorch().")
   }
-  check_config_string(cfg$input$source, "input: source")
-  if (!cfg$input$source %in% c("file", "cds")) fail("The setting 'input: source' must be file or cds.")
-  if (cfg$input$source == "cds") {
-    cds <- cfg$input$cds
-    if (!is.list(cds)) fail("The configuration section 'input: cds' must contain settings.")
-    unknown <- setdiff(names(cds), c("area", "cache_directory", "request_period", "processed_file"))
-    if (length(unknown)) fail("Unknown settings under input: cds: ", paste(unknown, collapse = ", "))
-    if (is.null(cds$area)) fail("The from-scratch input (source: cds) needs 'input: cds: area' ([North, West, South, East]).")
-    cfg$input$cds$area <- check_area(cds$area)
-    check_config_string(cds$cache_directory, "input: cds: cache_directory")
-    check_config_string(cds$request_period, "input: cds: request_period")
-    if (!cds$request_period %in% c("month", "year")) fail("The setting 'input: cds: request_period' must be month or year.")
-    check_config_string(cds$processed_file, "input: cds: processed_file")
-    if (is.null(cfg$period$start_date) || is.null(cfg$period$end_date)) {
-      fail("The from-scratch input (source: cds) needs 'period: start_date' and 'period: end_date'.")
-    }
-  } else if (input_required && is.null(cfg$input$file)) {
-    fail("No input file is set. Name the NetCDF file in the setting 'input: file' of a configuration ",
-         "(write_scorch_config() writes an editable copy), set 'input: source' to cds, or pass `tmax` to run_scorch().")
-  }
+  check_config_string(cfg$input$processed_file, "input: processed_file", allow_null = TRUE)
   files <- cfg$input$file
   if (!is.null(files)) {
     if (!is.character(files) || !length(files) || anyNA(files) || any(!nzchar(trimws(files)))) {

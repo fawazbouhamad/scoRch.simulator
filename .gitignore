@@ -13,3 +13,7 @@ Rplots.pdf
 __pycache__/
 era5_cache/
 era5_tmax_1deg.nc
+
+# Large optional hourly demonstration files are distributed separately.
+/demo/data/hourly/
+/demo/data/*.nc

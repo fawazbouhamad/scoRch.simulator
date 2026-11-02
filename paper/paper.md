@@ -129,10 +129,9 @@ override. The dependency set is deliberately small (`ncdf4`, `dbscan`,
 `spatstat`, `maps`, `yaml`); the equal-area projection needed by the Cox
 process is implemented in a few lines of R so that no GDAL or PROJ
 installation is required, and all plots use base graphics. The temperature
-data can be downloaded from scratch from the Copernicus Climate Data Store
-(the package requests the daily maximum 2-m temperature for the configured
-area and period, caches and resumes the downloads, reduces the files to
-1-degree cells and saves the result) or supplied as a prepared file. An
+data can be supplied as locally downloaded hourly ERA5 NetCDF files, which
+the package reduces to daily maxima in Celsius and averages to 1-degree
+cells, or as a prepared daily maximum temperature file. An
 ERA5-derived dataset of 1,800 one-degree cells over the contiguous United
 States and its surroundings (30 warm seasons) ships with the package so
 that the whole workflow runs in half a minute on a region other than the

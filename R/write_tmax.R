@@ -7,14 +7,15 @@
 #' [tmax_from_array()]) as one NetCDF file with the dimensions `lon`, `lat`
 #' and `time` and the variable `tmax` in degrees Celsius, the layout that
 #' [read_tmax()] and the `input: file` setting of [run_scorch()] accept. The
-#' from-scratch path of [run_scorch()] writes its processed input this way,
-#' so that the download and reduction need to be done only once.
+#' ERA5 path of [run_scorch()] can save its processed input this way with
+#' `input: processed_file`, so that the reduction needs to be done only once.
 #'
 #' @param tmax A `scorch_tmax` object.
 #' @param file Path of the NetCDF file to write.
 #' @param precision `"int16"` stores the values as 16-bit integers with a
-#'   scale factor of 0.01 degrees Celsius (a third of the size of
-#'   `"float32"`, rounded to 0.01); `"float32"` stores them unrounded.
+#'   scale factor of 0.01 degrees Celsius, rounded to 0.01; `"float32"`
+#'   stores single-precision values; `"float64"` preserves the computed
+#'   double-precision values exactly for subsequent analyses.
 #' @param title,source,licence,history Global attributes. `source` defaults to
 #'   the input description of `tmax`, `history` to the package version and
 #'   date.
@@ -26,7 +27,7 @@
 #' copy <- write_tmax(tmax, tempfile(fileext = ".nc"))
 #' identical(read_tmax(copy, months = 7)$tmax, tmax$tmax)
 #' @export
-write_tmax <- function(tmax, file, precision = c("int16", "float32"), title = NULL, source = NULL,
+write_tmax <- function(tmax, file, precision = c("int16", "float32", "float64"), title = NULL, source = NULL,
                        licence = NULL, history = NULL, overwrite = FALSE) {
   if (!inherits(tmax, "scorch_tmax")) fail("`tmax` must come from read_era5(), read_tmax() or tmax_from_array().")
   precision <- match.arg(precision)
@@ -47,7 +48,8 @@ write_tmax <- function(tmax, file, precision = c("int16", "float32"), title = NU
     var <- ncdf4::ncvar_def("tmax", "degC", dims, missval = -32768L, prec = "short", longname = long_name,
                             compression = 9, shuffle = TRUE)
   } else {
-    var <- ncdf4::ncvar_def("tmax", "degC", dims, missval = 1e30, prec = "float", longname = long_name,
+    var <- ncdf4::ncvar_def("tmax", "degC", dims, missval = 1e30,
+                            prec = if (precision == "float64") "double" else "float", longname = long_name,
                             compression = 9)
   }
   nc <- ncdf4::nc_create(file, var, force_v4 = TRUE)

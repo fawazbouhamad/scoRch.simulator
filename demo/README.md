@@ -3,16 +3,18 @@
 This folder runs the complete analysis on the data shipped with the package,
 the way it is run on any dataset: temperature data, one configuration file
 and one command. It is meant as a first walk-through for students and new
-users. A second script shows, offline, what the from-scratch path does with a
-file downloaded from the Climate Data Store.
+users. The optional hourly preprocessing example uses genuine ERA5 NetCDF data.
+Users can also provide files they have downloaded themselves. The package performs the preprocessing; it does not request data
+from the Climate Data Store and does not read credentials.
 
 | File | What it is |
 |---|---|
 | [`run_demo.R`](run_demo.R) | the commented demonstration: reads the data, runs `run_scorch()`, prints what was found, traces one real heat wave from the temperature data to its figure, then repeats the analysis one stage at a time |
 | [`scorch_config.yaml`](scorch_config.yaml) | the configuration: it names the input data, the output folder and the events to show in the figures; every other setting keeps its SCORCH study value |
-| [`cds_processing_example.R`](cds_processing_example.R) | the from-scratch path without a CDS account: reduces the shipped CDS file to 1-degree cells and compares them with the demonstration data |
+| [`run_hourly_demo.R`](run_hourly_demo.R) | a full-US, July 2012 preprocessing demonstration: hourly ERA5 to daily Tmax, Celsius and 1-degree cells, checked against the paired prepared file |
+| [`check_input_options.R`](check_input_options.R) | an offline local-file aggregation and prepared-NetCDF round-trip check using the small shipped ERA5 daily file; this file is daily, so the check is not presented as an hourly demonstration |
 | [`compare_output.R`](compare_output.R) | compares a run's `results/` with `expected_output/` sheet by sheet; the demo workflow runs it on every change |
-| [`expected_output/`](expected_output) | the eight workbooks, the `README.txt` (with the traced event) and five of the nine figures (600 dpi, as the study's figures) from a run on 12 October 2026 with package version 1.0.0, to compare with your own run |
+| [`expected_output/`](expected_output) | eight reference workbooks, the `README.txt` (with the traced event), and all nine figures; the numerical references are unchanged and the figure styling was aligned with the reproducibility repository on 1 November 2026 |
 
 **The data.** `inst/extdata/north_america_tmax.nc`: ERA5-derived daily
 maximum 2-m temperature on 25 x 72 one-degree cells between 25 N and 50 N and
@@ -38,13 +40,53 @@ Rscript demo/run_demo.R
 
 or, in R, `source("demo/run_demo.R")`. The run took 43 seconds on a laptop
 (the analysis about 16 seconds with the study's 5,000 bootstrap repetitions,
-the eight workbooks with their archive checks 7 seconds, the nine 600-dpi
+the eight workbooks with their archive checks 7 seconds, the nine 500/600-dpi
 figures 10 seconds, the traced event and the stage-by-stage repeat the rest).
 Then:
 
 ```
-Rscript demo/cds_processing_example.R
+Rscript demo/check_input_options.R
 ```
+
+## Demonstrate the hourly processing
+
+The optional data archive contains the whole US domain (25-50 N, 130-58 W)
+for **every hour of July 2012**, at 0.25 degrees, plus the prepared daily
+file derived from those exact hourly values. After extracting the archive:
+
+```text
+Rscript demo/run_hourly_demo.R path/to/extracted_archive
+```
+
+This calls the same `read_era5()` preprocessing used by `run_scorch()`:
+744 hourly fields become 31 daily UTC maxima at the native grid points,
+kelvin is converted to Celsius, and those daily maxima are averaged to
+1,800 complete one-degree cells. The script compares the result with the
+paired prepared file and checks an exact-value NetCDF round trip, then saves
+`results/processing_demo/prepared_tmax.nc`. It reads no credentials.
+
+**Why one month?** The broad spatial domain is retained while the optional
+download stays small. A month demonstrates temporal and spatial processing;
+it does not supply a long-term percentile baseline. Use `run_demo.R` and the
+separate 30-year prepared file for the full heatwave catalogs and models.
+For your own hourly record, point `input: file` at your NetCDF file(s) or
+folder, set `format: era5`, and run `run_scorch()` normally.
+
+**Data availability.** The 30-year prepared example is installed with the
+package. The optional paired monthly archive has been prepared separately
+for a Zenodo deposit; no new dataset DOI has been published yet. It contains
+the hourly month, its matching prepared month, and a copy of the 30-year
+quick-demo file with its provenance. The maintainer recipe
+[`data-raw/prepare_demo_archive.R`](../data-raw/prepare_demo_archive.R)
+rebuilds this deposit from the genuine hourly file. The separate maintainer
+[`fetch_hourly_demo.py`](../data-raw/fetch_hourly_demo.py) retrieves the
+public ARCO-ERA5 source; ordinary package use never invokes that script.
+
+The historical compact 30-year file rounds values to 0.01 C. The new paired
+monthly file preserves the computed double-precision values, so the two
+monthly input routes match exactly. Rounding can change percentile ties;
+the compact historical file is not used as the exact-value reference for
+the monthly processing demonstration.
 
 ## What you should see
 
@@ -108,10 +150,10 @@ is the traced event, 28 and 29 June 2012, one cluster a day; the bottom row is
 the Type 3 event of 4-31 August 2023, several clusters a day
 (`scorch_config.yaml` names both under `figures: representative_events`).
 Orange cells are the heatwave cells that DBSCAN put in a cluster, grey cells
-are heatwave cells it left out, the black outline is the ellipse with its two
-axes, and the dot is the temperature-weighted centroid. The map shows the
-surroundings of the analysed box; the date of each panel is written above
-it.*
+are heatwave cells it left out, the brown mesh marks the ellipse interior,
+the black outline and lines show the ellipse and its two axes, and the dot
+is the temperature-weighted centroid. The map shows the surroundings of the
+analysed box; each date is written inside the upper-left corner of its map.*
 
 ## The results folder
 
@@ -137,8 +179,7 @@ according to the log-Gaussian Cox process.
 
 To analyse your own data, write the complete, commented configuration with
 `write_scorch_config("scorch_config.yaml")`. Either point `input: file` to a
-daily maximum temperature file or to raw ERA5 files, or set
-`input: source: cds` with your area and period to download ERA5 from the
-Climate Data Store from scratch (one-time setup and the queue times to expect
-are in the main [README](../README.md)). Then run
+daily maximum temperature file or to ERA5 NetCDF files you downloaded
+yourself. Set `input: format` to `daily_tmax` or `era5`, or leave `auto`
+to detect the format. The package does the required preprocessing locally. Then run
 `run_scorch("scorch_config.yaml")`.

@@ -115,32 +115,36 @@ read_era5 <- function(files, variable = "auto", lon = "auto", lat = "auto", time
 read_configured_input <- function(cfg) {
   input <- cfg$input
   period <- cfg$period
-  if (identical(input$source, "cds")) {
-    cds <- input$cds
-    files <- fetch_era5_daily_tmax(area = cds$area, start = period$start_date, end = period$end_date,
-                                   months = period$warm_season_months, cache = cds$cache_directory,
-                                   period = cds$request_period)
-    tmax <- read_era5(files, months = period$warm_season_months, start = period$start_date,
-                      end = period$end_date, cell_size = input$era5_cell_size_deg)
-    write_tmax(tmax, cds$processed_file, overwrite = TRUE,
-               title = sprintf("Daily maximum 2-m temperature, %s", format_area(cds$area)),
-               source = paste0("ERA5 daily maximum 2-m temperature (Copernicus Climate Data Store, dataset ",
-                               CDS_DATASET, ", UTC days, 0.25 degrees, area ", format_area(cds$area), "); ",
-                               tmax$preprocessing, "; written by scoRch.simulator"),
-               licence = "Contains modified Copernicus Climate Change Service information; see the CDS licence of the dataset")
-    tmax$preprocessing <- paste0(tmax$preprocessing, "; saved to ", cds$processed_file)
-    message("The processed temperature was saved to ", cds$processed_file,
-            "; later runs can use it with input: source: file.")
-    return(tmax)
-  }
   files <- input_files(input$file)
   format <- input$format
   if (identical(format, "auto")) format <- detect_input_format(files[1])
   if (format == "era5") {
-    return(read_era5(files, variable = input$variable, lon = input$longitude, lat = input$latitude,
-                     time = input$time, units = input$units, months = period$warm_season_months,
-                     start = period$start_date, end = period$end_date, cell_size = input$era5_cell_size_deg))
+    tmax <- read_era5(files, variable = input$variable, lon = input$longitude, lat = input$latitude,
+                       time = input$time, units = input$units, months = period$warm_season_months,
+                       start = period$start_date, end = period$end_date, cell_size = input$era5_cell_size_deg)
+    if (!is.null(input$processed_file)) {
+      destination <- input$processed_file
+      if (normalizePath(destination, mustWork = FALSE) %in% normalizePath(files, mustWork = TRUE)) {
+        fail("The processed output must not replace an ERA5 input file: ", destination)
+      }
+      if (!dir.exists(dirname(destination)) &&
+          !dir.create(dirname(destination), recursive = TRUE, showWarnings = FALSE)) {
+        fail("Could not create the processed temperature directory: ", dirname(destination))
+      }
+      # Preserve computed values exactly: rounding can change percentile ties
+      # and therefore the catalogs of a subsequent prepared-input run.
+      write_tmax(tmax, destination, precision = "float64", overwrite = TRUE,
+                   title = "Prepared daily maximum 2-m temperature",
+                   licence = "Contains modified Copernicus Climate Change Service information (ERA5)")
+      tmax$preprocessing <- paste0(tmax$preprocessing, "; saved to ", destination)
+      message("Prepared daily Tmax saved to ", destination, ".")
+    }
+    return(tmax)
   }
+  if (!is.null(input$processed_file)) {
+    fail("'input: processed_file' is for ERA5 preprocessing; leave it null for prepared daily Tmax input.")
+  }
+
   if (length(files) != 1L || any(dir.exists(input$file))) {
     fail("Daily maximum temperature (format daily_tmax) is read from one NetCDF file; ",
          "several files or a folder are supported for ERA5 input (format era5).")

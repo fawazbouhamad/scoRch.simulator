@@ -1,5 +1,19 @@
 # scoRch.simulator 1.0.1 (unreleased)
 
+- Simplified input to prepared daily Tmax files or locally downloaded ERA5
+  NetCDF files. The package no longer downloads from the CDS, reads keys,
+  or depends on ecmwfr or httr. Existing source: cds configurations must be
+  replaced with input: file naming downloaded NetCDF files.
+- Added a July 2012 hourly preprocessing demonstration using the same full US
+  domain, plus an optional processed_file setting for saving
+  reusable prepared temperatures. The matching hourly Zenodo data deposit
+  is prepared separately from genuine hourly source files. The existing
+  30-year prepared file remains the full analysis demonstration.
+- Automatically saved prepared input preserves double-precision temperatures
+  so that a later prepared-input run does not alter percentile ties.
+- Matched result figures to the reproducibility repository's fonts, panel
+  labels, snapshot heading colours, date placement and clipped ellipse mesh.
+
 - Renamed the package and GitHub repository from `scoRch.generator`
   to `scoRch.simulator`. Install from the renamed repository and use
   `library(scoRch.simulator)`.

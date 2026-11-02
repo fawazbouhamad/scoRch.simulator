@@ -1,0 +1,13 @@
+# Optional July 2012 full-US preprocessing example. The full 30-year
+# analysis demonstration uses demo/scorch_config.yaml.
+input:
+  file: 'demo/data/hourly/era5_hourly_us_2012_07.nc'
+  format: era5
+  era5_cell_size_deg: 1
+  processed_file: 'results/processing_demo/prepared_tmax.nc'
+output:
+  directory: 'results/processing_demo'
+period:
+  warm_season_months: [7]
+  start_date: '2012-07-01'
+  end_date: '2012-07-31'

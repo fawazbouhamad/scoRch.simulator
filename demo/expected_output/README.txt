@@ -1,5 +1,5 @@
 scoRch.simulator 1.0.1 results
-Run started 2026-10-12 19:36:18, finished in 33 seconds.
+Run started 2026-11-01 22:21:17, finished in 27 seconds.
 
 INPUT
   Source: inst/extdata/north_america_tmax.nc
@@ -139,7 +139,6 @@ TRACED EVENT (demo/run_demo.R, part 4)
 
 SETTINGS OF THIS RUN (YAML)
   input:
-    source: file
     file: inst/extdata/north_america_tmax.nc
     format: auto
     variable: auto
@@ -148,11 +147,7 @@ SETTINGS OF THIS RUN (YAML)
     time: auto
     units: auto
     era5_cell_size_deg: 1.0
-    cds:
-      area: ~
-      cache_directory: era5_cache
-      request_period: month
-      processed_file: era5_tmax_1deg.nc
+    processed_file: ~
   period:
     warm_season_months:
     - 4

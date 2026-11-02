@@ -162,3 +162,29 @@ the renamed installation and demonstration. The scientific
 calculations and bundled data were not changed. The original dated
 verification record and the `v1.0.0` release retain their historical
 names.
+
+## Local inputs and figure alignment on 1 November 2026
+
+At Fawaz Bouhamad's request, Codex removed the built-in CDS request and
+credential-handling modules, simplified configuration to local prepared
+daily Tmax or ERA5 files, and added optional saving of processed input.
+Automatically saved temperatures retain double precision to preserve
+percentile ties on a later prepared-input run. The scientific detection,
+clustering, classification and modelling methods were not changed.
+
+Codex compared all nine result figures with the reproducibility repository's
+scripts and artwork and updated fonts, palettes, panel letters, date
+placement and ellipse meshes. All nine styled plots are now included in
+the expected demonstration output; its numerical workbook references were
+retained and compared with a fresh run.
+
+The maintainer's OneDrive NA files were inspected and found to contain
+daily Tmax at 0.25 degrees. They are not represented as hourly data.
+For the requested hourly demonstration, Codex obtained a genuine full-US
+July 2012 subset from the public Google ARCO-ERA5 archive, retaining its
+original hourly values, and prepared its matching daily one-degree file.
+The independent NumPy temporal/spatial calculation and the exact-value
+prepared-file round trip passed. A separate 30-year prepared file remains
+the full-analysis demonstration; the monthly example illustrates processing.
+Dataset files, provenance, metadata and checksums were prepared locally for
+review. No Zenodo deposit, release tag or new DOI was published in this work.
