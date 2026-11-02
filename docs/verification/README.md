@@ -2,6 +2,8 @@
 
 [Cleanup preservation check, 2 November 2026](cleanup_2026-11-02.md): three complete processed-data runs, zero numerical differences, and file checksums.
 
+
+
 The [historical verification record](history.md) documents comparisons with
 the research reproducibility repository and earlier package checks.
 

@@ -16,3 +16,4 @@
 ^\.zenodo\.json$
 ^docs$
 ^CHANGELOG\.md$
+^\.gitattributes$
