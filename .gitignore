@@ -4,6 +4,7 @@
 .Ruserdata
 *.Rproj
 /results/
+.scorch-stage-*/
 /scorch_config.yaml
 /doc/
 /Meta/

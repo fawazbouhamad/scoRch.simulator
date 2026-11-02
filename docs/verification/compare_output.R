@@ -2,7 +2,7 @@
 # workbook (read with openxlsx2), README.txt apart from its run-time line
 # (both read as UTF-8), the presence of the
 # figures, and that README.txt is the only text file. Run from the top folder
-# of the repository after demo/run_demo.R; the demo workflow runs it on every
+# of the repository after demo/run.R; the demo workflow runs it on every
 # change. Values are compared with a relative tolerance of 1e-6 (1e-3 for the
 # LGCP workbook, whose fit can differ slightly between platforms); dates and
 # text must be identical.

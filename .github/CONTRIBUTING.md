@@ -26,5 +26,4 @@ to a clone of the
 with the Zenodo file (doi:10.5281/zenodo.21717874) placed at
 `input/tmax_processed.nc`, `SCORCH_LONG_TESTS=1` for the full bootstrap
 check. Local ERA5 preprocessing is checked offline; the package uses locally supplied files. Every push runs `R CMD check` on Windows, Linux and macOS and the
-demo (`.github/workflows/`). `docs/development/release_checklist.md` lists the steps of
-a release.
+demo (`.github/workflows/`). `docs/development/README.md` lists the release steps.

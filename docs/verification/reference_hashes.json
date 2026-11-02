@@ -1,0 +1,488 @@
+{
+  "baseline_commit": "40c6a9f9ab4e076030b51ee5539edebb623ac9cd",
+  "protected_files": 80,
+  "all_working_files_unchanged": true,
+  "note": "Git blob hashes describe archived file content; working-file hashes describe this Windows checkout.",
+  "files": [
+    {
+      "path": "demo/results/Additional_Results/Analysis_Summary.xlsx",
+      "git_blob_sha256": "4ab88213b085c04c365a6735651cd7c02e549a609ec89dbec748c574ab609b23",
+      "working_file_sha256": "4ab88213b085c04c365a6735651cd7c02e549a609ec89dbec748c574ab609b23",
+      "bytes": 303589
+    },
+    {
+      "path": "demo/results/Heatwave_Catalogs/Compound_Heatwaves.xlsx",
+      "git_blob_sha256": "9894e18584d9b18a64c9fe58f2bf29952ef325e600cc8ade2613bf448df791d8",
+      "working_file_sha256": "9894e18584d9b18a64c9fe58f2bf29952ef325e600cc8ade2613bf448df791d8",
+      "bytes": 17543
+    },
+    {
+      "path": "demo/results/Heatwave_Catalogs/Heatwave_Clusters.xlsx",
+      "git_blob_sha256": "5d7840bb7b9c636b2788045d816b1ab1992cb4215ad8227db3761011e82fe428",
+      "working_file_sha256": "5d7840bb7b9c636b2788045d816b1ab1992cb4215ad8227db3761011e82fe428",
+      "bytes": 2587467
+    },
+    {
+      "path": "demo/results/Heatwave_Catalogs/Heatwave_Ellipses.xlsx",
+      "git_blob_sha256": "08ddf26f958e81a5848bd45fe584a408c30e50eb6f2320e0da2e88e7959c1b02",
+      "working_file_sha256": "08ddf26f958e81a5848bd45fe584a408c30e50eb6f2320e0da2e88e7959c1b02",
+      "bytes": 100212
+    },
+    {
+      "path": "demo/results/Heatwave_Catalogs/Heatwaves.xlsx",
+      "git_blob_sha256": "2ecac7b344d6b92e8db8e3e1998abd2a65632a9a23a23e69524490560462cd3f",
+      "working_file_sha256": "2ecac7b344d6b92e8db8e3e1998abd2a65632a9a23a23e69524490560462cd3f",
+      "bytes": 3556858
+    },
+    {
+      "path": "demo/results/Heatwave_Catalogs/Regional_Heatwaves.xlsx",
+      "git_blob_sha256": "0a9302d61478b8fcee2312f6808d6fb3ef9444938b4236a7699e62a438c765a0",
+      "working_file_sha256": "0a9302d61478b8fcee2312f6808d6fb3ef9444938b4236a7699e62a438c765a0",
+      "bytes": 1601771
+    },
+    {
+      "path": "demo/results/Modelling/LGCP.xlsx",
+      "git_blob_sha256": "3c8a7a26eba06c9ad27fe0d841a2b4263514550ddd34868edea0f373849db1d0",
+      "working_file_sha256": "3c8a7a26eba06c9ad27fe0d841a2b4263514550ddd34868edea0f373849db1d0",
+      "bytes": 118942
+    },
+    {
+      "path": "demo/results/Modelling/Power_Law.xlsx",
+      "git_blob_sha256": "ea26e0b539f826e06775ade8fccfea844179340d45fe0a42ea14c2bf8b74321f",
+      "working_file_sha256": "ea26e0b539f826e06775ade8fccfea844179340d45fe0a42ea14c2bf8b74321f",
+      "bytes": 6696
+    },
+    {
+      "path": "demo/results/figures/annual_event_counts_and_duration.png",
+      "git_blob_sha256": "d5220a60026c7e1422fc0b8462d4cac6fc5ad4d9bf838e04b39f7ec124e10c4e",
+      "working_file_sha256": "d5220a60026c7e1422fc0b8462d4cac6fc5ad4d9bf838e04b39f7ec124e10c4e",
+      "bytes": 269893
+    },
+    {
+      "path": "demo/results/figures/centroid_concentration.png",
+      "git_blob_sha256": "1a324104e2bfc6c8d235016f88ce6e364324c93939e2001c752baebcc3dcfecb",
+      "working_file_sha256": "1a324104e2bfc6c8d235016f88ce6e364324c93939e2001c752baebcc3dcfecb",
+      "bytes": 886807
+    },
+    {
+      "path": "demo/results/figures/consistent_multiday_events.png",
+      "git_blob_sha256": "d7869b3abc009eea33a48d228f673a2d8763bbd7740e3ef3cecbeabc92cf0e35",
+      "working_file_sha256": "d7869b3abc009eea33a48d228f673a2d8763bbd7740e3ef3cecbeabc92cf0e35",
+      "bytes": 1660862
+    },
+    {
+      "path": "demo/results/figures/ellipse_area_power_law.png",
+      "git_blob_sha256": "e78a9cd74209bfe4bb266ed096e15d4cedb0b09e211ea3eb360a240f4202e35b",
+      "working_file_sha256": "e78a9cd74209bfe4bb266ed096e15d4cedb0b09e211ea3eb360a240f4202e35b",
+      "bytes": 461707
+    },
+    {
+      "path": "demo/results/figures/ellipse_geometry_by_type.png",
+      "git_blob_sha256": "19e29fc1692a1dd7a06488c50e9499074358b0ab4b0cd551dae5f720a3e301bf",
+      "working_file_sha256": "19e29fc1692a1dd7a06488c50e9499074358b0ab4b0cd551dae5f720a3e301bf",
+      "bytes": 443262
+    },
+    {
+      "path": "demo/results/figures/ellipse_spatial_patterns.png",
+      "git_blob_sha256": "0edd74423b28dbe3f7aae71239e7540c324bcc0a278400cfc9b3335cd6a1ad2b",
+      "working_file_sha256": "0edd74423b28dbe3f7aae71239e7540c324bcc0a278400cfc9b3335cd6a1ad2b",
+      "bytes": 3103778
+    },
+    {
+      "path": "demo/results/figures/event_geometry_distributions.png",
+      "git_blob_sha256": "e94a4694bc8282e1a7b6264982be717868157c2ac816ec0a5ff781f21638418c",
+      "working_file_sha256": "e94a4694bc8282e1a7b6264982be717868157c2ac816ec0a5ff781f21638418c",
+      "bytes": 642440
+    },
+    {
+      "path": "demo/results/figures/mixed_multiday_events.png",
+      "git_blob_sha256": "edf2ad3a6f8b99fde649857a30b26b75e6b34e82145aacb5a1a18f8191459d4d",
+      "working_file_sha256": "edf2ad3a6f8b99fde649857a30b26b75e6b34e82145aacb5a1a18f8191459d4d",
+      "bytes": 1996326
+    },
+    {
+      "path": "demo/results/figures/single_day_events.png",
+      "git_blob_sha256": "bff0a85a58eb39e0fce50f8d24e4863185bb42b08db60f56b57fcdeb77d0f8fc",
+      "working_file_sha256": "bff0a85a58eb39e0fce50f8d24e4863185bb42b08db60f56b57fcdeb77d0f8fc",
+      "bytes": 998311
+    },
+    {
+      "path": "src/DESCRIPTION",
+      "git_blob_sha256": "1ffac71411c51c8093cff83686aa4141b49c53cf25000ca5e28766e1567bd830",
+      "working_file_sha256": "50bcebd9adaf40b4683b2ecc9b1010d50810a625fd2066997e825f57f9e0fb3e",
+      "bytes": 1545
+    },
+    {
+      "path": "src/NAMESPACE",
+      "git_blob_sha256": "166705e85708115a913fb657436525554bef0d1f4f0006a9fa28c588f685d51a",
+      "working_file_sha256": "49423d169eb07664fa5f8f0e30c6a3f9c6985e09d7a493ab17871bd5aaa72a99",
+      "bytes": 459
+    },
+    {
+      "path": "src/R/clustering.R",
+      "git_blob_sha256": "6e57618e6ab254ff24774d5979fddad46a16ff20de3f1f126a25120e23a4411d",
+      "working_file_sha256": "48ea57d2b14d3be77d22cd494616f3c3c43eaea251564621623679808c748b0e",
+      "bytes": 8488
+    },
+    {
+      "path": "src/R/config.R",
+      "git_blob_sha256": "d0bada91d35d9f05671fda8f031e3b2226a6a32866b9a21744f773f7c513a46c",
+      "working_file_sha256": "dfedbaa61dc02af6d2b51bf7d4c487bfaa392de371afc3022821d9a20a795d29",
+      "bytes": 12545
+    },
+    {
+      "path": "src/R/ellipses.R",
+      "git_blob_sha256": "e3a49b44ec55f3071d1f79c01a03674089e583bd268455fc9540eb08a503b34b",
+      "working_file_sha256": "9a62a39c301173c406437fd5e2c495c4d7463426c2cb7be591818192220ab6bf",
+      "bytes": 6798
+    },
+    {
+      "path": "src/R/era5.R",
+      "git_blob_sha256": "13792e79ee875ff7ab2068a2bc43e71a9ed2d1f013b43c6f3fdfbaa59825ae35",
+      "working_file_sha256": "9699dfefac56acd704e50582d2d38e5d5a414617b3c6135a4a2c8c1bed275347",
+      "bytes": 19373
+    },
+    {
+      "path": "src/R/events.R",
+      "git_blob_sha256": "a04180c08372b9dc274d835873284e9e22c29348a37bc88a78371b2ac818c30d",
+      "working_file_sha256": "f326d5454307eb92bd899cd8e929031e1644d416f5d3714d1f2c2206e6ac7407",
+      "bytes": 13353
+    },
+    {
+      "path": "src/R/figure_style.R",
+      "git_blob_sha256": "0b38088b8a9b8a5a315bc161a8783910d3d1a5d9806b78c512df268f3132283f",
+      "working_file_sha256": "5e4ecf65b2fe249e6cba1d132a95601d0a4e8a8e5d6a9d15e4d5ff1efc2328e0",
+      "bytes": 3142
+    },
+    {
+      "path": "src/R/figures.R",
+      "git_blob_sha256": "94dbfa8a6f38dd03442e51942b4b3342536ceffba820368946ba1fb982c59470",
+      "working_file_sha256": "be8cc857581be306cef1c318fd8dbe7c16ea102b46713b8237f1dff806068c26",
+      "bytes": 29309
+    },
+    {
+      "path": "src/R/figures_stats.R",
+      "git_blob_sha256": "d830662d2a9eb9b77c63f96b2d15ba3d520e837f63aba35115c9447e4b378935",
+      "working_file_sha256": "50ac8fb2f9cb662d05ababfd0463118b89147b2d2b1454e233d458540efbac35",
+      "bytes": 13796
+    },
+    {
+      "path": "src/R/heatwaves.R",
+      "git_blob_sha256": "bb74a0dfa7cc050196837c77f410e4c64681d8046493785fb897484ed7a5e186",
+      "working_file_sha256": "04931c22e67872ebc058dbea469e00c81d32158fcdb50388bd2ed917c9366351",
+      "bytes": 6303
+    },
+    {
+      "path": "src/R/input.R",
+      "git_blob_sha256": "11d5d3bb8a60b36b515e7d850c781481ba8a9f1750ebabdd85e62700e5b336fc",
+      "working_file_sha256": "e74c22e5214049bab23017a227d8d077d854f040118f6179e8ff5f0963df665e",
+      "bytes": 13694
+    },
+    {
+      "path": "src/R/lgcp.R",
+      "git_blob_sha256": "d025c67d6f868e916656b0101ab010c6f7eca157c416f451ed153c73c11956ed",
+      "working_file_sha256": "6f1983db8890c1dec36e2982dedfcc1bb88cb9e5686cfe86310eb2395adbe8b7",
+      "bytes": 12030
+    },
+    {
+      "path": "src/R/power_law.R",
+      "git_blob_sha256": "4a86715fc234a4428fc3b71dbac67a435bbf40750df74f1e8ed7e6452240dd69",
+      "working_file_sha256": "55e4d46bd7739d894b31dda0658f243948019e9c4288aae6a4e5cada5ac9030c",
+      "bytes": 9694
+    },
+    {
+      "path": "src/R/readme.R",
+      "git_blob_sha256": "f5fae80e154bd4ee7b29c3adabd7353340937c0ff7b55daa706203ca5c9bf052",
+      "working_file_sha256": "16ea11247e1a266b4f3e35d1c1cfe280d929a29de66edce97f584d38bf176c3f",
+      "bytes": 10856
+    },
+    {
+      "path": "src/R/regional_days.R",
+      "git_blob_sha256": "9ee58799584e4faeed443fbe6aa4bc833c6fe557f1f9ef703587d34a73a6dbcf",
+      "working_file_sha256": "39d9c90b987e5a2d575815cbd896f122d6a2b002ebf5793c36fc37f108f6f70f",
+      "bytes": 3858
+    },
+    {
+      "path": "src/R/run.R",
+      "git_blob_sha256": "c38e123212d6f724fa9f8ca664509aec5c98aca565b3fa8226758b8d5c731d9c",
+      "working_file_sha256": "cc6618b60e43739b952c634910e8c8e1ca11ead6d8b4b91e34f76d92e02e9a14",
+      "bytes": 13783
+    },
+    {
+      "path": "src/R/scoRch.simulator-package.R",
+      "git_blob_sha256": "97e2756664970d8e9792d20d145cf0512f529b1680ad230e63cfce4075b21186",
+      "working_file_sha256": "b7cff888132b17f6e0b3f52c7b0f3e9a32a29b586c8972ae22761ef0849b952c",
+      "bytes": 1672
+    },
+    {
+      "path": "src/R/workbooks.R",
+      "git_blob_sha256": "fd4282255fbac99eb59c4db38be1889cf2f9a8aba79bb88f4143cabd8d6f9992",
+      "working_file_sha256": "1b6f5d0fd000826f5378645d932394c002e264eab0f89538343a3ddfa0c54167",
+      "bytes": 13692
+    },
+    {
+      "path": "src/R/write_tmax.R",
+      "git_blob_sha256": "55bc501e9f6b4ef6b8b60bc7a94126a9919bc7217d212980dd6cf0436892106a",
+      "working_file_sha256": "144c304ebb67e09467b252672c9cb55402781abc8f0bdad7c82726fa4edbf85e",
+      "bytes": 4224
+    },
+    {
+      "path": "src/inst/extdata/cds_daily_tmax_2012_great_plains.nc",
+      "git_blob_sha256": "26664947bc04c3babc976ce1f212370aec45e35621816a476565efbee2c67f0c",
+      "working_file_sha256": "26664947bc04c3babc976ce1f212370aec45e35621816a476565efbee2c67f0c",
+      "bytes": 556926
+    },
+    {
+      "path": "src/inst/extdata/north_america_tmax.nc",
+      "git_blob_sha256": "59bc15d0acb9dc0484546e36a9c9e16593fe9fddf8e8ddc3df5f7f711e8dbaee",
+      "working_file_sha256": "59bc15d0acb9dc0484546e36a9c9e16593fe9fddf8e8ddc3df5f7f711e8dbaee",
+      "bytes": 12445463
+    },
+    {
+      "path": "src/inst/scorch_config.yaml",
+      "git_blob_sha256": "43a7d37c3ead2dcaed0b1da92fbf8b39aafef1b8db53d3016193d8a10d10308c",
+      "working_file_sha256": "61803124051a0b0b143d88746e8ab71f4781d96d374ca2065301d01a34f5360f",
+      "bytes": 4309
+    },
+    {
+      "path": "src/man/classify_events.Rd",
+      "git_blob_sha256": "362ed6f2a69f7c0b88d137cb7512650426bbd68d5a581ac38d5d0427230c9ba8",
+      "working_file_sha256": "1d54711a178194b202571365d7af9aece1609a537801c9cdb58900f04e5dfcae",
+      "bytes": 1872
+    },
+    {
+      "path": "src/man/cluster_heatwaves.Rd",
+      "git_blob_sha256": "02b18817ed2c19aa1ecf9beab431a89f4cedb3b5f8fa90bf7e448d4578f56573",
+      "working_file_sha256": "2f3e45a7b0022aea15c762e1fd70b3cb079c1dd1c942cb74adc7637ece2ed22a",
+      "bytes": 2125
+    },
+    {
+      "path": "src/man/detect_heatwaves.Rd",
+      "git_blob_sha256": "ddaed7751990b808fbd1ff06776a16ecc70f2e5e3ab08ce8bf6475a943a50707",
+      "working_file_sha256": "4eee42aaf08ff2fa5d8fe5624137781fae3b75bbc35747d8cf952c3357fe37de",
+      "bytes": 1819
+    },
+    {
+      "path": "src/man/figures/compound_event_types.png",
+      "git_blob_sha256": "f0471caeee9709ed1100ba328edce2aa874e94857da81535f0bc1442e85af0b2",
+      "working_file_sha256": "f0471caeee9709ed1100ba328edce2aa874e94857da81535f0bc1442e85af0b2",
+      "bytes": 178521
+    },
+    {
+      "path": "src/man/figures/scorch_workflow.png",
+      "git_blob_sha256": "dfbe5311f39c6f5b2625dc2e453ad268e2f5b436e659124fa6f5628745db4831",
+      "working_file_sha256": "dfbe5311f39c6f5b2625dc2e453ad268e2f5b436e659124fa6f5628745db4831",
+      "bytes": 338217
+    },
+    {
+      "path": "src/man/fit_ellipses.Rd",
+      "git_blob_sha256": "50d2187298c0c5269eed39bbaa5606a77b81131001863c1552ac1794b9c17523",
+      "working_file_sha256": "17921feda2ec6aa8e25be9a7fa3bb0eb17092c819457370ba9e657714455caf7",
+      "bytes": 2033
+    },
+    {
+      "path": "src/man/fit_lgcp.Rd",
+      "git_blob_sha256": "14111a47b50f69ecd21c58365720241ecde6d4f98e9cf8488f52b49c6fa8506a",
+      "working_file_sha256": "a44d2db6dd5dfc4b8095a42f8fdf2fcbd10ea86f802c5c6e02df8a4a520b8f8d",
+      "bytes": 2716
+    },
+    {
+      "path": "src/man/fit_power_law.Rd",
+      "git_blob_sha256": "34a245e4c3bf60ea14a125021ff7d33b291e2646e0976dfb1da58cc04fbf28ee",
+      "working_file_sha256": "955b002565c6b59703f87f01b020fa4395ffb05a286388e1b22843be6cf93cad",
+      "bytes": 2102
+    },
+    {
+      "path": "src/man/read_era5.Rd",
+      "git_blob_sha256": "0fc39af8901d4f265ee0936629288eef9e36fcbd68f6457d1a540adafb970360",
+      "working_file_sha256": "92a2495b52d0f52763d79e06bc4ec8a2b10dcd85b13440ac9a2f795169827e05",
+      "bytes": 4494
+    },
+    {
+      "path": "src/man/read_tmax.Rd",
+      "git_blob_sha256": "75396eb4694447457109981a1c80a880762d1e60209e594082fee592cb5d517e",
+      "working_file_sha256": "6a125a54777a0bf5b301fb30b04b542c83a22dcf305c2b86727a07db693d0a65",
+      "bytes": 2221
+    },
+    {
+      "path": "src/man/run_scorch.Rd",
+      "git_blob_sha256": "4e7bfaf5381874c0fde59dc504359c194c1b283fc5f4332c8d43a65734793c1b",
+      "working_file_sha256": "ac2a6ced4143c430e5db6ba2099019030ac962c7d65618652ee8f888219e9aec",
+      "bytes": 3735
+    },
+    {
+      "path": "src/man/scoRch.simulator-package.Rd",
+      "git_blob_sha256": "384ededccbb681cf827fa37ab179cb7709bd756b84943d667c5fd496d393930c",
+      "working_file_sha256": "59a089252e95c6c7592d5d3137c0925ef06ba1fd5fe2825f2f07c813c6770db5",
+      "bytes": 1492
+    },
+    {
+      "path": "src/man/scorch_figure.Rd",
+      "git_blob_sha256": "1617010de9de3bdec2f63f9bacdae217131a0a080aac4008dde678398cf239bd",
+      "working_file_sha256": "6986c7100a370608df2455c4b21df42f913cded217b5f45242b13599fdc21eee",
+      "bytes": 1386
+    },
+    {
+      "path": "src/man/scorch_template.Rd",
+      "git_blob_sha256": "2400d0c4f3640292d2d891592b701220d2f01ba36ccb7009168f09c6d1d93a2d",
+      "working_file_sha256": "8be00442ac915e198aca6e9b754ffef6e66cc24d3eab2f14d7adcec88434856d",
+      "bytes": 1041
+    },
+    {
+      "path": "src/man/select_regional_days.Rd",
+      "git_blob_sha256": "66284a91d3c4413e3fd8c2b8640b8b5034a891cdbce502c1be9116358c0dc607",
+      "working_file_sha256": "962c0dca747dee5d4384ca7312ac54d2cb4ab62f3fccfe1e808ea5a72aec88ca",
+      "bytes": 1435
+    },
+    {
+      "path": "src/man/tmax_from_array.Rd",
+      "git_blob_sha256": "ccd8e19871594d3e4c42d0b8505fd3e56c2b409e3731f9fba915f16ac45080ba",
+      "working_file_sha256": "59ea9d87e878894a10a319e43039ab2f42c941f89d618478c744f46a9ed6cf45",
+      "bytes": 1331
+    },
+    {
+      "path": "src/man/write_scorch_config.Rd",
+      "git_blob_sha256": "28c322c62cd576231e48e1a4cf73af14d51b27ee9446779ffe7468f5226c1711",
+      "working_file_sha256": "37dcaf3ec141288189137d94db172f1ebc13c481d29451288e1a88bed89ee153",
+      "bytes": 1131
+    },
+    {
+      "path": "src/man/write_tmax.Rd",
+      "git_blob_sha256": "1dd715c7b46d7b10fbec1f96bc0bf54b7c32fcf866dcf35505da31d90e32d739",
+      "working_file_sha256": "514d7e1699a106305d443830347b0084a98273d3efd957ad1441e025ba8dc459",
+      "bytes": 1962
+    },
+    {
+      "path": "src/tests/testthat.R",
+      "git_blob_sha256": "511127f701c9ee70dda706ab0b106a415a56f54dce13fbbbb8340c5a414fb091",
+      "working_file_sha256": "1b4bec8094f7a43ed8617bfc5d4f5788e50e3f1b07f21abb201082ac2fa7bd35",
+      "bytes": 80
+    },
+    {
+      "path": "src/tests/testthat/fixtures/study_cell_series.rds",
+      "git_blob_sha256": "02818b2c4a4512461c4e094824dec24ba38a7498b4a29ffa2a862a6f0c21bb7c",
+      "working_file_sha256": "02818b2c4a4512461c4e094824dec24ba38a7498b4a29ffa2a862a6f0c21bb7c",
+      "bytes": 60652
+    },
+    {
+      "path": "src/tests/testthat/fixtures/study_centroids_projected.csv",
+      "git_blob_sha256": "0d4ebd777789567a34ad47e342b1ad05ab5ec4f1ec601d4ef1ffdaaaae9c9a3e",
+      "working_file_sha256": "0d4ebd777789567a34ad47e342b1ad05ab5ec4f1ec601d4ef1ffdaaaae9c9a3e",
+      "bytes": 1450
+    },
+    {
+      "path": "src/tests/testthat/fixtures/study_cluster_cells.csv",
+      "git_blob_sha256": "fe88f0ec41fdae425d66c1808a5a1419c5d642deb54335bf1a0424f9eb99bcfa",
+      "working_file_sha256": "fe88f0ec41fdae425d66c1808a5a1419c5d642deb54335bf1a0424f9eb99bcfa",
+      "bytes": 22380
+    },
+    {
+      "path": "src/tests/testthat/fixtures/study_day_cells.csv",
+      "git_blob_sha256": "bb84881bbc2e89b4e035824abbb404c202d4740d7eb23dfaf548aec55d8f78f6",
+      "working_file_sha256": "bb84881bbc2e89b4e035824abbb404c202d4740d7eb23dfaf548aec55d8f78f6",
+      "bytes": 99485
+    },
+    {
+      "path": "src/tests/testthat/fixtures/study_day_settings.csv",
+      "git_blob_sha256": "80e2d0fec77466263b72e693b664f5dbe2dc8c7a4bddfed96e780608a664a82c",
+      "working_file_sha256": "80e2d0fec77466263b72e693b664f5dbe2dc8c7a4bddfed96e780608a664a82c",
+      "bytes": 681
+    },
+    {
+      "path": "src/tests/testthat/fixtures/study_ellipses.csv",
+      "git_blob_sha256": "8094f091e4d8c3740070f9ecddf51fdb83c7d20a5b0094c09f9f0507342bc283",
+      "working_file_sha256": "8094f091e4d8c3740070f9ecddf51fdb83c7d20a5b0094c09f9f0507342bc283",
+      "bytes": 1424
+    },
+    {
+      "path": "src/tests/testthat/fixtures/study_power_law_areas.csv",
+      "git_blob_sha256": "7fd5283510a101f04d36016d9092eee6b580ff22f248aff0af883a67fde08391",
+      "working_file_sha256": "7fd5283510a101f04d36016d9092eee6b580ff22f248aff0af883a67fde08391",
+      "bytes": 14695
+    },
+    {
+      "path": "src/tests/testthat/fixtures/study_power_law_fits.csv",
+      "git_blob_sha256": "144d9fc52e6af0f00670591afd057bfde9bdc165f22049a48ed1c992ff0b9c34",
+      "working_file_sha256": "144d9fc52e6af0f00670591afd057bfde9bdc165f22049a48ed1c992ff0b9c34",
+      "bytes": 293
+    },
+    {
+      "path": "src/tests/testthat/helper-workbooks.R",
+      "git_blob_sha256": "0c7bae820f6c2cbf8c41e54e50b6129fb90e8e6784ecba9afced6a6be89ea82a",
+      "working_file_sha256": "2b008dad90efc7a321917f6395f97b68b643c8ff74d3b1a20c970c21b48c8dda",
+      "bytes": 446
+    },
+    {
+      "path": "src/tests/testthat/test-empty-ellipses.R",
+      "git_blob_sha256": "ccc5f9feea2eb7e7b1b25c86e84fb36a69610751028a2320ecc7e8f28d66cbe3",
+      "working_file_sha256": "c1b5a7c540fb85b2d9662eec35b0cacf017e68859ea59dd06865dc7bf576a7ac",
+      "bytes": 1050
+    },
+    {
+      "path": "src/tests/testthat/test-era5.R",
+      "git_blob_sha256": "d86bb48cab1a8fd307a29f0ac20dd88dd8aa131cff3d82942c4527bb2f69a1c8",
+      "working_file_sha256": "773f13ac072a4aff68b268f3eb3261c7374af3dec4beabb1d9e225acee83daaf",
+      "bytes": 13115
+    },
+    {
+      "path": "src/tests/testthat/test-figures.R",
+      "git_blob_sha256": "1cd68ad46f3cb80f7e1c4f0f85e8919bf485aebd331d31ed53d001613302f880",
+      "working_file_sha256": "262e9b6a09edc6123aebb7713452dc7bb66968a1bffe9fc82156e96e87a71114",
+      "bytes": 2791
+    },
+    {
+      "path": "src/tests/testthat/test-input-config.R",
+      "git_blob_sha256": "b3055eb4eafd08317736a1c617879b8e517d838eaa4a587061fbfe9b07fc6959",
+      "working_file_sha256": "dba8fd6afedcb3e404f1dfb38e7f703956d33323f04e9be3433a40070854d158",
+      "bytes": 16560
+    },
+    {
+      "path": "src/tests/testthat/test-local-inputs.R",
+      "git_blob_sha256": "a2afb820dd2bde552d82f1a0ae6c1d66704c6527f7b9c5cd222e70369f4110a1",
+      "working_file_sha256": "cf1b5c759fb316b12c44c43ce5c2344d8ac3a72984b48fc721a2a3ecfc9a3ee9",
+      "bytes": 1641
+    },
+    {
+      "path": "src/tests/testthat/test-models.R",
+      "git_blob_sha256": "a32d3828aad5a1728cbd1b893f1e4eed9435debea80b8b7da79e8e6dcd9c903a",
+      "working_file_sha256": "6dbe10742bf26b92073394199bab6d5a8005f34185b21ddf44debf76af01aef7",
+      "bytes": 2921
+    },
+    {
+      "path": "src/tests/testthat/test-reference-study.R",
+      "git_blob_sha256": "464f054898eb292af2f6fddc17329a69ff325fa0f50dea719dc0d472a5c5256a",
+      "working_file_sha256": "b3ae90b8273c1d77db8f33442929adc52aba2f069b6dce4e050537f20ebb3761",
+      "bytes": 6131
+    },
+    {
+      "path": "src/tests/testthat/test-season-validation.R",
+      "git_blob_sha256": "44272e2dac9553e79b4ada015b15a6b458bbe099d1ad58002cb036ea08c7c6e4",
+      "working_file_sha256": "20df074bcab43ff6b685ab326c0899f97a1584229a9f8c59bebdfcf5def295b1",
+      "bytes": 2034
+    },
+    {
+      "path": "src/tests/testthat/test-stages.R",
+      "git_blob_sha256": "8f0d1dd285e65b371166341ba814bcd723a404b5ba42b36e4acf47938ab42308",
+      "working_file_sha256": "54d9865cceed47c17b0caf22d0802d6351a6668f94aab68e1942468dfedc1c4c",
+      "bytes": 9668
+    },
+    {
+      "path": "src/tests/testthat/test-workbooks.R",
+      "git_blob_sha256": "3fdf7b1d4f77715816b5bce36dab0a52c828549543ab2ac7ad613154b1af63dc",
+      "working_file_sha256": "debd4c634bdc3738c822e045e391f50a169d8ff02434f2443527d24d82ac7c9f",
+      "bytes": 8759
+    },
+    {
+      "path": "src/tests/testthat/test-workflow.R",
+      "git_blob_sha256": "bb348cd968a5047dbd26c07737402fe7f96f162ec6ebc9ad543c03d63be6eb68",
+      "working_file_sha256": "82e3411568fdbdf65899a847202a55f7993847a9451aa33981f8732011e2de42",
+      "bytes": 11540
+    },
+    {
+      "path": "src/tests/testthat/test-write-tmax.R",
+      "git_blob_sha256": "7a3cb0d35fc54d5df624b8ee76f699a1a671b0073946584b646cfd67a53ee593",
+      "working_file_sha256": "020aad802f3d3eca7ebcb1dedc42f1f0756aa11b97570d8fb529d6fe215fe6dd",
+      "bytes": 2400
+    }
+  ]
+}

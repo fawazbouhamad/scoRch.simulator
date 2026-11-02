@@ -85,7 +85,7 @@ FILES
 WARNINGS
   None.
 
-TRACED EVENT (demo/run_demo.R, part 4)
+TRACED EVENT (demo/run.R)
   Compound event 7 (Catalog 5): 2012-06-28 to 2012-07-04, 7 days, Temporally Clustered = Type 3, clusters per day 1-1-1-1-1-1-1
 
   Stage 2 (Catalog 2): every day of the event had at least 353 of the 1800 cells in a local heatwave,
@@ -133,14 +133,14 @@ TRACED EVENT (demo/run_demo.R, part 4)
      2012-07-06  35.34                no             no           no       no
      2012-07-07  35.81                no             no           no       no
 
-  Figure: results/figures/consistent_multiday_events.png shows this event (named in demo/processed_config.yaml
+  Figure: results/figures/consistent_multiday_events.png shows this event (named in demo/config/prepared.yaml
   under figures: representative_events): orange cells are the clustered heatwave cells, grey cells the
   heatwave cells DBSCAN left out, the black outline is the ellipse and the dot its weighted centroid.
 
 SETTINGS OF THIS RUN (YAML)
   input:
     file: src/inst/extdata/north_america_tmax.nc
-    format: auto
+    format: daily_tmax
     variable: auto
     longitude: auto
     latitude: auto

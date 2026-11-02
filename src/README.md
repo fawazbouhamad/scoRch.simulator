@@ -23,4 +23,4 @@ R CMD INSTALL src
 | [man](man/) | R help pages and explanatory artwork |
 | [tests](tests/) | Automated checks and study reference fixtures |
 
-The [structure guide](../docs/structure.md) maps each task to its source file.
+The [user guide](../docs/README.md#software-structure) maps each task to its source file.
