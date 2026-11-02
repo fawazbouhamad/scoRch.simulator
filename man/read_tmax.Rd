@@ -51,7 +51,7 @@ dataset) are excluded; any other missing value stops the analysis, because
 the method needs a complete record for every cell.
 }
 \examples{
-file <- system.file("extdata", "north_america_tmax.nc", package = "scoRch.generator")
+file <- system.file("extdata", "north_america_tmax.nc", package = "scoRch.simulator")
 tmax <- read_tmax(file)
 tmax
 }

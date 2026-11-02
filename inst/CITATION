@@ -1,15 +1,15 @@
-citHeader("To cite scoRch.generator in publications, please cite the software and the study it implements:")
+citHeader("To cite scoRch.simulator in publications, please cite the software and the study it implements:")
 
 bibentry(
   bibtype  = "Manual",
-  title    = "scoRch.generator: Spatiotemporal Classification of Regional Compound Heatwaves",
+  title    = "scoRch.simulator: Spatiotemporal Classification of Regional Compound Heatwaves",
   author   = c(person("Fawaz", "Bouhamad"), person("Nasser", "Najibi")),
   year     = "2026",
-  note     = "R package version 1.0.0",
-  url      = "https://github.com/fawazbouhamad/scoRch.generator",
+  note     = "R package version 1.0.1",
+  url      = "https://github.com/fawazbouhamad/scoRch.simulator",
   textVersion = paste("Bouhamad, F., and Najibi, N. (2026).",
-                      "scoRch.generator: Spatiotemporal Classification of Regional Compound Heatwaves.",
-                      "R package version 1.0.0. https://github.com/fawazbouhamad/scoRch.generator")
+                      "scoRch.simulator: Spatiotemporal Classification of Regional Compound Heatwaves.",
+                      "R package version 1.0.1. https://github.com/fawazbouhamad/scoRch.simulator")
 )
 
 bibentry(

@@ -20,7 +20,7 @@
 #'   type), `annual_counts`, `annual_duration` (mean duration of Type 3 and
 #'   Type 4 events by start year) and `trends` (trend tests on those series).
 #' @examples
-#' file <- system.file("extdata", "north_america_tmax.nc", package = "scoRch.generator")
+#' file <- system.file("extdata", "north_america_tmax.nc", package = "scoRch.simulator")
 #' tmax <- read_tmax(file, start = "2015-01-01")
 #' clusters <- cluster_heatwaves(select_regional_days(detect_heatwaves(tmax)))
 #' events <- classify_events(clusters, fit_ellipses(clusters, tmax))

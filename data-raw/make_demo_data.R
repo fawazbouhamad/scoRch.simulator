@@ -1,4 +1,4 @@
-# Build the demonstration data of scoRch.generator:
+# Build the demonstration data of scoRch.simulator:
 #   inst/extdata/north_america_tmax.nc   daily maximum 2-m temperature on 1-degree cells,
 #                                        25-50 N and 130-58 W, every April-September day of
 #                                        1996-2025 (25 x 72 = 1,800 cells, 5,490 dates)
@@ -13,7 +13,7 @@
 #
 # Run from the package root, with the package installed:
 #   Rscript data-raw/make_demo_data.R path/to/raw_daily_nc
-suppressPackageStartupMessages({library(ncdf4); library(scoRch.generator)})
+suppressPackageStartupMessages({library(ncdf4); library(scoRch.simulator)})
 dir <- commandArgs(trailingOnly = TRUE)[1]
 if (is.na(dir) || !dir.exists(dir)) stop("give the folder of the yearly <year>_daily_Tmax_NA.nc files")
 years <- 1996:2025
@@ -69,14 +69,14 @@ for (i in 1:8) {                       # the 4 x 4 mean by hand, from the raw fi
 
 # 3. The file.
 write_tmax(tmax, target, precision = "int16", overwrite = TRUE,
-           title = "scoRch.generator demonstration data: daily maximum 2-m temperature, 25-50 N and 130-58 W, April-September 1996-2025",
+           title = "scoRch.simulator demonstration data: daily maximum 2-m temperature, 25-50 N and 130-58 W, April-September 1996-2025",
            source = paste("ERA5 (Hersbach et al., 2020) hourly 2-m temperature from the ARCO-ERA5 archive on Google Cloud",
                           "(Carver and Merose, 2023), reduced by the authors to the daily maximum of each UTC calendar day",
                           "at 0.25 degrees (files <year>_daily_Tmax_NA.nc), averaged to 1-degree cells by",
-                          "scoRch.generator::read_era5() and rounded to 0.01 degC"),
+                          "scoRch.simulator::read_era5() and rounded to 0.01 degC"),
            licence = "CC BY 4.0 for the authors' processing; contains modified Copernicus Climate Change Service information 2026 (ERA5)",
-           history = sprintf("written on %s by data-raw/make_demo_data.R of scoRch.generator %s from 30 yearly files (data-raw/arco_na_manifest.txt)",
-                             format(Sys.Date()), as.character(packageVersion("scoRch.generator"))))
+           history = sprintf("written on %s by data-raw/make_demo_data.R of scoRch.simulator %s from 30 yearly files (data-raw/arco_na_manifest.txt)",
+                             format(Sys.Date()), as.character(packageVersion("scoRch.simulator"))))
 back <- read_tmax(target)
 stopifnot(nrow(back$cells) == 1800, length(back$dates) == 5490, !anyNA(back$tmax), max(abs(back$tmax - tmax$tmax)) <= 0.005 + 1e-9)
 cat(sprintf("wrote %s: %d cells, %d dates, %.1f MB, md5 %s; Tmax %.2f to %.2f degC, round trip within %.4f degC\n",

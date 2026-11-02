@@ -38,7 +38,7 @@ the heatwave). A heatwave never crosses a gap in the calendar, such as the
 break between two warm seasons.
 }
 \examples{
-file <- system.file("extdata", "north_america_tmax.nc", package = "scoRch.generator")
+file <- system.file("extdata", "north_america_tmax.nc", package = "scoRch.simulator")
 heatwaves <- detect_heatwaves(read_tmax(file, start = "2015-01-01"))
 head(heatwaves$events)
 }

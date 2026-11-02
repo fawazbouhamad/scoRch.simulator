@@ -1,5 +1,5 @@
 ---
-title: 'scoRch.generator: An R package for the spatiotemporal classification of regional compound heatwaves'
+title: 'scoRch.simulator: An R package for the spatiotemporal classification of regional compound heatwaves'
 tags:
   - R
   - heatwaves
@@ -22,7 +22,7 @@ bibliography: paper.bib
 # Summary
 
 Heatwaves that cover large regions for several days cause the greatest harm,
-yet most software describes heatwaves one location at a time. `scoRch.generator`
+yet most software describes heatwaves one location at a time. `scoRch.simulator`
 implements SCORCH (Spatiotemporal Classification of Regional Compound
 Heatwaves), the method of our study of compound space-time heatwave
 typologies [@bouhamad_najibi_scorch], as an R package for any gridded daily
@@ -50,7 +50,7 @@ measures [@lyon2019; @keellings2020] and one-off clustering scripts. Such
 code is rarely reusable, and the many conventions that decide the result
 (which quantile rule, which neighbourhood distance, how border cells are
 assigned, how single cool days inside a hot spell are treated) are seldom
-documented. `scoRch.generator` packages the complete SCORCH chain with its
+documented. `scoRch.simulator` packages the complete SCORCH chain with its
 conventions fixed and documented, so that climate scientists, hydrologists
 and risk analysts can apply the published typology to their own regions with
 nothing more than R. The target users are researchers and students with
@@ -71,7 +71,7 @@ follow contiguous warm areas but do not provide a regional-day criterion, a
 data-driven choice of clustering settings, ellipse descriptors or a typology.
 General clustering and point-process software exists in R: `dbscan`
 [@hahsler2019] implements DBSCAN efficiently and `spatstat` [@baddeley2005;
-@baddeley2015] fits log-Gaussian Cox processes. `scoRch.generator` builds on
+@baddeley2015] fits log-Gaussian Cox processes. `scoRch.simulator` builds on
 these two packages rather than reimplementing them, and contributes what no
 existing package offers: the regional selection, the parameter search and
 pooling rules, the ellipse geometry and weighting, the typology, and the

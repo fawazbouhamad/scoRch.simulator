@@ -7,7 +7,7 @@
 # demo/README.md explains every input and output and the event traced in
 # part 4.
 
-library(scoRch.generator)
+library(scoRch.simulator)
 
 # A day of the compound event traced in part 4. It was chosen after a first
 # run of this script (see demo/README.md); any date inside any event works.
@@ -21,7 +21,7 @@ trace_date <- "2012-06-30"
 # day of 1996-2025 (inst/extdata/README.md gives the source, licence and
 # processing). read_tmax() reads any NetCDF file of daily maximum temperature
 # on a regular grid.
-file <- system.file("extdata", "north_america_tmax.nc", package = "scoRch.generator")
+file <- system.file("extdata", "north_america_tmax.nc", package = "scoRch.simulator")
 tmax <- read_tmax(file)
 print(tmax)
 

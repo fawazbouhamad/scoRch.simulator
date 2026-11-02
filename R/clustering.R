@@ -23,7 +23,7 @@
 #'   parameter choice of every day), `sequences` (settings of every run of
 #'   consecutive days) and the tables carried from the earlier stages.
 #' @examples
-#' file <- system.file("extdata", "north_america_tmax.nc", package = "scoRch.generator")
+#' file <- system.file("extdata", "north_america_tmax.nc", package = "scoRch.simulator")
 #' regional <- select_regional_days(detect_heatwaves(read_tmax(file, start = "2015-01-01")))
 #' clusters <- cluster_heatwaves(regional)
 #' head(clusters$clusters)

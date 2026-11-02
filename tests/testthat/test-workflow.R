@@ -1,4 +1,4 @@
-example_file <- system.file("extdata", "north_america_tmax.nc", package = "scoRch.generator")
+example_file <- system.file("extdata", "north_america_tmax.nc", package = "scoRch.simulator")
 
 test_that("the complete workflow runs on the example data and writes every output", {
   out <- file.path(tempfile("scorch"), "results")
@@ -32,7 +32,7 @@ test_that("the complete workflow runs on the example data and writes every outpu
   expect_true(all(result$plots$status == "generated"))
   expect_setequal(list.files(out, recursive = TRUE), c(expected, "figures/figure_2.png", "figures/user-plot.png"))
   readme <- readLines(file.path(out, "README.txt"))
-  expect_equal(readme[1], paste("scoRch.generator", as.character(packageVersion("scoRch.generator")), "results"))
+  expect_equal(readme[1], paste("scoRch.simulator", as.character(packageVersion("scoRch.simulator")), "results"))
   expect_true(any(readme == "  Stage 5  Compound heatwave events: 29"))
   expect_true(any(grepl("^  ellipse_spatial_patterns.png: ", readme)))
   expect_false(any(grepl("not drawn|Table 1", readme)))
@@ -62,10 +62,10 @@ test_that("the complete workflow runs on the example data and writes every outpu
   expect_error(scorch_figure(result, 2), "no visualization")
   type_4 <- result$events$events[result$events$events$event_type == 4, ]
   result$config$figures$representative_events$type_4 <- format(type_4$start_date[1])
-  shown <- scoRch.generator:::representative_events(result, 4)[[1]]
+  shown <- scoRch.simulator:::representative_events(result, 4)[[1]]
   expect_equal(shown[1], type_4$start_date[1])
   result$config$figures$representative_events$type_4 <- "1900-01-01"
-  expect_error(scoRch.generator:::representative_events(result, 4), "not inside a Type 4 event")
+  expect_error(scoRch.simulator:::representative_events(result, 4), "not inside a Type 4 event")
   previous_png <- unname(tools::md5sum(png_file))
   expect_error(scorch_figure(result, "mixed_multiday_events", png_file), "not inside a Type 4 event")
   expect_equal(unname(tools::md5sum(png_file)), previous_png)
@@ -74,14 +74,14 @@ test_that("the complete workflow runs on the example data and writes every outpu
   skipped_file <- tempfile(fileext = ".png")
   expect_false(suppressMessages(scorch_figure(result_without_lgcp, "centroid_concentration", skipped_file)))
   expect_false(file.exists(skipped_file))
-  expect_length(scoRch.generator:::representative_events(result, 3), 2)   # other types unaffected
+  expect_length(scoRch.simulator:::representative_events(result, 3), 2)   # other types unaffected
   type_3 <- result$events$events[result$events$events$event_type == 3, ]
   result$config$figures$representative_events$type_3 <- format(type_3$start_date[1] + 0:1)
-  expect_error(scoRch.generator:::representative_events(result, 3), "different Type 3 events")
+  expect_error(scoRch.simulator:::representative_events(result, 3), "different Type 3 events")
   result$config$figures$representative_events$type_3 <- format(type_3$end_date[1])
-  expect_error(scoRch.generator:::representative_events(result, 3), "last day")
+  expect_error(scoRch.simulator:::representative_events(result, 3), "last day")
   result$config$figures$representative_events$type_4 <- NULL
-  automatic <- scoRch.generator:::representative_events(result, 4)
+  automatic <- scoRch.simulator:::representative_events(result, 4)
   expect_true(all(diff(automatic[[1]]) == 1))
   bad_config <- config
   bad_config$figures <- list(representative_events = list(type_4 = "1900-01-01"))

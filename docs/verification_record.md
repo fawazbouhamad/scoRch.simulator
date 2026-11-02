@@ -1,5 +1,9 @@
 # Verification record, 12 October 2026
 
+The original record below describes `scoRch.generator` 1.0.0 and retains
+the names and commands actually used then. The package is now named
+`scoRch.simulator`; verification of the rename is recorded at the end.
+
 Package: scoRch.generator 1.0.0, the tree of the single root commit
 released on 12 October 2026. (An earlier packaging of the code with the
 study's own region as example data was checked the same way on 11 October
@@ -161,7 +165,7 @@ Every push runs `R CMD check` on macOS, Windows and Ubuntu
 (`.github/workflows/R-CMD-check.yaml`) and the demo plus the example on
 Ubuntu with the workbook, README and figure comparisons of
 `demo/compare_output.R` (`.github/workflows/demo.yaml`):
-https://github.com/fawazbouhamad/scoRch.generator/actions.
+https://github.com/fawazbouhamad/scoRch.simulator/actions.
 
 The release tree was published four times on 12 October 2026, each time as
 the single root commit of the repository, the earlier commit kept in a local
@@ -204,3 +208,35 @@ archive or citation of it existed.
   is what this account experienced on 11-12 October 2026.
 - The Zenodo software DOI of the next release has not been minted
   (`release_checklist.md`).
+
+## Package rename verification on 1 November 2026
+
+Package: scoRch.simulator 1.0.1, pending a tagged release. This change
+renames the package and repository from scoRch.generator. The existing
+v1.0.0 tag and release retain the original package name.
+
+On Windows 11 with R 4.5.1:
+
+- Regenerated the help pages with roxygen2 and installed the renamed package
+  into an isolated library. The namespace, bundled configuration and sample
+  data load under the new name.
+- Built scoRch.simulator_1.0.1.tar.gz and ran R CMD check --no-manual:
+  Status: OK. The test suite reported 605 passed expectations, 0 failures,
+  0 warnings and 4 skips. The skipped checks require a live CDS request,
+  the full current or historical study data, or the long bootstrap flag;
+  those optional checks were not rerun for the rename.
+- Ran demo/run_demo.R with its 5000 bootstrap repetitions and the offline
+  demo/cds_processing_example.R. Ran demo/compare_output.R: every workbook
+  sheet matched the existing expected results within its declared tolerance,
+  all expected figures were present, and README.txt matched apart from run
+  time after updating its package-name and version header. The demonstration
+  still has 65,790 local heatwaves, 140 selected days, 376 clusters/ellipses
+  and 29 compound events (Types 1-4: 1/4/20/4).
+- Compared all 19 R source files with the original commit: every change is
+  the literal package-name substitution, including installed-resource
+  lookups and help examples. All 18 binary data, fixture, figure and
+  workbook files are byte-identical. All 11 CSV and YAML files are unchanged
+  after Git line-ending normalization. The embedded historical provenance
+  in the NetCDF files is preserved.
+- Parsed the software JSON and citation metadata and checked the new name,
+  version and repository links. No new release or software DOI was created.

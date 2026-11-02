@@ -1,4 +1,4 @@
 library(testthat)
-library(scoRch.generator)
+library(scoRch.simulator)
 
-test_check("scoRch.generator")
+test_check("scoRch.simulator")

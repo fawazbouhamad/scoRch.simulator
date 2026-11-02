@@ -1,3 +1,15 @@
+# scoRch.simulator 1.0.1 (unreleased)
+
+- Renamed the package and GitHub repository from `scoRch.generator`
+  to `scoRch.simulator`. Install from the renamed repository and use
+  `library(scoRch.simulator)`.
+- Updated installed-resource lookups, help pages, examples, tests,
+  citations and software metadata to use the new name.
+- The analysis functions, settings, bundled data and scientific
+  calculations are unchanged. Only the name and version in the
+  expected demonstration README have changed.
+- The existing `v1.0.0` tag and release retain the original name.
+
 # scoRch.generator 1.0.0
 
 First public release, 12 October 2026: the R implementation of SCORCH

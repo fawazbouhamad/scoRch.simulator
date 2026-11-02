@@ -38,7 +38,7 @@ finally clustered with those pooled settings. Clusters are numbered in the
 order DBSCAN finds them, scanning cells west to east and south to north.
 }
 \examples{
-file <- system.file("extdata", "north_america_tmax.nc", package = "scoRch.generator")
+file <- system.file("extdata", "north_america_tmax.nc", package = "scoRch.simulator")
 regional <- select_regional_days(detect_heatwaves(read_tmax(file, start = "2015-01-01")))
 clusters <- cluster_heatwaves(regional)
 head(clusters$clusters)

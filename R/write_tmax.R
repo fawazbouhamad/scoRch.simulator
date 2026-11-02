@@ -21,7 +21,7 @@
 #' @param overwrite Replace an existing file?
 #' @return The path, invisibly.
 #' @examples
-#' file <- system.file("extdata", "north_america_tmax.nc", package = "scoRch.generator")
+#' file <- system.file("extdata", "north_america_tmax.nc", package = "scoRch.simulator")
 #' tmax <- read_tmax(file, months = 7, start = "2012-01-01", end = "2012-12-31")
 #' copy <- write_tmax(tmax, tempfile(fileext = ".nc"))
 #' identical(read_tmax(copy, months = 7)$tmax, tmax$tmax)
@@ -64,8 +64,8 @@ write_tmax <- function(tmax, file, precision = c("int16", "float32"), title = NU
     source <- paste(c(tmax$source, tmax$preprocessing), collapse = "; ")
   }
   if (is.null(history)) {
-    history <- sprintf("written by scoRch.generator %s on %s",
-                       as.character(utils::packageVersion("scoRch.generator")), format(Sys.Date()))
+    history <- sprintf("written by scoRch.simulator %s on %s",
+                       as.character(utils::packageVersion("scoRch.simulator")), format(Sys.Date()))
   }
   ncdf4::ncatt_put(nc, 0, "Conventions", "CF-1.8")
   if (!is.null(title)) ncdf4::ncatt_put(nc, 0, "title", title)

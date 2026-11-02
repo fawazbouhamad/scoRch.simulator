@@ -1,6 +1,6 @@
 test_that("warm-season months form one contiguous calendar run", {
-  validate <- scoRch.generator:::validate_season_months
-  season_start <- scoRch.generator:::season_start_month
+  validate <- scoRch.simulator:::validate_season_months
+  season_start <- scoRch.simulator:::season_start_month
 
   expect_equal(validate(4:9), 4:9)
   expect_equal(validate(c(11, 12, 1, 2, 3)), c(1L, 2L, 3L, 11L, 12L))
@@ -16,7 +16,7 @@ test_that("warm-season months form one contiguous calendar run", {
 })
 
 test_that("configuration rejects seasons with more than one start month", {
-  read_config <- scoRch.generator:::read_config
+  read_config <- scoRch.simulator:::read_config
   expect_error(read_config(list(period = list(warm_season_months = c(11, 12, 1, 3))),
                            input_required = FALSE), "contiguous season")
   cfg <- read_config(list(period = list(warm_season_months = c(11, 12, 1, 2, 3))),

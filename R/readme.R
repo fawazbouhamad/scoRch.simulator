@@ -31,13 +31,13 @@ run_readme <- function(result, books) {
 readme_heading <- function(result, complete) {
   started <- format(result$started, "%Y-%m-%d %H:%M:%S")
   if (!complete) {
-    return(c(sprintf("scoRch.generator %s results: INCOMPLETE RUN", result$package_version),
+    return(c(sprintf("scoRch.simulator %s results: INCOMPLETE RUN", result$package_version),
              sprintf("Run started %s and stopped: %s", started, result$incomplete),
              "Only Catalogs 1-3, the cell thresholds and the daily heatwave extent are available.",
              "No ellipses, compound events, models or figures were produced."))
   }
   seconds <- result$elapsed_minutes * 60
-  c(sprintf("scoRch.generator %s results", result$package_version),
+  c(sprintf("scoRch.simulator %s results", result$package_version),
     sprintf("Run started %s, finished in %s.", started,
             if (seconds < 120) sprintf("%.0f seconds", seconds) else sprintf("%.1f minutes", seconds / 60)))
 }

@@ -1,4 +1,4 @@
-example_file <- system.file("extdata", "north_america_tmax.nc", package = "scoRch.generator")
+example_file <- system.file("extdata", "north_america_tmax.nc", package = "scoRch.simulator")
 
 # Write an ERA5-like NetCDF file of 2-m temperature (`values`: time x
 # latitude x longitude, or time x latitude x longitude x expver). New CDS
@@ -163,7 +163,7 @@ test_that("raw ERA5 named in the configuration gives the same analysis as its da
 
   config <- list(input = list(file = file), output = list(directory = file.path(folder, "era5")),
                  power_law = list(bootstrap_repetitions = 20))
-  expect_equal(scoRch.generator:::detect_input_format(file), "era5")
+  expect_equal(scoRch.simulator:::detect_input_format(file), "era5")
   era5 <- suppressMessages(run_scorch(config))
   reference <- tmax_from_array(grid, daily$dates, lon, lat, units = "K", months = 4:9)
   baseline <- suppressMessages(run_scorch(list(output = list(directory = file.path(folder, "daily")),
@@ -187,20 +187,20 @@ test_that("raw ERA5 named in the configuration gives the same analysis as its da
 })
 
 test_that("daily maximum temperature files are read as before", {
-  read <- function(input) scoRch.generator:::read_configured_input(scoRch.generator:::read_config(list(input = input)))
+  read <- function(input) scoRch.simulator:::read_configured_input(scoRch.simulator:::read_config(list(input = input)))
   before <- read_tmax(example_file)
   expect_identical(read(list(file = example_file)), before)
   expect_identical(read(list(file = example_file, format = "daily_tmax")), before)
   expect_identical(read(list(file = example_file, variable = "tmax", longitude = "lon", latitude = "lat",
                              time = "time")), before)
-  expect_equal(scoRch.generator:::detect_input_format(example_file), "daily_tmax")
+  expect_equal(scoRch.simulator:::detect_input_format(example_file), "daily_tmax")
   expect_error(read(list(file = c(example_file, example_file))), "one NetCDF file")
   expect_error(read(list(file = example_file, variable = "t2m")), "no temperature variable called 't2m'")
   expect_error(read(list(file = example_file, format = "era5")), "no temperature variable")
 })
 
 test_that("the input settings are checked", {
-  read <- scoRch.generator:::read_config
+  read <- scoRch.simulator:::read_config
   expect_error(read(list(input = list(file = example_file, format = "grib"))), "auto, era5 or daily_tmax")
   expect_error(read(list(input = list(file = example_file, era5_cell_size_deg = -1))), "era5_cell_size_deg")
   expect_error(read(list(input = list(file = c(example_file, "missing.nc")))), "does not exist: missing.nc")

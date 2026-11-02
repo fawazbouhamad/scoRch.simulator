@@ -45,7 +45,7 @@ write_scorch_config <- function(path = "scorch_config.yaml", overwrite = FALSE) 
 scorch_template <- function(path = "scorch_config.yaml", fast = FALSE, overwrite = FALSE) {
   check_new_file(path, overwrite)
   lines <- readLines(scorch_config_file())
-  example <- system.file("extdata", "north_america_tmax.nc", package = "scoRch.generator")
+  example <- system.file("extdata", "north_america_tmax.nc", package = "scoRch.simulator")
   input_line <- grep("^  file: null ", lines)
   if (length(input_line) != 1L) fail("The shipped configuration has no single 'input: file' line.")
   lines[input_line] <- sprintf("  file: '%s'    # the example dataset; replace with your NetCDF file, in quotes", example)
@@ -67,8 +67,8 @@ check_new_file <- function(path, overwrite) {
 
 # The SCORCH configuration installed with the package.
 scorch_config_file <- function() {
-  path <- system.file("scorch_config.yaml", package = "scoRch.generator")
-  if (!nzchar(path)) fail("The SCORCH configuration shipped with the package is missing; reinstall scoRch.generator.")
+  path <- system.file("scorch_config.yaml", package = "scoRch.simulator")
+  if (!nzchar(path)) fail("The SCORCH configuration shipped with the package is missing; reinstall scoRch.simulator.")
   path
 }
 

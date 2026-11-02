@@ -26,7 +26,7 @@ threshold: the observed count at or just above the \code{percentile} position
 of all daily counts (the "higher" quantile rule of the study).
 }
 \examples{
-file <- system.file("extdata", "north_america_tmax.nc", package = "scoRch.generator")
+file <- system.file("extdata", "north_america_tmax.nc", package = "scoRch.simulator")
 regional <- select_regional_days(detect_heatwaves(read_tmax(file, start = "2015-01-01")))
 regional$threshold_cells
 head(regional$selected_days)

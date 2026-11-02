@@ -17,7 +17,7 @@ processed input is version 1.0.0 of the Zenodo dataset 10.5281/zenodo.21717874
 3. Commit and push to `main`; wait for the `R-CMD-check` and `demo` workflows.
 4. Create the GitHub release (tag `vX.Y.Z` on the tested commit) with the
    `NEWS.md` entry as release notes, for example
-   `gh release create vX.Y.Z --target <commit> --title "scoRch.generator vX.Y.Z" --notes-file <notes>`.
+   `gh release create vX.Y.Z --target <commit> --title "scoRch.simulator vX.Y.Z" --notes-file <notes>`.
 5. Archive on Zenodo: either enable this repository in the Zenodo GitHub
    integration (https://zenodo.org/account/settings/github/) **before**
    creating the release, so Zenodo archives it automatically with the metadata

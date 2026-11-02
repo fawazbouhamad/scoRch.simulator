@@ -1,11 +1,11 @@
-# Contributing to scoRch.generator
+# Contributing to scoRch.simulator
 
 Thank you for your interest. The package is small on purpose; please keep
 contributions in that spirit.
 
 **Report a problem or ask for support.** Open an issue at
-<https://github.com/fawazbouhamad/scoRch.generator/issues> with your R version,
-the package version (`packageVersion("scoRch.generator")`), the configuration
+<https://github.com/fawazbouhamad/scoRch.simulator/issues> with your R version,
+the package version (`packageVersion("scoRch.simulator")`), the configuration
 file and the message you saw. Questions about the science of the method go to
 the authors (see the README).
 

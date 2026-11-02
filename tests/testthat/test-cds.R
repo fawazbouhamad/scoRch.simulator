@@ -2,7 +2,7 @@
 # resuming against a fake CDS, the file writer and the configuration switch.
 # The live request at the end runs only when SCORCH_CDS_LIVE is set.
 
-plan <- scoRch.generator:::plan_cds_requests
+plan <- scoRch.simulator:::plan_cds_requests
 
 # A small ERA5-like daily file for one request: t2m (K) on the 0.25-degree
 # points of the request area, one value per requested day.
@@ -61,7 +61,7 @@ fake_cds <- function(delay = 0L, first_status = NULL, jobs = new.env()) {
 }
 
 with_fake_cds <- function(backend, code) {
-  old <- options(scoRch.generator.cds_backend = backend)
+  old <- options(scoRch.simulator.cds_backend = backend)
   on.exit(options(old))
   force(code)
 }
@@ -84,12 +84,12 @@ test_that("requests are planned month by month or year by year, clipped to the p
   by_year <- plan(as.Date("1996-11-01"), as.Date("1997-03-31"), c(11, 12, 1, 2, 3), "year")
   expect_equal(by_year$months, I(list(c("11", "12"), c("01", "02", "03"))))
   expect_equal(nrow(plan(as.Date("1996-01-01"), as.Date("1996-03-31"), 4:9, "month")), 0)
-  expect_error(scoRch.generator:::check_area(c(25, -130, 50, -58)), "North above South")
-  expect_error(scoRch.generator:::check_area(c(50, -130, 25)), "four numbers")
+  expect_error(scoRch.simulator:::check_area(c(25, -130, 50, -58)), "North above South")
+  expect_error(scoRch.simulator:::check_area(c(50, -130, 25)), "four numbers")
 })
 
 test_that("area edges off the 0.25-degree ERA5 grid are refused before any request", {
-  check_area <- scoRch.generator:::check_area
+  check_area <- scoRch.simulator:::check_area
   expect_equal(check_area(c(44.25, -104, 34, -93.75)), c(44.25, -104, 34, -93.75))   # on the grid
   for (bad in list(c(44.1, -104, 34, -94), c(44, -104.3, 34, -94), c(44, -104, 34.05, -94), c(44, -104, 34, -93.9))) {
     expect_error(check_area(bad), "multiples of 0.25")
@@ -99,7 +99,7 @@ test_that("area edges off the 0.25-degree ERA5 grid are refused before any reque
   expect_error(with_fake_cds(untouched, fetch_era5_daily_tmax(c(44.1, -104, 34, -94), "2012-07-01", "2012-07-31",
                                                                 cache = tempfile())), "multiples of 0.25")
   expect_length(untouched$log$submitted, 0)
-  expect_error(scoRch.generator:::read_config(list(input = list(source = "cds", cds = list(area = c(44.1, -104, 34, -94))),
+  expect_error(scoRch.simulator:::read_config(list(input = list(source = "cds", cds = list(area = c(44.1, -104, 34, -94))),
                                                    period = list(start_date = "2012-07-01", end_date = "2012-07-31"))),
                "multiples of 0.25")
 })
@@ -169,7 +169,7 @@ test_that("write_tmax() writes a file that read_tmax() reads back", {
   nc <- ncdf4::nc_open(packed)
   expect_equal(ncdf4::ncatt_get(nc, 0, "title")$value, "test")
   expect_match(ncdf4::ncatt_get(nc, 0, "source")$value, "test array")
-  expect_match(ncdf4::ncatt_get(nc, 0, "history")$value, "scoRch.generator")
+  expect_match(ncdf4::ncatt_get(nc, 0, "history")$value, "scoRch.simulator")
   expect_equal(ncdf4::ncatt_get(nc, "tmax", "scale_factor")$value, 0.01)
   ncdf4::nc_close(nc)
   expect_error(write_tmax(tmax, packed), "already exists")
@@ -177,7 +177,7 @@ test_that("write_tmax() writes a file that read_tmax() reads back", {
 })
 
 test_that("the configuration selects the from-scratch path and checks its settings", {
-  read <- scoRch.generator:::read_config
+  read <- scoRch.simulator:::read_config
   base <- list(input = list(source = "cds", cds = list(area = c(37, -98, 35, -96))),
                period = list(start_date = "2012-06-20", end_date = "2012-07-10"))
   cfg <- read(base)
@@ -195,7 +195,7 @@ test_that("the configuration selects the from-scratch path and checks its settin
   cache <- tempfile("cds-run-")
   processed <- tempfile(fileext = ".nc")
   cfg <- read(modifyList(base, list(input = list(cds = list(cache_directory = cache, processed_file = processed)))))
-  tmax <- with_fake_cds(fake_cds(), suppressMessages(scoRch.generator:::read_configured_input(cfg)))
+  tmax <- with_fake_cds(fake_cds(), suppressMessages(scoRch.simulator:::read_configured_input(cfg)))
   expect_s3_class(tmax, "scorch_tmax")
   expect_true(file.exists(processed))
   expect_match(tmax$preprocessing, "saved to")
@@ -241,7 +241,7 @@ test_that("a cached file that does not answer its request is set aside and reque
   cache <- tempfile("cds-invalid-")
   dir.create(cache)
   area <- c(37, -98, 35, -96)
-  request <- scoRch.generator:::cds_request(2012, "06", sprintf("%02d", 20:30), area)
+  request <- scoRch.simulator:::cds_request(2012, "06", sprintf("%02d", 20:30), area)
   target <- file.path(cache, request$target)
   fetch <- function() {
     cds <- fake_cds()
@@ -253,31 +253,31 @@ test_that("a cached file that does not answer its request is set aside and reque
   out <- fetch()
   expect_length(out$submitted, 1)
   expect_true(file.exists(paste0(target, ".invalid")))
-  expect_null(scoRch.generator:::cds_cache_problem(target, request))
+  expect_null(scoRch.simulator:::cds_cache_problem(target, request))
   # a correct file whose record names another request: not reused
-  writeLines("another request", scoRch.generator:::cds_record_path(target))
-  expect_match(scoRch.generator:::cds_cache_problem(target, request), "recorded request differs")
+  writeLines("another request", scoRch.simulator:::cds_record_path(target))
+  expect_match(scoRch.simulator:::cds_cache_problem(target, request), "recorded request differs")
   expect_length(fetch()$submitted, 1)
   # a truncated download: not reused
   writeLines(character(), target)
-  expect_match(scoRch.generator:::cds_cache_problem(target, request), "empty")
+  expect_match(scoRch.simulator:::cds_cache_problem(target, request), "empty")
   expect_length(fetch()$submitted, 1)
   con <- file(target, "wb"); writeBin(as.raw(1:100), con); close(con)
-  expect_match(scoRch.generator:::cds_cache_problem(target, request), "not a readable NetCDF")
+  expect_match(scoRch.simulator:::cds_cache_problem(target, request), "not a readable NetCDF")
   expect_length(fetch()$submitted, 1)
   # a file with the right grid but one day missing: not reused
   write_daily_era5(target, modifyList(request, list(day = sprintf("%02d", 20:29))))
-  writeLines(scoRch.generator:::cds_request_key(request), scoRch.generator:::cds_record_path(target))
-  expect_match(scoRch.generator:::cds_cache_problem(target, request), "dates")
+  writeLines(scoRch.simulator:::cds_request_key(request), scoRch.simulator:::cds_record_path(target))
+  expect_match(scoRch.simulator:::cds_cache_problem(target, request), "dates")
   expect_length(fetch()$submitted, 1)
-  expect_null(scoRch.generator:::cds_cache_problem(target, request))
+  expect_null(scoRch.simulator:::cds_cache_problem(target, request))
   # a job note of another request is ignored; a delivered file that does not match is an error
   writeLines(c("https://cds.example/jobs/old", "another request"), paste0(target, ".job"))
-  unlink(c(target, scoRch.generator:::cds_record_path(target)))
+  unlink(c(target, scoRch.simulator:::cds_record_path(target)))
   out <- fetch()
   expect_length(out$submitted, 1)
   expect_false(file.exists(paste0(target, ".job")))
-  unlink(c(target, scoRch.generator:::cds_record_path(target)))
+  unlink(c(target, scoRch.simulator:::cds_record_path(target)))
   wrong <- fake_cds()
   wrong$transfer <- function(url, cache, filename, user) write_daily_era5(file.path(cache, filename), modifyList(request, list(area = c(38, -99, 36, -97))))
   expect_error(with_fake_cds(wrong, suppressMessages(fetch_era5_daily_tmax(area, "2012-06-20", "2012-06-30", cache = cache, retry = 1))),
@@ -286,8 +286,8 @@ test_that("a cached file that does not answer its request is set aside and reque
 })
 
 test_that("the shipped CDS sample reduces to the cells of the demonstration data", {
-  sample <- system.file("extdata", "cds_daily_tmax_2012_great_plains.nc", package = "scoRch.generator")
-  demo <- system.file("extdata", "north_america_tmax.nc", package = "scoRch.generator")
+  sample <- system.file("extdata", "cds_daily_tmax_2012_great_plains.nc", package = "scoRch.simulator")
+  demo <- system.file("extdata", "north_america_tmax.nc", package = "scoRch.simulator")
   skip_if(!nzchar(demo), "the demonstration data are not installed")
   from_cds <- suppressMessages(read_era5(sample, months = 4:9, cell_size = 1))
   expect_equal(nrow(from_cds$cells), 100)
@@ -307,7 +307,7 @@ test_that("one live CDS request reproduces the shipped sample (SCORCH_CDS_LIVE=1
   files <- fetch_era5_daily_tmax(area = c(44, -104, 34, -94), start = "2012-07-01", end = "2012-07-31",
                                  months = 7, cache = cache, time_out = 8 * 3600, retry = 60)
   live <- suppressMessages(read_era5(files, months = 7, cell_size = NULL))
-  sample <- system.file("extdata", "cds_daily_tmax_2012_great_plains.nc", package = "scoRch.generator")
+  sample <- system.file("extdata", "cds_daily_tmax_2012_great_plains.nc", package = "scoRch.simulator")
   shipped <- suppressMessages(read_era5(sample, months = 7, cell_size = NULL))
   expect_equal(live$dates, shipped$dates)
   expect_equal(live$tmax, shipped$tmax, tolerance = 1e-6)

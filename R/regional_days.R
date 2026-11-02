@@ -16,7 +16,7 @@
 #'   and south to north), `threshold_cells`, and the `thresholds`, `dates`,
 #'   `cells` and `grid` carried from the earlier stages.
 #' @examples
-#' file <- system.file("extdata", "north_america_tmax.nc", package = "scoRch.generator")
+#' file <- system.file("extdata", "north_america_tmax.nc", package = "scoRch.simulator")
 #' regional <- select_regional_days(detect_heatwaves(read_tmax(file, start = "2015-01-01")))
 #' regional$threshold_cells
 #' head(regional$selected_days)

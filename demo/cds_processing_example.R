@@ -10,11 +10,11 @@
 # account and no download. Run it from the top folder of the repository:
 #     Rscript demo/cds_processing_example.R
 
-library(scoRch.generator)
+library(scoRch.simulator)
 library(ncdf4)
 
 # 1. The raw CDS file -----------------------------------------------------------
-sample <- system.file("extdata", "cds_daily_tmax_2012_great_plains.nc", package = "scoRch.generator")
+sample <- system.file("extdata", "cds_daily_tmax_2012_great_plains.nc", package = "scoRch.simulator")
 nc <- nc_open(sample)
 cat(sprintf("CDS file: variable t2m in %s, %d x %d grid points at 0.25 degrees, %d daily values from %s\n",
             ncatt_get(nc, "t2m", "units")$value, nc$dim$longitude$len, nc$dim$latitude$len, nc$dim$valid_time$len,
@@ -40,7 +40,7 @@ cat(sprintf("Hottest cell-day: %.2f C in the cell %g N, %g W on %s\n", max(cells
 # archive, see inst/extdata/README.md). Two sources, the same reanalysis: the
 # cells agree to the float32 rounding of the sources plus the 0.01-degree
 # packing of the demonstration file.
-demo <- read_tmax(system.file("extdata", "north_america_tmax.nc", package = "scoRch.generator"),
+demo <- read_tmax(system.file("extdata", "north_america_tmax.nc", package = "scoRch.simulator"),
                   start = "2012-01-01", end = "2012-12-31")
 columns <- match(paste(cells$cells$lon, cells$cells$lat), paste(demo$cells$lon, demo$cells$lat))
 stopifnot(!anyNA(columns), identical(demo$dates, cells$dates))

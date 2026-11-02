@@ -21,7 +21,7 @@
 #'   `local_event_id` (dates x cells; 0 = not in a heatwave), plus the input's
 #'   `dates`, `cells` and `grid`.
 #' @examples
-#' file <- system.file("extdata", "north_america_tmax.nc", package = "scoRch.generator")
+#' file <- system.file("extdata", "north_america_tmax.nc", package = "scoRch.simulator")
 #' heatwaves <- detect_heatwaves(read_tmax(file, start = "2015-01-01"))
 #' head(heatwaves$events)
 #' @export

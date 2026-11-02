@@ -1,5 +1,5 @@
 fixture <- function(name) test_path("fixtures", name)
-heatwave_runs <- scoRch.generator:::heatwave_runs
+heatwave_runs <- scoRch.simulator:::heatwave_runs
 
 test_that("heatwave runs bridge single days, split at double gaps and never cross calendar gaps", {
   no_gap <- rep(FALSE, 16)
@@ -34,7 +34,7 @@ test_that("a study cell reproduces its catalog threshold and local heatwaves", {
 })
 
 test_that("the regional threshold uses the 'higher' quantile rule", {
-  quantile_higher <- scoRch.generator:::quantile_higher
+  quantile_higher <- scoRch.simulator:::quantile_higher
   expect_equal(quantile_higher(1:100, 0.975), 98)
   expect_equal(quantile_higher(c(5, 1, 3), 0.5), 3)
   expect_equal(quantile_higher(rep(0, 10), 0.975), 0)
@@ -68,24 +68,24 @@ test_that("ellipse geometry and weighted centroids reproduce catalog ellipses", 
   expected <- read.csv(fixture("study_ellipses.csv"))
   for (id in expected$ellipse_id) {
     g <- members[members$cluster_id == id, ]
-    g <- g[scoRch.generator:::longitude_major_order(g$lon, g$lat), ]
-    geometry <- scoRch.generator:::ellipse_geometry(g$lon, g$lat, 1.25)
+    g <- g[scoRch.simulator:::longitude_major_order(g$lon, g$lat), ]
+    geometry <- scoRch.simulator:::ellipse_geometry(g$lon, g$lat, 1.25)
     row <- expected[expected$ellipse_id == id, ]
     for (column in c("major_axis_km", "minor_axis_km", "area_km2", "axis_ratio", "azimuth_north_cw_deg",
                      "major_axis_east", "major_axis_north")) {
       expect_equal(geometry[[column]], row[[column]], tolerance = 1e-9, info = column)
     }
-    w <- scoRch.generator:::as_single_precision(g$tmax_c)
+    w <- scoRch.simulator:::as_single_precision(g$tmax_c)
     expect_equal(sum(g$lon * w) / sum(w), row$centroid_lon_weighted, tolerance = 1e-7)
     expect_equal(sum(g$lat * w) / sum(w), row$centroid_lat_weighted, tolerance = 1e-7)
   }
-  single <- scoRch.generator:::ellipse_geometry(45, 30, 1.25)
+  single <- scoRch.simulator:::ellipse_geometry(45, 30, 1.25)
   expect_equal(single$major_axis_km, 2.5)
   expect_equal(single$axis_ratio, 1)
 })
 
 test_that("event types, axial means and trend tests follow the study definitions", {
-  classify_event <- scoRch.generator:::classify_event
+  classify_event <- scoRch.simulator:::classify_event
   expect_equal(classify_event(1), 1L)
   expect_equal(classify_event(3), 2L)
   expect_equal(classify_event(c(1, 1, 1)), 3L)
@@ -94,22 +94,22 @@ test_that("event types, axial means and trend tests follow the study definitions
   expect_equal(classify_event(c(1, 0)), 4L)
   expect_equal(classify_event(c(0, 2)), 4L)
   expect_error(classify_event(0), "at least one cluster")
-  axial_mean <- scoRch.generator:::axial_mean
+  axial_mean <- scoRch.simulator:::axial_mean
   expect_equal(axial_mean(c(10, 20))$mean, 15)
   expect_equal(axial_mean(c(80, -80))$mean, 90)
   expect_equal(axial_mean(c(45, 45))$resultant, 1)
   expect_true(is.na(axial_mean(c(0, 90))$mean))
-  mk <- scoRch.generator:::mann_kendall(1:10)
+  mk <- scoRch.simulator:::mann_kendall(1:10)
   expect_equal(mk$s, 45)
   expect_equal(mk$z, 44 / sqrt(125))
   expect_equal(mk$result, "increasing")
-  expect_equal(scoRch.generator:::mann_kendall(c(3, 1, 2, 3))$result, "no significant trend")
-  expect_equal(scoRch.generator:::sens_slope(1:10, 2 * (1:10) + 1), 2)
+  expect_equal(scoRch.simulator:::mann_kendall(c(3, 1, 2, 3))$result, "no significant trend")
+  expect_equal(scoRch.simulator:::sens_slope(1:10, 2 * (1:10) + 1), 2)
 })
 
 test_that("seasons that span the new year are counted in the year they start", {
-  season_start_month <- scoRch.generator:::season_start_month
-  season_year <- scoRch.generator:::season_year
+  season_start_month <- scoRch.simulator:::season_start_month
+  season_year <- scoRch.simulator:::season_year
   expect_equal(season_start_month(4:9), 4L)
   expect_equal(season_start_month(c(11, 12, 1, 2, 3)), 11L)
   expect_equal(season_start_month(1:12), 1L)

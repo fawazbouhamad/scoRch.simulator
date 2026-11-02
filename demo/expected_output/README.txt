@@ -1,4 +1,4 @@
-scoRch.generator 1.0.0 results
+scoRch.simulator 1.0.1 results
 Run started 2026-10-12 19:36:18, finished in 33 seconds.
 
 INPUT

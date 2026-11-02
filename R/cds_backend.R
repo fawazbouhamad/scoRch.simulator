@@ -5,7 +5,7 @@
 # The functions that reach the CDS. An option can replace them (tests do), so
 # the planning, caching and resuming logic runs without the network.
 cds_backend <- function() {
-  custom <- getOption("scoRch.generator.cds_backend")
+  custom <- getOption("scoRch.simulator.cds_backend")
   if (!is.null(custom)) return(custom)
   for (pkg in c("ecmwfr", "httr")) {
     if (!requireNamespace(pkg, quietly = TRUE)) {

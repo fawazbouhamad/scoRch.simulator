@@ -24,7 +24,7 @@
 #'   (degrees clockwise from north, in (-90, 90]) of the ellipse, and the
 #'   temperature-weighted centroid.
 #' @examples
-#' file <- system.file("extdata", "north_america_tmax.nc", package = "scoRch.generator")
+#' file <- system.file("extdata", "north_america_tmax.nc", package = "scoRch.simulator")
 #' tmax <- read_tmax(file, start = "2015-01-01")
 #' clusters <- cluster_heatwaves(select_regional_days(detect_heatwaves(tmax)))
 #' ellipses <- fit_ellipses(clusters, tmax)

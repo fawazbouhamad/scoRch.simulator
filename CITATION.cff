@@ -1,22 +1,21 @@
-# Citation metadata for the scoRch.generator R package (Citation File Format 1.2.0).
+# Citation metadata for the scoRch.simulator R package (Citation File Format 1.2.0).
 # The software release and the study's processed dataset are separate records:
-#   software: this repository, version 1.0.0, released on 12 October 2026
+#   software: this repository, version 1.0.1, pending release
 #             (the Zenodo software DOI is added under `identifiers:` once the
 #             release is archived; see docs/release_checklist.md)
 #   dataset:  "Processed ERA5 daily maximum temperature data for SCORCH,
 #             1940-2025", version 1.0.0, DOI 10.5281/zenodo.21717874
 cff-version: 1.2.0
 message: >-
-  If you use scoRch.generator, please cite the software and the study it
+  If you use scoRch.simulator, please cite the software and the study it
   implements. When you use the study's results, also cite the processed
   dataset (DOI 10.5281/zenodo.21717874).
 type: software
-title: "scoRch.generator: Spatiotemporal Classification of Regional Compound Heatwaves"
-version: 1.0.0
-date-released: "2026-10-12"
+title: "scoRch.simulator: Spatiotemporal Classification of Regional Compound Heatwaves"
+version: 1.0.1
 license: GPL-3.0-or-later
-repository-code: "https://github.com/fawazbouhamad/scoRch.generator"
-url: "https://github.com/fawazbouhamad/scoRch.generator"
+repository-code: "https://github.com/fawazbouhamad/scoRch.simulator"
+url: "https://github.com/fawazbouhamad/scoRch.simulator"
 abstract: >-
   R implementation of SCORCH, the method of Bouhamad and Najibi for finding
   regionally extensive compound heatwaves in gridded daily maximum

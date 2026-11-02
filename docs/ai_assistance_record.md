@@ -2,7 +2,7 @@
 
 This file records where an AI coding tool helped with this package, so that
 the use can be described accurately (for example in the generative-AI
-declaration of a SoftwareX article). The tool was Claude Code (Anthropic),
+declaration of a SoftwareX article). The original packaging tool was Claude Code (Anthropic),
 running the model Claude Fable 5.1, operated in interactive sessions by Fawaz
 Bouhamad, who gave the briefs, supplied the data access, reviewed the output
 and committed it under his own Git identity. No commit carries an AI
@@ -152,3 +152,13 @@ validation of `fetch_era5_daily_tmax()` ahead of the token check, reran the
 tests and `R CMD check`, and rebuilt the root commit, which the maintainer
 republished in place of the first; no credential was added to the
 continuous-integration configuration.
+
+## Package rename on 1 November 2026
+
+Codex (OpenAI), at Fawaz Bouhamad's request, renamed the package
+and repository to `scoRch.simulator`, updated its resource lookups,
+documentation, examples, tests and citation metadata, and checked
+the renamed installation and demonstration. The scientific
+calculations and bundled data were not changed. The original dated
+verification record and the `v1.0.0` release retain their historical
+names.

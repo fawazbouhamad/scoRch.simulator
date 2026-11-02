@@ -9,9 +9,9 @@ those documents.
 
 ## Repository requirements
 
-| Requirement (source) | Where scoRch.generator meets it |
+| Requirement (source) | Where scoRch.simulator meets it |
 |---|---|
-| "Store your code/software in an open-access GitHub repository where it is publicly available" (guide) | https://github.com/fawazbouhamad/scoRch.generator, public |
+| "Store your code/software in an open-access GitHub repository where it is publicly available" (guide) | https://github.com/fawazbouhamad/scoRch.simulator, public |
 | "README.md and LICENSE.txt files. Your README.md file should be well-written, explaining the use, installation, and purpose of your proposed software" (guide); "GitHub repositories must have a well-documented README.md file, and a Licence.txt file" (template) | `README.md` (purpose, installation, quick start, input formats, settings, outputs, verification, citation) and `LICENSE.txt` (GPL-3) |
 | "Source code in a repo/src directory" (guide) | An R package keeps its source in `R/` by the R standard (`R CMD check` requires it); the README points to the files. If the editorial office insists on `src/`, a `src/README.md` pointer can be added without moving the code |
 | "All software and code must be open source and released under a recognized legal license ... such as Apache License, GNU General Public License (GPL) or MIT License" (guide, template) | `License: GPL (>= 3)` in `DESCRIPTION`, GPL-3.0-or-later in `CITATION.cff` |
@@ -28,15 +28,15 @@ Conclusions), with the code metadata table below.
 
 ## Code metadata table (template Table 1, "Code metadata (mandatory)")
 
-| Nr | Code metadata description | Value for scoRch.generator |
+| Nr | Code metadata description | Value for scoRch.simulator |
 |---|---|---|
-| C1 | Current code version | v1.0.0 |
-| C2 | Permanent link to code/repository used for this code version | https://github.com/fawazbouhamad/scoRch.generator (release tag `v1.0.0`) |
+| C1 | Current code version | 1.0.1 on main; tagged release pending |
+| C2 | Permanent link to code/repository used for this code version | https://github.com/fawazbouhamad/scoRch.simulator (renamed package on `main`; use the tested commit URL until a new release is tagged; `v1.0.0` retains the original package name) |
 | C3 | Legal code license | GNU General Public License v3.0 or later (GPL-3.0-or-later) |
 | C4 | Code versioning system used | git |
 | C5 | Software code languages, tools and services used | R (>= 4.1); packages dbscan, ncdf4, spatstat.geom, spatstat.model, maps, yaml; optionally ecmwfr and httr for the download path from the Copernicus Climate Data Store; testthat for tests; GitHub Actions for continuous integration |
 | C6 | Compilation requirements, operating environments and dependencies | pure R, no compilation; Windows, Linux and macOS (checked by `R CMD check` on all three in continuous integration); dependencies installed automatically by `remotes::install_github()` |
-| C7 | If available, link to developer documentation/manual | https://github.com/fawazbouhamad/scoRch.generator/blob/main/README.md (plus the R help pages, `?run_scorch`, and `demo/`) |
+| C7 | If available, link to developer documentation/manual | https://github.com/fawazbouhamad/scoRch.simulator/blob/main/README.md (plus the R help pages, `?run_scorch`, and `demo/`) |
 | C8 | Support email for questions | the corresponding author's address (entered in the submission) |
 
 ## Illustrative example for the article

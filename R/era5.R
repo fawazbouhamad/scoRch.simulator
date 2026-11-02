@@ -126,7 +126,7 @@ read_configured_input <- function(cfg) {
                title = sprintf("Daily maximum 2-m temperature, %s", format_area(cds$area)),
                source = paste0("ERA5 daily maximum 2-m temperature (Copernicus Climate Data Store, dataset ",
                                CDS_DATASET, ", UTC days, 0.25 degrees, area ", format_area(cds$area), "); ",
-                               tmax$preprocessing, "; written by scoRch.generator"),
+                               tmax$preprocessing, "; written by scoRch.simulator"),
                licence = "Contains modified Copernicus Climate Change Service information; see the CDS licence of the dataset")
     tmax$preprocessing <- paste0(tmax$preprocessing, "; saved to ", cds$processed_file)
     message("The processed temperature was saved to ", cds$processed_file,

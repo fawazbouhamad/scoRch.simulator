@@ -29,7 +29,7 @@ America.
 ## Run it
 
 From the top folder of the repository, after installing the package
-(`remotes::install_github("fawazbouhamad/scoRch.generator")` or
+(`remotes::install_github("fawazbouhamad/scoRch.simulator")` or
 `devtools::install()`):
 
 ```

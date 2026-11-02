@@ -1,4 +1,4 @@
-example_file <- system.file("extdata", "north_america_tmax.nc", package = "scoRch.generator")
+example_file <- system.file("extdata", "north_america_tmax.nc", package = "scoRch.simulator")
 
 test_that("the example NetCDF file is read into the expected structure", {
   tmax <- read_tmax(example_file)
@@ -39,7 +39,7 @@ test_that("arrays are validated, oriented and converted", {
 })
 
 test_that("CF time units are decoded", {
-  decode_time <- scoRch.generator:::decode_time
+  decode_time <- scoRch.simulator:::decode_time
   expect_equal(decode_time(c(0, 1), "days since 2000-01-01"), as.Date(c("2000-01-01", "2000-01-02")))
   expect_equal(decode_time(36, "hours since 2000-01-01 00:00:00"), as.Date("2000-01-02"))
   expect_equal(decode_time(0.5, "days since 2000-01-01 12:00:00"), as.Date("2000-01-02"))
@@ -66,7 +66,7 @@ test_that("a scorch_tmax can be restricted to the configured period", {
   dates <- as.Date(c("2000-03-31", "2000-04-01", "2000-04-02", "2000-09-30", "2000-10-01"))
   values <- array(seq_len(5 * 2 * 2), dim = c(5, 2, 2))
   tmax <- tmax_from_array(values, dates, lon = c(40, 41), lat = c(30, 31))
-  subset <- scoRch.generator:::subset_tmax_period(tmax, months = c(4, 9),
+  subset <- scoRch.simulator:::subset_tmax_period(tmax, months = c(4, 9),
                                                    start = "2000-04-02", end = "2000-09-30")
   expect_s3_class(subset, "scorch_tmax")
   expect_equal(subset$dates, dates[c(3, 4)])
@@ -76,16 +76,16 @@ test_that("a scorch_tmax can be restricted to the configured period", {
   expect_identical(subset$source, tmax$source)
   expect_equal(subset$season_months, c(4, 9))
   expect_equal(length(tmax$dates), 5)  # original object was not modified
-  single <- scoRch.generator:::subset_tmax_period(tmax, months = 4,
+  single <- scoRch.simulator:::subset_tmax_period(tmax, months = 4,
                                                    start = "2000-04-02", end = "2000-04-02")
   expect_equal(dim(single$tmax), c(1, 4))
-  expect_error(scoRch.generator:::subset_tmax_period(tmax, months = 2), "No dates are left")
+  expect_error(scoRch.simulator:::subset_tmax_period(tmax, months = 2), "No dates are left")
 })
 
 test_that("the shipped SCORCH configuration is the source of the study settings", {
-  shipped <- system.file("scorch_config.yaml", package = "scoRch.generator")
+  shipped <- system.file("scorch_config.yaml", package = "scoRch.simulator")
   expect_true(nzchar(shipped))
-  defaults <- scoRch.generator:::scorch_defaults()
+  defaults <- scoRch.simulator:::scorch_defaults()
   # The study settings, written out once more here so that a change to the
   # shipped file cannot pass unnoticed.
   study <- list(
@@ -117,24 +117,24 @@ test_that("the shipped SCORCH configuration is the source of the study settings"
                defaults$lgcp[c("raster_km", "window_margin_km")])
   expect_equal(eval(formals(read_tmax)$months), defaults$period$warm_season_months)
 
-  expect_identical(scoRch.generator:::read_config(NULL, input_required = FALSE),
-                   scoRch.generator:::read_config(list(), input_required = FALSE))
-  expect_error(scoRch.generator:::read_config(NULL), "No input file is set")
+  expect_identical(scoRch.simulator:::read_config(NULL, input_required = FALSE),
+                   scoRch.simulator:::read_config(list(), input_required = FALSE))
+  expect_error(scoRch.simulator:::read_config(NULL), "No input file is set")
   expect_error(run_scorch(), "No input file is set")
 })
 
 test_that("an editable copy of the SCORCH configuration overrides only what it changes", {
   path <- tempfile(fileext = ".yaml")
   expect_identical(write_scorch_config(path), path)
-  expect_identical(readLines(path), readLines(system.file("scorch_config.yaml", package = "scoRch.generator")))
+  expect_identical(readLines(path), readLines(system.file("scorch_config.yaml", package = "scoRch.simulator")))
   expect_error(write_scorch_config(path), "already exists")
-  expect_error(scoRch.generator:::read_config(path), "No input file is set")
+  expect_error(scoRch.simulator:::read_config(path), "No input file is set")
   lines <- readLines(path)
   lines <- sub("^  file: null ", sprintf("  file: '%s' ", example_file), lines)
   lines <- sub("threshold_percentile: 95 ", "threshold_percentile: 90 ", lines, fixed = TRUE)
   writeLines(lines, path)
-  cfg <- scoRch.generator:::read_config(path)
-  study <- scoRch.generator:::read_config(list(input = list(file = example_file)))
+  cfg <- scoRch.simulator:::read_config(path)
+  study <- scoRch.simulator:::read_config(list(input = list(file = example_file)))
   expect_equal(cfg$input$file, example_file)
   expect_equal(cfg$heatwaves$threshold_percentile, 90)
   expect_equal(cfg$heatwaves[-1], study$heatwaves[-1])
@@ -145,7 +145,7 @@ test_that("an editable copy of the SCORCH configuration overrides only what it c
   partial <- tempfile(fileext = ".yaml")
   writeLines(c("input:", sprintf("  file: '%s'", example_file),
                "clustering:", "  eps_values: [1, 2.5]", "lgcp:", "  raster_km: 50"), partial)
-  cfg <- scoRch.generator:::read_config(partial)
+  cfg <- scoRch.simulator:::read_config(partial)
   expect_equal(cfg$clustering$eps_values, c(1, 2.5))
   expect_equal(cfg$clustering$min_samples_values, study$clustering$min_samples_values)
   expect_equal(cfg$lgcp$raster_km, 50)
@@ -158,35 +158,35 @@ test_that("the example configuration is written, read and completed with default
   path <- tempfile(fileext = ".yaml")
   scorch_template(path)
   expect_error(scorch_template(path), "already exists")
-  cfg <- scoRch.generator:::read_config(path)
+  cfg <- scoRch.simulator:::read_config(path)
   expect_equal(cfg$input$file, example_file)
-  expect_equal(cfg[-1], scoRch.generator:::read_config(list(input = list(file = example_file)))[-1])
+  expect_equal(cfg[-1], scoRch.simulator:::read_config(list(input = list(file = example_file)))[-1])
   expect_equal(cfg$power_law$bootstrap_repetitions, 5000)
   expect_equal(cfg$clustering$eps_values, c(1, 1.5, 2, 2.5, 3, 3.5, 4))
   expect_type(cfg$clustering$eps_values, "double")
   expect_null(cfg$period$start_date)
   fast <- scorch_template(tempfile(fileext = ".yaml"), fast = TRUE)
-  expect_equal(scoRch.generator:::read_config(fast)$power_law$bootstrap_repetitions, 200)
+  expect_equal(scoRch.simulator:::read_config(fast)$power_law$bootstrap_repetitions, 200)
   expect_match(readLines(fast)[1], "FAST DEMONSTRATION")
   minimal <- list(input = list(file = example_file), output = list(directory = tempdir()))
-  cfg <- scoRch.generator:::read_config(minimal)
+  cfg <- scoRch.simulator:::read_config(minimal)
   expect_equal(cfg$regional_days$percentile, 97.5)
-  expect_error(scoRch.generator:::read_config(list(input = list(file = example_file), extra = list())), "Unknown settings")
-  expect_error(scoRch.generator:::read_config(list(input = list(file = example_file, foo = 1))), "Unknown settings")
-  expect_error(scoRch.generator:::read_config(list(output = list(directory = "x"))), "input: file")
-  expect_error(scoRch.generator:::read_config(list(input = list(file = "missing.nc"))), "does not exist")
+  expect_error(scoRch.simulator:::read_config(list(input = list(file = example_file), extra = list())), "Unknown settings")
+  expect_error(scoRch.simulator:::read_config(list(input = list(file = example_file, foo = 1))), "Unknown settings")
+  expect_error(scoRch.simulator:::read_config(list(output = list(directory = "x"))), "input: file")
+  expect_error(scoRch.simulator:::read_config(list(input = list(file = "missing.nc"))), "does not exist")
   bad <- list(input = list(file = example_file), period = list(warm_season_months = 13))
-  expect_error(scoRch.generator:::read_config(bad), "warm_season_months")
+  expect_error(scoRch.simulator:::read_config(bad), "warm_season_months")
   bad <- list(input = list(file = example_file), period = list(start_date = "01-02-2000"))
-  expect_error(scoRch.generator:::read_config(bad), "YYYY-MM-DD")
+  expect_error(scoRch.simulator:::read_config(bad), "YYYY-MM-DD")
   ok <- list(input = list(file = example_file), period = list(start_date = "2000-02-01"))
-  expect_equal(scoRch.generator:::read_config(ok)$period$start_date, as.Date("2000-02-01"))
+  expect_equal(scoRch.simulator:::read_config(ok)$period$start_date, as.Date("2000-02-01"))
   bad <- list(input = list(file = example_file), figures = list(representative_events = list(type_5 = "2000-01-01")))
-  expect_error(scoRch.generator:::read_config(bad), "representative_events")
+  expect_error(scoRch.simulator:::read_config(bad), "representative_events")
 })
 
 test_that("configuration values are checked before analysis starts", {
-  read <- scoRch.generator:::read_config
+  read <- scoRch.simulator:::read_config
   one_setting <- function(section, key, value) {
     cfg <- list(input = list(file = example_file))
     if (is.null(cfg[[section]])) cfg[[section]] <- list()
@@ -248,7 +248,7 @@ test_that("configuration values are checked before analysis starts", {
 })
 
 test_that("representative-event overrides have valid dates and counts", {
-  read <- scoRch.generator:::read_config
+  read <- scoRch.simulator:::read_config
   setting <- function(value, type = "type_3") {
     list(input = list(file = example_file),
          figures = list(representative_events = setNames(list(value), type)))

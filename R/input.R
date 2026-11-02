@@ -28,7 +28,7 @@
 #'   and latitude values and steps in degrees).
 #' @seealso [tmax_from_array()] for temperature already in R.
 #' @examples
-#' file <- system.file("extdata", "north_america_tmax.nc", package = "scoRch.generator")
+#' file <- system.file("extdata", "north_america_tmax.nc", package = "scoRch.simulator")
 #' tmax <- read_tmax(file)
 #' tmax
 #' @export

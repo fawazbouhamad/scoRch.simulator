@@ -101,7 +101,7 @@ run_scorch <- function(config = NULL, tmax = NULL) {
     books <- partial_workbooks(heatwaves, regional, clusters)
     write_workbooks(stage, books)
     partial <- list(config = cfg, input = input, heatwaves = heatwaves, regional = regional, clusters = clusters,
-                    started = started, package_version = as.character(utils::packageVersion("scoRch.generator")),
+                    started = started, package_version = as.character(utils::packageVersion("scoRch.simulator")),
                     incomplete = "no selected day formed a cluster.")
     write_text_file(run_readme(partial, books), file.path(stage, "README.txt"))
     publish_run_output(stage, out)
@@ -135,7 +135,7 @@ run_scorch <- function(config = NULL, tmax = NULL) {
     ellipses = events$ellipses,
     events = events[c("events", "event_days", "table_1", "annual_counts", "annual_duration", "trends")],
     power_law = power_law, lgcp = lgcp, lgcp_error = lgcp_error, output_dir = stage,
-    package_version = as.character(utils::packageVersion("scoRch.generator")),
+    package_version = as.character(utils::packageVersion("scoRch.simulator")),
     started = started), class = "scorch_result")
 
   step("Writing the result workbooks to %s", out)

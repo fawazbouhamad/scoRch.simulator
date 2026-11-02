@@ -33,7 +33,7 @@
 #'   `diagnostics`, `warnings` and the fitted `kppm` model.
 #' @examples
 #' \donttest{
-#' file <- system.file("extdata", "north_america_tmax.nc", package = "scoRch.generator")
+#' file <- system.file("extdata", "north_america_tmax.nc", package = "scoRch.simulator")
 #' tmax <- read_tmax(file, start = "2015-01-01")
 #' clusters <- cluster_heatwaves(select_regional_days(detect_heatwaves(tmax)))
 #' events <- classify_events(clusters, fit_ellipses(clusters, tmax))

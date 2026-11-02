@@ -1,11 +1,11 @@
-# scoRch.generator
+# scoRch.simulator
 
-[![R-CMD-check](https://github.com/fawazbouhamad/scoRch.generator/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/fawazbouhamad/scoRch.generator/actions/workflows/R-CMD-check.yaml)
-[![demo](https://github.com/fawazbouhamad/scoRch.generator/actions/workflows/demo.yaml/badge.svg)](https://github.com/fawazbouhamad/scoRch.generator/actions/workflows/demo.yaml)
+[![R-CMD-check](https://github.com/fawazbouhamad/scoRch.simulator/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/fawazbouhamad/scoRch.simulator/actions/workflows/R-CMD-check.yaml)
+[![demo](https://github.com/fawazbouhamad/scoRch.simulator/actions/workflows/demo.yaml/badge.svg)](https://github.com/fawazbouhamad/scoRch.simulator/actions/workflows/demo.yaml)
 [![License: GPL-3.0-or-later](https://img.shields.io/badge/license-GPL--3.0--or--later-orange)](LICENSE.txt)
-[![Version 1.0.0](https://img.shields.io/badge/version-1.0.0-blue)](NEWS.md)
+[![Version 1.0.1](https://img.shields.io/badge/version-1.0.1-blue)](NEWS.md)
 
-**scoRch.generator** finds large, regionally extensive heatwaves in gridded
+**scoRch.simulator** finds large, regionally extensive heatwaves in gridded
 daily maximum temperature and classifies them into four space-time types. It
 is the R implementation of **SCORCH** (Spatiotemporal Classification of
 Regional Compound Heatwaves), the method of *Understanding Compound Space-Time
@@ -22,6 +22,13 @@ and the study's processed input is the Zenodo dataset
 [10.5281/zenodo.21717874](https://doi.org/10.5281/zenodo.21717874). The
 package is verified against that record (see [Verification](#verification)).
 
+The main branch is now **scoRch.simulator 1.0.1**, renamed from
+**scoRch.generator**. Install from the repository and use
+`library(scoRch.simulator)`. The existing `v1.0.0` tag and release
+preserve the original package name; version 1.0.1 has not yet been
+published as a tagged release. The analysis functions, configuration
+settings and scientific calculations are unchanged.
+
 ## Quick start
 
 | | |
@@ -32,7 +39,7 @@ package is verified against that record (see [Verification](#verification)).
 | **You get** | eight XLSX workbooks (catalogs, summary tables, model results), nine figures and a plain-language `README.txt` in `results/` |
 
 ```r
-library(scoRch.generator)
+library(scoRch.simulator)
 write_scorch_config("scorch_config.yaml")   # 1. an editable copy of the SCORCH configuration
                                             # 2. in scorch_config.yaml, set  input: file: 'my_era5_folder'
 run_scorch("scorch_config.yaml")            # 3. the complete SCORCH analysis
@@ -84,7 +91,7 @@ automatically. R 4.1 or newer is required.
 
 ```r
 install.packages("remotes")
-remotes::install_github("fawazbouhamad/scoRch.generator")
+remotes::install_github("fawazbouhamad/scoRch.simulator")
 ```
 
 ## Try the demonstration
@@ -100,7 +107,7 @@ licence, processing and verification, and [`data-raw/`](data-raw) the script
 that rebuilds it.
 
 ```r
-library(scoRch.generator)
+library(scoRch.simulator)
 scorch_template("scorch_config.yaml", fast = TRUE)  # 1. write a config for the demonstration data
 run_scorch("scorch_config.yaml")                    # 2. run; results appear in results/
 ```
@@ -349,8 +356,9 @@ preprocessing, and the complete demonstration workflow; the full-study compariso
 names a clone of the
 [reproducibility repository](https://github.com/fawazbouhamad/compound-heatwave-typologies-SCORCH)
 with the Zenodo file placed at `input/tmax_processed.nc`, and the 5000-repetition
-bootstrap check runs with `SCORCH_LONG_TESTS=1`. The last verification, on
-12 October 2026 with version 1.0.0, is recorded in
+bootstrap check runs with `SCORCH_LONG_TESTS=1`. The original study verification,
+on 12 October 2026 with version 1.0.0, and the package rename checks on
+1 November 2026 with version 1.0.1 are recorded in
 [`docs/verification_record.md`](docs/verification_record.md).
 
 **Preprocessing correction.** The study's first processed input (historical,
@@ -374,13 +382,13 @@ CDS files, their storage precision).
 ## Citation
 
 Please cite the software and the study it implements. In R,
-`citation("scoRch.generator")` prints both; [`CITATION.cff`](CITATION.cff)
+`citation("scoRch.simulator")` prints both; [`CITATION.cff`](CITATION.cff)
 holds the same metadata (GitHub shows a "Cite this repository" button) and
 [`codemeta.json`](codemeta.json) the machine-readable description.
 
-- **Software:** Bouhamad, F., and Najibi, N. (2026). *scoRch.generator:
+- **Software:** Bouhamad, F., and Najibi, N. (2026). *scoRch.simulator:
   Spatiotemporal Classification of Regional Compound Heatwaves*. R package
-  version 1.0.0. https://github.com/fawazbouhamad/scoRch.generator. A Zenodo
+  version 1.0.1. https://github.com/fawazbouhamad/scoRch.simulator. A Zenodo
   software DOI will be added once the release is archived
   ([`docs/release_checklist.md`](docs/release_checklist.md)).
 - **Dataset:** Bouhamad, F., and Najibi, N. (2026). *Processed ERA5 daily
@@ -414,7 +422,8 @@ record), the from-scratch input path, the demonstration data build from the
 authors' own ERA5-derived files, the demo with its traced event, the figure
 styling and the documentation were written with the assistance of an AI
 coding tool (Claude Code by Anthropic), operated and reviewed by Fawaz
-Bouhamad; the scientific calculations and results are the authors' own.
+Bouhamad; the later package rename was implemented with Codex (OpenAI).
+The scientific calculations and results are the authors' own.
 [`docs/ai_assistance_record.md`](docs/ai_assistance_record.md) lists what the
 tool wrote. The repository's public history begins with this release in a
 single commit, at the maintainer's decision.
@@ -422,7 +431,7 @@ single commit, at the maintainer's decision.
 ## Support and contributing
 
 - Problems installing or running the package: open an issue in the
-  [Issues tab](https://github.com/fawazbouhamad/scoRch.generator/issues).
+  [Issues tab](https://github.com/fawazbouhamad/scoRch.simulator/issues).
 - Scientific questions: contact Fawaz Bouhamad or
   [Nasser Najibi](https://nassernajibi.com/).
 - Contributions are welcome; see [CONTRIBUTING.md](CONTRIBUTING.md).

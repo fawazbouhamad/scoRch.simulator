@@ -42,7 +42,7 @@ from-scratch path of \code{\link[=run_scorch]{run_scorch()}} writes its processe
 so that the download and reduction need to be done only once.
 }
 \examples{
-file <- system.file("extdata", "north_america_tmax.nc", package = "scoRch.generator")
+file <- system.file("extdata", "north_america_tmax.nc", package = "scoRch.simulator")
 tmax <- read_tmax(file, months = 7, start = "2012-01-01", end = "2012-12-31")
 copy <- write_tmax(tmax, tempfile(fileext = ".nc"))
 identical(read_tmax(copy, months = 7)$tmax, tmax$tmax)
