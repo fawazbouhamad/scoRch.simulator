@@ -219,9 +219,20 @@ draw_ellipse_area_power_law <- function(result) {
     if (ok) {
       alpha <- boot$alpha_boot[!is.na(boot$alpha_boot)]
       stats <- stats::quantile(alpha, c(0.025, 0.25, 0.5, 0.75, 0.975), names = FALSE, type = 7)
-      graphics::bxp(list(stats = matrix(stats, 5), n = length(alpha), names = ""), outline = FALSE,
+      # Match reference Figure 11(b,d): a 0.18-wide box in a 1.2-wide
+      # horizontal range, with 1-point outlines/whiskers and a 1.6-point median.
+      # Explicit width avoids bxp() halving the width of a single box.
+      # R line widths use 1/96 inch; the reference uses points (1/72 inch).
+      point_lwd <- 96 / 72
+      old_xaxs <- graphics::par("xaxs")
+      graphics::par(xaxs = "i")
+      graphics::bxp(list(stats = matrix(stats, 5), n = length(alpha), names = ""), outline = FALSE, width = 1,
                     boxfill = "#E6E6E6", boxcol = "grey35", whiskcol = "grey35", staplecol = "grey35",
-                    medlwd = 1.6, whisklty = 1, axes = FALSE, boxwex = 0.45, ylim = range(stats) + c(-0.3, 0.3))
+                    boxlwd = point_lwd, whisklwd = point_lwd, staplelwd = point_lwd,
+                    medcol = "black", medlwd = 1.6 * point_lwd, whisklty = 1, staplewex = 0.5,
+                    axes = FALSE, boxwex = 0.18, xlim = c(0.4, 1.6),
+                    ylim = range(stats) + c(-0.3, 0.3))
+      graphics::par(xaxs = old_xaxs)
       graphics::grid(nx = NA, ny = NULL, col = "grey90", lwd = 0.5)
       graphics::box(bty = "l", lwd = 0.8)
       graphics::axis(2, cex.axis = 0.8, mgp = c(2, 0.5, 0), tck = -0.02, las = 1)
