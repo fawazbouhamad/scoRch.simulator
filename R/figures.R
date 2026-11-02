@@ -44,14 +44,16 @@ scorch_figure <- function(result, name = NULL, file = NULL, dpi = NULL, number =
     # Draw beside the requested file. A skipped or failed plot must not leave
     # a blank or partial PNG, or replace a plot from an earlier successful run.
     temporary <- tempfile(".scorch-plot-", tmpdir = dirname(file), fileext = ".png")
+    previous_device <- grDevices::dev.cur()
     grDevices::png(temporary, width = size[1], height = size[2], units = "in", res = dpi,
-                    bg = "white", type = if (capabilities("cairo")) "cairo" else getOption("bitmapType"))
-    graphics::par(family = figure_font(id))
+                    bg = "white", type = figure_bitmap_type())
+    if (identical(grDevices::dev.cur(), previous_device)) fail("Could not open the PNG graphics device.")
     device_open <- TRUE
     on.exit({
       if (device_open) grDevices::dev.off()
       if (file.exists(temporary)) unlink(temporary)
     }, add = TRUE)
+    graphics::par(family = figure_font(id))
     drawn <- spec$draw(result)
     grDevices::dev.off()
     device_open <- FALSE
@@ -487,7 +489,7 @@ type_heading <- function(type, cex = 26 / 12) {
   graphics::par(mai = c(0, 0, 0, 0))
   graphics::plot.new()
   graphics::text(0.5, 0.5, paste("Type", type), col = SNAPSHOT_TYPE_COLOURS[type], font = 2,
-                  cex = cex / graphics::par("cex"), family = "Arial")
+                  cex = cex / graphics::par("cex"), family = figure_sans_font())
 }
 
 # One day of a Type 1 and of a Type 2 event, side by side (the study's Figure 5).

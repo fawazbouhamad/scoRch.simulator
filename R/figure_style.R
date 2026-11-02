@@ -4,19 +4,32 @@
 SNAPSHOT_TYPE_COLOURS <- c("#FF0000", "#FF7401", "#FFBC01", "#7030A0")
 
 figure_font <- function(name) {
-  if (identical(name, "ellipse_geometry_by_type")) "serif" else "Arial"
+  if (identical(name, "ellipse_geometry_by_type")) "serif" else figure_sans_font()
+}
+
+figure_sans_font <- function() {
+  # Base PDF/PostScript devices use registered font families; system font
+  # names such as Arial belong to the bitmap and screen devices.
+  if (names(grDevices::dev.cur()) %in% c("pdf", "postscript")) "sans" else "Arial"
+}
+
+figure_bitmap_type <- function() {
+  # Native Quartz works without XQuartz. macOS can report compiled-in Cairo
+  # support even when its runtime X11 libraries are not installed.
+  if (identical(Sys.info()[["sysname"]], "Darwin") && capabilities("aqua")) return("quartz")
+  if (capabilities("cairo")) "cairo" else getOption("bitmapType")
 }
 
 panel_label <- function(letter, adj = 0.5) {
   graphics::mtext(paste0("(", letter, ")"), side = 3, line = 0.5,
-                   adj = adj, font = 2, cex = 17 / 12, family = "Arial")
+                   adj = adj, font = 2, cex = 17 / 12, family = figure_sans_font())
 }
 
 row_label <- function(letter) {
   graphics::par(mai = c(0, 0, 0, 0))
   graphics::plot.new()
   graphics::text(0.5, 0.5, paste0("(", letter, ")"), font = 2,
-                  cex = 17 / 12 / graphics::par("cex"), family = "Arial")
+                  cex = 17 / 12 / graphics::par("cex"), family = figure_sans_font())
 }
 
 # Clip vertical and horizontal mesh lines to the ellipse polygon. The fine

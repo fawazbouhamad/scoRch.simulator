@@ -188,3 +188,6 @@ prepared-file round trip passed. A separate 30-year prepared file remains
 the full-analysis demonstration; the monthly example illustrates processing.
 Dataset files, provenance, metadata and checksums were prepared locally for
 review. No Zenodo deposit, release tag or new DOI was published in this work.
+The subsequent macOS CI failure identified missing Cairo runtime libraries;
+Codex selected the native Quartz bitmap backend on macOS and added a PDF
+font regression check before rerunning cross-platform verification.

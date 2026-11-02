@@ -249,6 +249,12 @@ On Windows 11 with R 4.5.1:
   reference audits). The end-to-end local ERA5 test saves its processed
   temperatures, reruns from that prepared file and compares every workbook
   sheet and generated PNG, with identical results.
+- The first cross-platform run passed the Ubuntu demo but exposed a macOS
+  graphics runtime issue: compiled-in Cairo support was reported even though
+  its XQuartz libraries were absent. PNG output now selects native Quartz
+  on macOS, and PDF/PostScript labels use their registered sans-serif family.
+  A focused regression check renders headings and panel labels on a base
+  PDF device without warnings. Windows PNG output continues to use Cairo.
 - Removed the CDS downloader, credential handling, its exports and optional
   HTTP/CDS dependencies. Both configuration input routes now use local
   files: prepared daily Tmax or ERA5 requiring preprocessing. Added an

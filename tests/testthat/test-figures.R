@@ -1,3 +1,14 @@
+test_that("figure headings and labels draw on a base PDF device", {
+  grDevices::pdf(tempfile(fileext = ".pdf"))
+  tryCatch(expect_warning({
+    graphics::par(family = scoRch.simulator:::figure_font("single_day_events"))
+    scoRch.simulator:::type_heading(1)
+    scoRch.simulator:::row_label("a")
+    graphics::plot.new()
+    scoRch.simulator:::panel_label("a")
+  }, NA), finally = grDevices::dev.off())
+})
+
 test_that("state outlines are drawn only on maps over the United States", {
   overlaps <- scoRch.simulator:::overlaps_us_states
   expect_true(overlaps(c(-104, -94, 34, 44)))       # central Great Plains
