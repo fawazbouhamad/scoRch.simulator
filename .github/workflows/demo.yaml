@@ -1,6 +1,6 @@
 # Install the package and run the demonstration and the preprocessing example
 # on every change, then compare every workbook sheet, README.txt and the
-# figures with demo/expected_output.
+# figures with demo/results.
 on:
   push:
     branches: [main]
@@ -24,14 +24,15 @@ jobs:
           use-public-rspm: true
       - uses: r-lib/actions/setup-r-dependencies@v2
         with:
+          working-directory: src
           extra-packages: local::.
           needs: check
       - name: Run the demonstration
         run: Rscript demo/run_demo.R
       - name: Check the two local input options
-        run: Rscript demo/check_input_options.R
-      - name: Compare the demo output with demo/expected_output
-        run: Rscript demo/compare_output.R
+        run: Rscript docs/verification/check_input_options.R
+      - name: Compare the demo output with demo/results
+        run: Rscript docs/verification/compare_output.R
       - uses: actions/upload-artifact@v4
         with:
           name: demo-output

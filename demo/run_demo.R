@@ -18,18 +18,25 @@ trace_date <- "2012-06-30"
 # 25 x 72 one-degree cells between 25 N and 50 N and between 130 W and 58 W:
 # the contiguous United States with southern Canada, northern Mexico and the
 # adjacent Pacific, Atlantic and Gulf of Mexico waters, every April-September
-# day of 1996-2025 (inst/extdata/README.md gives the source, licence and
+# day of 1996-2025 (src/inst/extdata/README.md gives the source, licence and
 # processing). read_tmax() reads any NetCDF file of daily maximum temperature
 # on a regular grid.
-file <- system.file("extdata", "north_america_tmax.nc", package = "scoRch.simulator")
+# Optional arguments select the matching prepared file from the full hourly
+# archive and a separate output directory. Sourcing the script uses the defaults.
+demo_args <- if (sys.nframe() == 0L) commandArgs(trailingOnly = TRUE) else character()
+if (length(demo_args) > 2L) stop("Use: Rscript demo/run_demo.R [prepared.nc] [output_folder]")
+demo_config <- yaml::read_yaml("demo/processed_config.yaml")
+if (length(demo_args) >= 1L) demo_config$input$file <- demo_args[1]
+if (length(demo_args) >= 2L) demo_config$output$directory <- demo_args[2]
+file <- demo_config$input$file
 tmax <- read_tmax(file)
 print(tmax)
 
 # 2. The whole workflow with one command ---------------------------------------
-# demo/scorch_config.yaml names the input, the output folder and the event to
+# demo/processed_config.yaml names the input, the output folder and the event to
 # show in the figures; every other setting keeps the value of the SCORCH study
-# (see inst/scorch_config.yaml).
-result <- run_scorch("demo/scorch_config.yaml")
+# (see src/inst/scorch_config.yaml).
+result <- run_scorch(demo_config)
 
 # 3. What was found -----------------------------------------------------------
 cat("\nCompound heatwave events by type (the Event Type Summary sheet):\n")
@@ -117,7 +124,7 @@ trace_event <- function(result, tmax, date) {
                   in_event = ifelse(window >= event$start_date & window <= event$end_date, "yes", "no")))
   figure <- c("single_day_events", "single_day_events", "consistent_multiday_events", "mixed_multiday_events")[event$event_type]
   say("")
-  say("Figure: %s/figures/%s.png shows this event (named in demo/scorch_config.yaml", result$output_dir, figure)
+  say("Figure: %s/figures/%s.png shows this event (named in demo/processed_config.yaml", result$output_dir, figure)
   say("under figures: representative_events): orange cells are the clustered heatwave cells, grey cells the")
   say("heatwave cells DBSCAN left out, the black outline is the ellipse and the dot its weighted centroid.")
   lines

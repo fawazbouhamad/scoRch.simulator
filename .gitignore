@@ -3,7 +3,7 @@
 .RData
 .Ruserdata
 *.Rproj
-results/
+/results/
 /scorch_config.yaml
 /doc/
 /Meta/
@@ -15,5 +15,5 @@ era5_cache/
 era5_tmax_1deg.nc
 
 # Large optional hourly demonstration files are distributed separately.
-/demo/data/hourly/
+/demo/data/
 /demo/data/*.nc

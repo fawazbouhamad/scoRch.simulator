@@ -1,0 +1,497 @@
+{
+  "baseline_commit": "e3bf4a5378627bca97487462f0d33b53e82de6eb",
+  "protected_files_checked": 79,
+  "all_protected_files_byte_identical": true,
+  "files": [
+    {
+      "before": "DESCRIPTION",
+      "after": "src/DESCRIPTION",
+      "sha256": "50bcebd9adaf40b4683b2ecc9b1010d50810a625fd2066997e825f57f9e0fb3e",
+      "bytes": 1545
+    },
+    {
+      "before": "NAMESPACE",
+      "after": "src/NAMESPACE",
+      "sha256": "49423d169eb07664fa5f8f0e30c6a3f9c6985e09d7a493ab17871bd5aaa72a99",
+      "bytes": 459
+    },
+    {
+      "before": "R/clustering.R",
+      "after": "src/R/clustering.R",
+      "sha256": "48ea57d2b14d3be77d22cd494616f3c3c43eaea251564621623679808c748b0e",
+      "bytes": 8488
+    },
+    {
+      "before": "R/config.R",
+      "after": "src/R/config.R",
+      "sha256": "dfedbaa61dc02af6d2b51bf7d4c487bfaa392de371afc3022821d9a20a795d29",
+      "bytes": 12545
+    },
+    {
+      "before": "R/ellipses.R",
+      "after": "src/R/ellipses.R",
+      "sha256": "9a62a39c301173c406437fd5e2c495c4d7463426c2cb7be591818192220ab6bf",
+      "bytes": 6798
+    },
+    {
+      "before": "R/era5.R",
+      "after": "src/R/era5.R",
+      "sha256": "9699dfefac56acd704e50582d2d38e5d5a414617b3c6135a4a2c8c1bed275347",
+      "bytes": 19373
+    },
+    {
+      "before": "R/events.R",
+      "after": "src/R/events.R",
+      "sha256": "f326d5454307eb92bd899cd8e929031e1644d416f5d3714d1f2c2206e6ac7407",
+      "bytes": 13353
+    },
+    {
+      "before": "R/figure_style.R",
+      "after": "src/R/figure_style.R",
+      "sha256": "5e4ecf65b2fe249e6cba1d132a95601d0a4e8a8e5d6a9d15e4d5ff1efc2328e0",
+      "bytes": 3142
+    },
+    {
+      "before": "R/figures.R",
+      "after": "src/R/figures.R",
+      "sha256": "be8cc857581be306cef1c318fd8dbe7c16ea102b46713b8237f1dff806068c26",
+      "bytes": 29309
+    },
+    {
+      "before": "R/heatwaves.R",
+      "after": "src/R/heatwaves.R",
+      "sha256": "04931c22e67872ebc058dbea469e00c81d32158fcdb50388bd2ed917c9366351",
+      "bytes": 6303
+    },
+    {
+      "before": "R/input.R",
+      "after": "src/R/input.R",
+      "sha256": "e74c22e5214049bab23017a227d8d077d854f040118f6179e8ff5f0963df665e",
+      "bytes": 13694
+    },
+    {
+      "before": "R/lgcp.R",
+      "after": "src/R/lgcp.R",
+      "sha256": "6f1983db8890c1dec36e2982dedfcc1bb88cb9e5686cfe86310eb2395adbe8b7",
+      "bytes": 12030
+    },
+    {
+      "before": "R/power_law.R",
+      "after": "src/R/power_law.R",
+      "sha256": "55e4d46bd7739d894b31dda0658f243948019e9c4288aae6a4e5cada5ac9030c",
+      "bytes": 9694
+    },
+    {
+      "before": "R/readme.R",
+      "after": "src/R/readme.R",
+      "sha256": "16ea11247e1a266b4f3e35d1c1cfe280d929a29de66edce97f584d38bf176c3f",
+      "bytes": 10856
+    },
+    {
+      "before": "R/regional_days.R",
+      "after": "src/R/regional_days.R",
+      "sha256": "39d9c90b987e5a2d575815cbd896f122d6a2b002ebf5793c36fc37f108f6f70f",
+      "bytes": 3858
+    },
+    {
+      "before": "R/run.R",
+      "after": "src/R/run.R",
+      "sha256": "cc6618b60e43739b952c634910e8c8e1ca11ead6d8b4b91e34f76d92e02e9a14",
+      "bytes": 13783
+    },
+    {
+      "before": "R/scoRch.simulator-package.R",
+      "after": "src/R/scoRch.simulator-package.R",
+      "sha256": "b7cff888132b17f6e0b3f52c7b0f3e9a32a29b586c8972ae22761ef0849b952c",
+      "bytes": 1672
+    },
+    {
+      "before": "R/workbooks.R",
+      "after": "src/R/workbooks.R",
+      "sha256": "1b6f5d0fd000826f5378645d932394c002e264eab0f89538343a3ddfa0c54167",
+      "bytes": 13692
+    },
+    {
+      "before": "R/write_tmax.R",
+      "after": "src/R/write_tmax.R",
+      "sha256": "144c304ebb67e09467b252672c9cb55402781abc8f0bdad7c82726fa4edbf85e",
+      "bytes": 4224
+    },
+    {
+      "before": "demo/expected_output/Additional_Results/Analysis_Summary.xlsx",
+      "after": "demo/results/Additional_Results/Analysis_Summary.xlsx",
+      "sha256": "4ab88213b085c04c365a6735651cd7c02e549a609ec89dbec748c574ab609b23",
+      "bytes": 303589
+    },
+    {
+      "before": "demo/expected_output/Heatwave_Catalogs/Compound_Heatwaves.xlsx",
+      "after": "demo/results/Heatwave_Catalogs/Compound_Heatwaves.xlsx",
+      "sha256": "9894e18584d9b18a64c9fe58f2bf29952ef325e600cc8ade2613bf448df791d8",
+      "bytes": 17543
+    },
+    {
+      "before": "demo/expected_output/Heatwave_Catalogs/Heatwave_Clusters.xlsx",
+      "after": "demo/results/Heatwave_Catalogs/Heatwave_Clusters.xlsx",
+      "sha256": "5d7840bb7b9c636b2788045d816b1ab1992cb4215ad8227db3761011e82fe428",
+      "bytes": 2587467
+    },
+    {
+      "before": "demo/expected_output/Heatwave_Catalogs/Heatwave_Ellipses.xlsx",
+      "after": "demo/results/Heatwave_Catalogs/Heatwave_Ellipses.xlsx",
+      "sha256": "08ddf26f958e81a5848bd45fe584a408c30e50eb6f2320e0da2e88e7959c1b02",
+      "bytes": 100212
+    },
+    {
+      "before": "demo/expected_output/Heatwave_Catalogs/Heatwaves.xlsx",
+      "after": "demo/results/Heatwave_Catalogs/Heatwaves.xlsx",
+      "sha256": "2ecac7b344d6b92e8db8e3e1998abd2a65632a9a23a23e69524490560462cd3f",
+      "bytes": 3556858
+    },
+    {
+      "before": "demo/expected_output/Heatwave_Catalogs/Regional_Heatwaves.xlsx",
+      "after": "demo/results/Heatwave_Catalogs/Regional_Heatwaves.xlsx",
+      "sha256": "0a9302d61478b8fcee2312f6808d6fb3ef9444938b4236a7699e62a438c765a0",
+      "bytes": 1601771
+    },
+    {
+      "before": "demo/expected_output/Modelling/LGCP.xlsx",
+      "after": "demo/results/Modelling/LGCP.xlsx",
+      "sha256": "3c8a7a26eba06c9ad27fe0d841a2b4263514550ddd34868edea0f373849db1d0",
+      "bytes": 118942
+    },
+    {
+      "before": "demo/expected_output/Modelling/Power_Law.xlsx",
+      "after": "demo/results/Modelling/Power_Law.xlsx",
+      "sha256": "ea26e0b539f826e06775ade8fccfea844179340d45fe0a42ea14c2bf8b74321f",
+      "bytes": 6696
+    },
+    {
+      "before": "demo/expected_output/figures/annual_event_counts_and_duration.png",
+      "after": "demo/results/figures/annual_event_counts_and_duration.png",
+      "sha256": "d5220a60026c7e1422fc0b8462d4cac6fc5ad4d9bf838e04b39f7ec124e10c4e",
+      "bytes": 269893
+    },
+    {
+      "before": "demo/expected_output/figures/centroid_concentration.png",
+      "after": "demo/results/figures/centroid_concentration.png",
+      "sha256": "1a324104e2bfc6c8d235016f88ce6e364324c93939e2001c752baebcc3dcfecb",
+      "bytes": 886807
+    },
+    {
+      "before": "demo/expected_output/figures/consistent_multiday_events.png",
+      "after": "demo/results/figures/consistent_multiday_events.png",
+      "sha256": "d7869b3abc009eea33a48d228f673a2d8763bbd7740e3ef3cecbeabc92cf0e35",
+      "bytes": 1660862
+    },
+    {
+      "before": "demo/expected_output/figures/ellipse_geometry_by_type.png",
+      "after": "demo/results/figures/ellipse_geometry_by_type.png",
+      "sha256": "19e29fc1692a1dd7a06488c50e9499074358b0ab4b0cd551dae5f720a3e301bf",
+      "bytes": 443262
+    },
+    {
+      "before": "demo/expected_output/figures/ellipse_spatial_patterns.png",
+      "after": "demo/results/figures/ellipse_spatial_patterns.png",
+      "sha256": "0edd74423b28dbe3f7aae71239e7540c324bcc0a278400cfc9b3335cd6a1ad2b",
+      "bytes": 3103778
+    },
+    {
+      "before": "demo/expected_output/figures/event_geometry_distributions.png",
+      "after": "demo/results/figures/event_geometry_distributions.png",
+      "sha256": "e94a4694bc8282e1a7b6264982be717868157c2ac816ec0a5ff781f21638418c",
+      "bytes": 642440
+    },
+    {
+      "before": "demo/expected_output/figures/mixed_multiday_events.png",
+      "after": "demo/results/figures/mixed_multiday_events.png",
+      "sha256": "edf2ad3a6f8b99fde649857a30b26b75e6b34e82145aacb5a1a18f8191459d4d",
+      "bytes": 1996326
+    },
+    {
+      "before": "demo/expected_output/figures/single_day_events.png",
+      "after": "demo/results/figures/single_day_events.png",
+      "sha256": "bff0a85a58eb39e0fce50f8d24e4863185bb42b08db60f56b57fcdeb77d0f8fc",
+      "bytes": 998311
+    },
+    {
+      "before": "inst/CITATION",
+      "after": "src/inst/CITATION",
+      "sha256": "860a3b994993bcb31fe87434cf6f29ebef3c61f84c7ed3b1d14cd46cafa41edc",
+      "bytes": 1306
+    },
+    {
+      "before": "inst/extdata/cds_daily_tmax_2012_great_plains.nc",
+      "after": "src/inst/extdata/cds_daily_tmax_2012_great_plains.nc",
+      "sha256": "26664947bc04c3babc976ce1f212370aec45e35621816a476565efbee2c67f0c",
+      "bytes": 556926
+    },
+    {
+      "before": "inst/extdata/north_america_tmax.nc",
+      "after": "src/inst/extdata/north_america_tmax.nc",
+      "sha256": "59bc15d0acb9dc0484546e36a9c9e16593fe9fddf8e8ddc3df5f7f711e8dbaee",
+      "bytes": 12445463
+    },
+    {
+      "before": "inst/scorch_config.yaml",
+      "after": "src/inst/scorch_config.yaml",
+      "sha256": "61803124051a0b0b143d88746e8ab71f4781d96d374ca2065301d01a34f5360f",
+      "bytes": 4309
+    },
+    {
+      "before": "man/classify_events.Rd",
+      "after": "src/man/classify_events.Rd",
+      "sha256": "1d54711a178194b202571365d7af9aece1609a537801c9cdb58900f04e5dfcae",
+      "bytes": 1872
+    },
+    {
+      "before": "man/cluster_heatwaves.Rd",
+      "after": "src/man/cluster_heatwaves.Rd",
+      "sha256": "2f3e45a7b0022aea15c762e1fd70b3cb079c1dd1c942cb74adc7637ece2ed22a",
+      "bytes": 2125
+    },
+    {
+      "before": "man/detect_heatwaves.Rd",
+      "after": "src/man/detect_heatwaves.Rd",
+      "sha256": "4eee42aaf08ff2fa5d8fe5624137781fae3b75bbc35747d8cf952c3357fe37de",
+      "bytes": 1819
+    },
+    {
+      "before": "man/figures/compound_event_types.png",
+      "after": "src/man/figures/compound_event_types.png",
+      "sha256": "f0471caeee9709ed1100ba328edce2aa874e94857da81535f0bc1442e85af0b2",
+      "bytes": 178521
+    },
+    {
+      "before": "man/figures/scorch_workflow.png",
+      "after": "src/man/figures/scorch_workflow.png",
+      "sha256": "dfbe5311f39c6f5b2625dc2e453ad268e2f5b436e659124fa6f5628745db4831",
+      "bytes": 338217
+    },
+    {
+      "before": "man/fit_ellipses.Rd",
+      "after": "src/man/fit_ellipses.Rd",
+      "sha256": "17921feda2ec6aa8e25be9a7fa3bb0eb17092c819457370ba9e657714455caf7",
+      "bytes": 2033
+    },
+    {
+      "before": "man/fit_lgcp.Rd",
+      "after": "src/man/fit_lgcp.Rd",
+      "sha256": "a44d2db6dd5dfc4b8095a42f8fdf2fcbd10ea86f802c5c6e02df8a4a520b8f8d",
+      "bytes": 2716
+    },
+    {
+      "before": "man/fit_power_law.Rd",
+      "after": "src/man/fit_power_law.Rd",
+      "sha256": "955b002565c6b59703f87f01b020fa4395ffb05a286388e1b22843be6cf93cad",
+      "bytes": 2102
+    },
+    {
+      "before": "man/read_era5.Rd",
+      "after": "src/man/read_era5.Rd",
+      "sha256": "92a2495b52d0f52763d79e06bc4ec8a2b10dcd85b13440ac9a2f795169827e05",
+      "bytes": 4494
+    },
+    {
+      "before": "man/read_tmax.Rd",
+      "after": "src/man/read_tmax.Rd",
+      "sha256": "6a125a54777a0bf5b301fb30b04b542c83a22dcf305c2b86727a07db693d0a65",
+      "bytes": 2221
+    },
+    {
+      "before": "man/run_scorch.Rd",
+      "after": "src/man/run_scorch.Rd",
+      "sha256": "ac2a6ced4143c430e5db6ba2099019030ac962c7d65618652ee8f888219e9aec",
+      "bytes": 3735
+    },
+    {
+      "before": "man/scoRch.simulator-package.Rd",
+      "after": "src/man/scoRch.simulator-package.Rd",
+      "sha256": "59a089252e95c6c7592d5d3137c0925ef06ba1fd5fe2825f2f07c813c6770db5",
+      "bytes": 1492
+    },
+    {
+      "before": "man/scorch_figure.Rd",
+      "after": "src/man/scorch_figure.Rd",
+      "sha256": "6986c7100a370608df2455c4b21df42f913cded217b5f45242b13599fdc21eee",
+      "bytes": 1386
+    },
+    {
+      "before": "man/scorch_template.Rd",
+      "after": "src/man/scorch_template.Rd",
+      "sha256": "8be00442ac915e198aca6e9b754ffef6e66cc24d3eab2f14d7adcec88434856d",
+      "bytes": 1041
+    },
+    {
+      "before": "man/select_regional_days.Rd",
+      "after": "src/man/select_regional_days.Rd",
+      "sha256": "962c0dca747dee5d4384ca7312ac54d2cb4ab62f3fccfe1e808ea5a72aec88ca",
+      "bytes": 1435
+    },
+    {
+      "before": "man/tmax_from_array.Rd",
+      "after": "src/man/tmax_from_array.Rd",
+      "sha256": "59ea9d87e878894a10a319e43039ab2f42c941f89d618478c744f46a9ed6cf45",
+      "bytes": 1331
+    },
+    {
+      "before": "man/write_scorch_config.Rd",
+      "after": "src/man/write_scorch_config.Rd",
+      "sha256": "37dcaf3ec141288189137d94db172f1ebc13c481d29451288e1a88bed89ee153",
+      "bytes": 1131
+    },
+    {
+      "before": "man/write_tmax.Rd",
+      "after": "src/man/write_tmax.Rd",
+      "sha256": "514d7e1699a106305d443830347b0084a98273d3efd957ad1441e025ba8dc459",
+      "bytes": 1962
+    },
+    {
+      "before": "tests/testthat.R",
+      "after": "src/tests/testthat.R",
+      "sha256": "1b4bec8094f7a43ed8617bfc5d4f5788e50e3f1b07f21abb201082ac2fa7bd35",
+      "bytes": 80
+    },
+    {
+      "before": "tests/testthat/fixtures/study_cell_series.rds",
+      "after": "src/tests/testthat/fixtures/study_cell_series.rds",
+      "sha256": "02818b2c4a4512461c4e094824dec24ba38a7498b4a29ffa2a862a6f0c21bb7c",
+      "bytes": 60652
+    },
+    {
+      "before": "tests/testthat/fixtures/study_centroids_projected.csv",
+      "after": "src/tests/testthat/fixtures/study_centroids_projected.csv",
+      "sha256": "0d4ebd777789567a34ad47e342b1ad05ab5ec4f1ec601d4ef1ffdaaaae9c9a3e",
+      "bytes": 1450
+    },
+    {
+      "before": "tests/testthat/fixtures/study_cluster_cells.csv",
+      "after": "src/tests/testthat/fixtures/study_cluster_cells.csv",
+      "sha256": "fe88f0ec41fdae425d66c1808a5a1419c5d642deb54335bf1a0424f9eb99bcfa",
+      "bytes": 22380
+    },
+    {
+      "before": "tests/testthat/fixtures/study_day_cells.csv",
+      "after": "src/tests/testthat/fixtures/study_day_cells.csv",
+      "sha256": "bb84881bbc2e89b4e035824abbb404c202d4740d7eb23dfaf548aec55d8f78f6",
+      "bytes": 99485
+    },
+    {
+      "before": "tests/testthat/fixtures/study_day_settings.csv",
+      "after": "src/tests/testthat/fixtures/study_day_settings.csv",
+      "sha256": "80e2d0fec77466263b72e693b664f5dbe2dc8c7a4bddfed96e780608a664a82c",
+      "bytes": 681
+    },
+    {
+      "before": "tests/testthat/fixtures/study_ellipses.csv",
+      "after": "src/tests/testthat/fixtures/study_ellipses.csv",
+      "sha256": "8094f091e4d8c3740070f9ecddf51fdb83c7d20a5b0094c09f9f0507342bc283",
+      "bytes": 1424
+    },
+    {
+      "before": "tests/testthat/fixtures/study_power_law_areas.csv",
+      "after": "src/tests/testthat/fixtures/study_power_law_areas.csv",
+      "sha256": "7fd5283510a101f04d36016d9092eee6b580ff22f248aff0af883a67fde08391",
+      "bytes": 14695
+    },
+    {
+      "before": "tests/testthat/fixtures/study_power_law_fits.csv",
+      "after": "src/tests/testthat/fixtures/study_power_law_fits.csv",
+      "sha256": "144d9fc52e6af0f00670591afd057bfde9bdc165f22049a48ed1c992ff0b9c34",
+      "bytes": 293
+    },
+    {
+      "before": "tests/testthat/helper-workbooks.R",
+      "after": "src/tests/testthat/helper-workbooks.R",
+      "sha256": "2b008dad90efc7a321917f6395f97b68b643c8ff74d3b1a20c970c21b48c8dda",
+      "bytes": 446
+    },
+    {
+      "before": "tests/testthat/test-empty-ellipses.R",
+      "after": "src/tests/testthat/test-empty-ellipses.R",
+      "sha256": "c1b5a7c540fb85b2d9662eec35b0cacf017e68859ea59dd06865dc7bf576a7ac",
+      "bytes": 1050
+    },
+    {
+      "before": "tests/testthat/test-era5.R",
+      "after": "src/tests/testthat/test-era5.R",
+      "sha256": "773f13ac072a4aff68b268f3eb3261c7374af3dec4beabb1d9e225acee83daaf",
+      "bytes": 13115
+    },
+    {
+      "before": "tests/testthat/test-figures.R",
+      "after": "src/tests/testthat/test-figures.R",
+      "sha256": "262e9b6a09edc6123aebb7713452dc7bb66968a1bffe9fc82156e96e87a71114",
+      "bytes": 2791
+    },
+    {
+      "before": "tests/testthat/test-input-config.R",
+      "after": "src/tests/testthat/test-input-config.R",
+      "sha256": "dba8fd6afedcb3e404f1dfb38e7f703956d33323f04e9be3433a40070854d158",
+      "bytes": 16560
+    },
+    {
+      "before": "tests/testthat/test-local-inputs.R",
+      "after": "src/tests/testthat/test-local-inputs.R",
+      "sha256": "cf1b5c759fb316b12c44c43ce5c2344d8ac3a72984b48fc721a2a3ecfc9a3ee9",
+      "bytes": 1641
+    },
+    {
+      "before": "tests/testthat/test-models.R",
+      "after": "src/tests/testthat/test-models.R",
+      "sha256": "6dbe10742bf26b92073394199bab6d5a8005f34185b21ddf44debf76af01aef7",
+      "bytes": 2921
+    },
+    {
+      "before": "tests/testthat/test-reference-study.R",
+      "after": "src/tests/testthat/test-reference-study.R",
+      "sha256": "b3ae90b8273c1d77db8f33442929adc52aba2f069b6dce4e050537f20ebb3761",
+      "bytes": 6131
+    },
+    {
+      "before": "tests/testthat/test-season-validation.R",
+      "after": "src/tests/testthat/test-season-validation.R",
+      "sha256": "20df074bcab43ff6b685ab326c0899f97a1584229a9f8c59bebdfcf5def295b1",
+      "bytes": 2034
+    },
+    {
+      "before": "tests/testthat/test-stages.R",
+      "after": "src/tests/testthat/test-stages.R",
+      "sha256": "54d9865cceed47c17b0caf22d0802d6351a6668f94aab68e1942468dfedc1c4c",
+      "bytes": 9668
+    },
+    {
+      "before": "tests/testthat/test-workbooks.R",
+      "after": "src/tests/testthat/test-workbooks.R",
+      "sha256": "debd4c634bdc3738c822e045e391f50a169d8ff02434f2443527d24d82ac7c9f",
+      "bytes": 8759
+    },
+    {
+      "before": "tests/testthat/test-workflow.R",
+      "after": "src/tests/testthat/test-workflow.R",
+      "sha256": "82e3411568fdbdf65899a847202a55f7993847a9451aa33981f8732011e2de42",
+      "bytes": 11540
+    },
+    {
+      "before": "tests/testthat/test-write-tmax.R",
+      "after": "src/tests/testthat/test-write-tmax.R",
+      "sha256": "020aad802f3d3eca7ebcb1dedc42f1f0756aa11b97570d8fb529d6fe215fe6dd",
+      "bytes": 2400
+    }
+  ],
+  "approved_changes": [
+    "Power-law plot b/d rendering only",
+    "Run README input/config path references",
+    "Data provenance document links"
+  ],
+  "root_entries": [
+    ".github",
+    ".gitignore",
+    ".zenodo.json",
+    "CITATION.cff",
+    "LICENSE.txt",
+    "README.md",
+    "demo",
+    "docs",
+    "src"
+  ]
+}
