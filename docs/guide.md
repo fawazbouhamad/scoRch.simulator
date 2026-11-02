@@ -130,7 +130,7 @@ hourly ERA5, paired with its derived daily Tmax file. It demonstrates hourly
 to daily reduction, Celsius conversion and 0.25-degree to 1-degree aggregation,
 with exact agreement between the two input routes. See
 [`docs/development/data-raw/run_monthly_processing.R`](../docs/development/data-raw/run_monthly_processing.R) and the
-[`demo instructions`](../demo/README.md#demonstrate-the-hourly-processing).
+[`monthly recipe instructions`](development/data-raw/README.md).
 The month demonstrates preprocessing; the 30-year file supports the full analysis.
 
 ## Use your own data
