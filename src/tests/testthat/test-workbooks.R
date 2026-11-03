@@ -84,10 +84,10 @@ test_that("the workbooks of a run cover every table, with the LGCP workbook opti
                  power_law = list(summary = df),
                  lgcp = list(parameter_table = df, cells = df, concentration = df))
   books <- scoRch.simulator:::result_workbooks(result)
-  expect_equal(names(books), c("Heatwave_Catalogs/Heatwaves.xlsx", "Heatwave_Catalogs/Regional_Heatwaves.xlsx",
-                               "Heatwave_Catalogs/Heatwave_Clusters.xlsx", "Heatwave_Catalogs/Heatwave_Ellipses.xlsx",
-                               "Heatwave_Catalogs/Compound_Heatwaves.xlsx", "Modelling/Power_Law_Model.xlsx",
-                               "Modelling/Spatial_Risk_Model.xlsx", "Heatwave_Statistics.xlsx"))
+  expect_equal(names(books), c("catalogs/01_heatwave_events.xlsx", "catalogs/02_regionally_extensive_heatwaves.xlsx",
+                               "catalogs/03_extreme_heatwave_clusters.xlsx", "catalogs/04_extreme_heatwave_ellipses.xlsx",
+                               "catalogs/05_compound_heatwave_events.xlsx", "modeling/Power_Law_Model.xlsx",
+                               "modeling/Spatial_Risk_Model.xlsx", "Heatwave_Statistics.xlsx"))
   expect_equal(unname(lapply(books, names)),
                list("Heatwave Events", c("Regional Days", "Regional Day Cells"), c("Clusters", "Cluster Cells"),
                     "Ellipses", c("Compound Events", "Event Days"), "Power Law Fits",
@@ -98,10 +98,10 @@ test_that("the workbooks of a run cover every table, with the LGCP workbook opti
   expect_false(any(grepl("Table 1", c(names(books), sheets))))
   expect_true(all(names(books) %in% scoRch.simulator:::managed_output_files()))
   result$lgcp <- NULL
-  expect_false("Modelling/Spatial_Risk_Model.xlsx" %in% names(scoRch.simulator:::result_workbooks(result)))
+  expect_false("modeling/Spatial_Risk_Model.xlsx" %in% names(scoRch.simulator:::result_workbooks(result)))
   partial <- scoRch.simulator:::partial_workbooks(result$heatwaves, result$regional, result$clusters)
-  expect_equal(names(partial), c("Heatwave_Catalogs/Heatwaves.xlsx", "Heatwave_Catalogs/Regional_Heatwaves.xlsx",
-                                 "Heatwave_Catalogs/Heatwave_Clusters.xlsx", "Heatwave_Statistics.xlsx"))
+  expect_equal(names(partial), c("catalogs/01_heatwave_events.xlsx", "catalogs/02_regionally_extensive_heatwaves.xlsx",
+                                 "catalogs/03_extreme_heatwave_clusters.xlsx", "Heatwave_Statistics.xlsx"))
   expect_equal(names(partial[[4]]), c("Cell Thresholds", "Daily Heatwave Extent"))
 })
 

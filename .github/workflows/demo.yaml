@@ -1,6 +1,6 @@
 # Install the package and run the demonstration and the preprocessing example
 # on every change, then compare every workbook sheet, Run_Summary.txt and the
-# figures with demo/results.
+# figures with demo/output.
 on:
   push:
     branches: [main]
@@ -31,9 +31,9 @@ jobs:
         run: Rscript demo/run.R
       - name: Check the two local input options
         run: Rscript .github/scripts/check_input_options.R
-      - name: Compare the demo output with demo/results
+      - name: Compare the demo output with demo/output
         run: Rscript .github/scripts/compare_output.R
       - uses: actions/upload-artifact@v4
         with:
           name: demo-output
-          path: results
+          path: output

@@ -7,10 +7,10 @@
 #' daily maximum temperature, see [read_tmax()]), runs the five
 #' catalog stages, fits the power-law and LGCP models, and writes the
 #' results to the output folder as XLSX workbooks, PNG figures and one
-#' `Run_Summary.txt`: `Heatwave_Catalogs/` (`Heatwaves.xlsx`,
-#' `Regional_Heatwaves.xlsx`, `Heatwave_Clusters.xlsx`,
-#' `Heatwave_Ellipses.xlsx` and `Compound_Heatwaves.xlsx`: Catalogs 1-5 with
-#' their day and cell tables), `Modelling/` (`Power_Law_Model.xlsx` and
+#' `Run_Summary.txt`: `catalogs/` (`01_heatwave_events.xlsx`,
+#' `02_regionally_extensive_heatwaves.xlsx`, `03_extreme_heatwave_clusters.xlsx`,
+#' `04_extreme_heatwave_ellipses.xlsx` and `05_compound_heatwave_events.xlsx`: Catalogs 1-5 with
+#' their day and cell tables), `modeling/` (`Power_Law_Model.xlsx` and
 #' `Spatial_Risk_Model.xlsx`: fits, parameters, intensity and centroid concentration),
 #' `Heatwave_Statistics.xlsx` (event type summary, cell
 #' thresholds, daily heatwave extent, duration trends), `figures/` (nine
@@ -39,25 +39,31 @@
 #'   structure. `NULL` (the default) runs with the SCORCH study settings; the
 #'   temperature must then be given as `tmax`, because the shipped
 #'   configuration names no input file, and the results are written to
-#'   `results/` in the working directory.
+#'   `output/` in the working directory.
 #' @param tmax Optional `scorch_tmax` object (from [read_tmax()] or
 #'   [tmax_from_array()]) to analyse instead of reading the file named in the
 #'   configuration. The configured warm-season months and date limits also
 #'   apply to this object.
+#' @param trace_date Optional date to explain in the run summary. A trace is
+#'   included if the date belongs to one of the compound events in this run.
 #' @return A `scorch_result` list (invisibly) with the configuration, the
 #'   input description and the tables of every stage: `heatwaves`, `regional`,
 #'   `clusters`, `ellipses`, `events`, `power_law` and `lgcp`. Use it with
 #'   [scorch_figure()] to redraw a result plot.
 #' @examples
 #' \donttest{
-#' old <- setwd(tempdir())                              # results go to tempdir()/results
+#' old <- setwd(tempdir())                              # results go to tempdir()/output
 #' scorch_template("scorch_config.yaml", fast = TRUE)   # fast demonstration for the example data
 #' result <- run_scorch("scorch_config.yaml")
 #' result$events$table_1
 #' setwd(old)
 #' }
 #' @export
-run_scorch <- function(config = NULL, tmax = NULL) {
+run_scorch <- function(config = NULL, tmax = NULL, trace_date = NULL) {
+  if (!is.null(trace_date)) {
+    trace_date <- tryCatch(as.Date(trace_date), error = function(e) as.Date(NA))
+    if (length(trace_date) != 1L || is.na(trace_date)) fail("trace_date must be one calendar date, e.g. '2012-06-30'.")
+  }
   started <- Sys.time()
   cfg <- read_config(config, input_required = is.null(tmax))
   out <- cfg$output$directory
@@ -153,6 +159,14 @@ run_scorch <- function(config = NULL, tmax = NULL) {
     }
   }
   result$plots <- plots
+  if (!is.null(trace_date) && trace_date %in% tmax$dates) {
+    matches <- events$events$start_date <= trace_date & events$events$end_date >= trace_date
+    if (sum(matches) == 1L) {
+      traced <- result
+      traced$output_dir <- out
+      result$trace <- trace_event(traced, tmax, trace_date)
+    }
+  }
   result$elapsed_minutes <- as.numeric(difftime(Sys.time(), started, units = "mins"))
   write_text_file(run_readme(result, books), file.path(stage, "Run_Summary.txt"))
   publish_run_output(stage, out)
@@ -200,7 +214,7 @@ prepare_run_output <- function(out) {
   }
   stage <- tempfile(pattern = ".scorch-stage-", tmpdir = parent)
   if (!dir.create(stage, showWarnings = FALSE)) fail("Could not create the temporary output directory: ", stage)
-  for (folder in c("Heatwave_Catalogs", "Modelling", "figures")) {
+  for (folder in c("catalogs", "modeling", "figures")) {
     if (!dir.create(file.path(stage, folder), showWarnings = FALSE)) {
       unlink(stage, recursive = TRUE)
       fail("Could not prepare the output folder: ", folder)
@@ -251,27 +265,45 @@ publish_run_output <- function(stage, out) {
   }
   unlink(backup, recursive = TRUE)
   # Remove only the now-empty former package folder, never user contents.
-  old_folder <- file.path(out, "Additional_Results")
-  if (dir.exists(old_folder) && !length(list.files(old_folder, all.files = TRUE, no.. = TRUE))) {
-    root <- normalizePath(out, winslash = "/", mustWork = TRUE)
-    target <- normalizePath(old_folder, winslash = "/", mustWork = TRUE)
-    if (identical(dirname(target), root)) unlink(target, recursive = TRUE)
+  for (folder in c("Additional_Results", "Heatwave_Catalogs", "Modelling")) {
+    old_folder <- file.path(out, folder)
+    if (dir.exists(old_folder) && !length(list.files(old_folder, all.files = TRUE, no.. = TRUE))) {
+      root <- normalizePath(out, winslash = "/", mustWork = TRUE)
+      target <- normalizePath(old_folder, winslash = "/", mustWork = TRUE)
+      if (identical(dirname(target), root)) unlink(target, recursive = TRUE)
+    }
   }
   invisible(out)
 }
 
 # Include all optional outputs so a rerun cannot leave a stale model or plot.
 managed_output_files <- function() {
-  c(file.path("Heatwave_Catalogs", c("Heatwaves.xlsx", "Regional_Heatwaves.xlsx", "Heatwave_Clusters.xlsx",
-                                      "Heatwave_Ellipses.xlsx", "Compound_Heatwaves.xlsx")),
-    file.path("Modelling", c("Power_Law_Model.xlsx", "Spatial_Risk_Model.xlsx")),
-    file.path("Heatwave_Statistics.xlsx"),
-    file.path("figures", paste0(names(figure_specs()), ".png")),
+  c(
+    "catalogs/01_heatwave_events.xlsx",
+    "catalogs/02_regionally_extensive_heatwaves.xlsx",
+    "catalogs/03_extreme_heatwave_clusters.xlsx",
+    "catalogs/04_extreme_heatwave_ellipses.xlsx",
+    "catalogs/05_compound_heatwave_events.xlsx",
+    "modeling/Power_Law_Model.xlsx",
+    "modeling/Spatial_Risk_Model.xlsx",
+    "Heatwave_Statistics.xlsx",
     "Run_Summary.txt",
-    # Previous export names are retired during a successful rerun.
-    "README.txt", "Additional_Results/Analysis_Summary.xlsx",
-    "Modelling/Power_Law.xlsx", "Modelling/LGCP.xlsx",
-    "figures/ellipse_area_power_law.png", "figures/centroid_concentration.png")
+    file.path("figures", paste0(names(figure_specs()), ".png")),
+    # Retire earlier generated paths only after a successful run.
+    "Heatwave_Catalogs/Heatwaves.xlsx",
+    "Heatwave_Catalogs/Regional_Heatwaves.xlsx",
+    "Heatwave_Catalogs/Heatwave_Clusters.xlsx",
+    "Heatwave_Catalogs/Heatwave_Ellipses.xlsx",
+    "Heatwave_Catalogs/Compound_Heatwaves.xlsx",
+    "Modelling/Power_Law_Model.xlsx",
+    "Modelling/Spatial_Risk_Model.xlsx",
+    "README.txt",
+    "Additional_Results/Analysis_Summary.xlsx",
+    "Modelling/Power_Law.xlsx",
+    "Modelling/LGCP.xlsx",
+    "figures/ellipse_area_power_law.png",
+    "figures/centroid_concentration.png"
+  )
 }
 
 # Degrees with the hemisphere letter, for the run summary and print methods.

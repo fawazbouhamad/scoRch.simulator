@@ -4,7 +4,7 @@
 \alias{run_scorch}
 \title{Run the complete SCORCH workflow}
 \usage{
-run_scorch(config = NULL, tmax = NULL)
+run_scorch(config = NULL, tmax = NULL, trace_date = NULL)
 }
 \arguments{
 \item{config}{Path of a YAML configuration file (an edited copy from
@@ -12,12 +12,14 @@ run_scorch(config = NULL, tmax = NULL)
 structure. \code{NULL} (the default) runs with the SCORCH study settings; the
 temperature must then be given as \code{tmax}, because the shipped
 configuration names no input file, and the results are written to
-\verb{results/} in the working directory.}
+\verb{output/} in the working directory.}
 
 \item{tmax}{Optional \code{scorch_tmax} object (from \code{\link[=read_tmax]{read_tmax()}} or
 \code{\link[=tmax_from_array]{tmax_from_array()}}) to analyse instead of reading the file named in the
 configuration. The configured warm-season months and date limits also
 apply to this object.}
+\item{trace_date}{Optional date to explain in the run summary, if it belongs to a compound event in this run.}
+
 }
 \value{
 A \code{scorch_result} list (invisibly) with the configuration, the
@@ -31,10 +33,10 @@ temperature, reduced to daily maxima as described in \code{\link[=read_era5]{rea
 daily maximum temperature, see \code{\link[=read_tmax]{read_tmax()}}), runs the five
 catalog stages, fits the power-law and LGCP models, and writes the
 results to the output folder as XLSX workbooks, PNG figures and one
-\code{Run_Summary.txt}: \verb{Heatwave_Catalogs/} (\code{Heatwaves.xlsx},
-\code{Regional_Heatwaves.xlsx}, \code{Heatwave_Clusters.xlsx},
-\code{Heatwave_Ellipses.xlsx} and \code{Compound_Heatwaves.xlsx}: Catalogs 1-5 with
-their day and cell tables), \verb{Modelling/} (\code{Power_Law_Model.xlsx} and
+\code{Run_Summary.txt}: \verb{catalogs/} (\code{01_heatwave_events.xlsx},
+\code{02_regionally_extensive_heatwaves.xlsx}, \code{03_extreme_heatwave_clusters.xlsx},
+\code{04_extreme_heatwave_ellipses.xlsx} and \code{05_compound_heatwave_events.xlsx}: Catalogs 1-5 with
+their day and cell tables), \verb{modeling/} (\code{Power_Law_Model.xlsx} and
 \code{Spatial_Risk_Model.xlsx}: fits, parameters, intensity and centroid concentration),
 \code{Heatwave_Statistics.xlsx} (event type summary, cell
 thresholds, daily heatwave extent, duration trends), \verb{figures/} (nine
@@ -61,7 +63,7 @@ value.
 }
 \examples{
 \donttest{
-old <- setwd(tempdir())                              # results go to tempdir()/results
+old <- setwd(tempdir())                              # results go to tempdir()/output
 scorch_template("scorch_config.yaml", fast = TRUE)   # fast demonstration for the example data
 result <- run_scorch("scorch_config.yaml")
 result$events$table_1

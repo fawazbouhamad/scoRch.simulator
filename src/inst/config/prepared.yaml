@@ -1,0 +1,8 @@
+# US demonstration; omitted scientific settings keep the study defaults.
+input:
+  format: daily_tmax
+output:
+  directory: output
+figures:
+  representative_events:
+    type_3: ["2012-06-28", "2023-08-04"]

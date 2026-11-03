@@ -92,7 +92,7 @@ test_that("the shipped SCORCH configuration is the source of the study settings"
     input = list(file = NULL, format = "auto", variable = "auto", longitude = "auto",
                  latitude = "auto", time = "auto", units = "auto", era5_cell_size_deg = 1,
                  processed_file = NULL),
-    output = list(directory = "results"),
+    output = list(directory = "output"),
     period = list(warm_season_months = 4:9, start_date = NULL, end_date = NULL),
     heatwaves = list(threshold_percentile = 95, min_duration_days = 3, min_exceeding_days = 3),
     regional_days = list(percentile = 97.5),

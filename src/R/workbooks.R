@@ -15,23 +15,23 @@ XLSX_MAX_ROWS <- 1048576L   # rows an XLSX sheet can hold, header included
 # The workbooks of a complete run: relative path -> named list of sheets.
 result_workbooks <- function(result) {
   books <- list(
-    "Heatwave_Catalogs/Heatwaves.xlsx" = list(
+    "catalogs/01_heatwave_events.xlsx" = list(
       "Heatwave Events" = result$heatwaves$events),
-    "Heatwave_Catalogs/Regional_Heatwaves.xlsx" = list(
+    "catalogs/02_regionally_extensive_heatwaves.xlsx" = list(
       "Regional Days" = result$regional$selected_days,
       "Regional Day Cells" = result$regional$selected_cells),
-    "Heatwave_Catalogs/Heatwave_Clusters.xlsx" = list(
+    "catalogs/03_extreme_heatwave_clusters.xlsx" = list(
       "Clusters" = result$clusters$clusters,
       "Cluster Cells" = result$clusters$cluster_cells),
-    "Heatwave_Catalogs/Heatwave_Ellipses.xlsx" = list(
+    "catalogs/04_extreme_heatwave_ellipses.xlsx" = list(
       "Ellipses" = result$ellipses),
-    "Heatwave_Catalogs/Compound_Heatwaves.xlsx" = list(
+    "catalogs/05_compound_heatwave_events.xlsx" = list(
       "Compound Events" = result$events$events,
       "Event Days" = result$events$event_days),
-    "Modelling/Power_Law_Model.xlsx" = list(
+    "modeling/Power_Law_Model.xlsx" = list(
       "Power Law Fits" = result$power_law$summary))
   if (!is.null(result$lgcp)) {
-    books[["Modelling/Spatial_Risk_Model.xlsx"]] <- list(
+    books[["modeling/Spatial_Risk_Model.xlsx"]] <- list(
       "Parameters" = result$lgcp$parameter_table,
       "Intensity" = result$lgcp$cells,
       "Centroid Concentration" = result$lgcp$concentration)
@@ -48,12 +48,12 @@ result_workbooks <- function(result) {
 # cluster: Catalogs 1-3 and the per-cell and per-day tables.
 partial_workbooks <- function(heatwaves, regional, clusters) {
   list(
-    "Heatwave_Catalogs/Heatwaves.xlsx" = list(
+    "catalogs/01_heatwave_events.xlsx" = list(
       "Heatwave Events" = heatwaves$events),
-    "Heatwave_Catalogs/Regional_Heatwaves.xlsx" = list(
+    "catalogs/02_regionally_extensive_heatwaves.xlsx" = list(
       "Regional Days" = regional$selected_days,
       "Regional Day Cells" = regional$selected_cells),
-    "Heatwave_Catalogs/Heatwave_Clusters.xlsx" = list(
+    "catalogs/03_extreme_heatwave_clusters.xlsx" = list(
       "Clusters" = clusters$clusters,
       "Cluster Cells" = clusters$cluster_cells),
     "Heatwave_Statistics.xlsx" = list(
@@ -75,7 +75,7 @@ sheet_descriptions <- function() c(
   "Parameters" = "the fitted LGCP coefficients, field variance and scale",
   "Intensity" = "mean LGCP intensity and concentration rank of every cell",
   "Centroid Concentration" = "share of the centroids inside the top-20% and top-50% intensity zones",
-  "Event Type Summary" = "statistics by compound heatwave type: days, events, durations, ellipses per event",
+  "Event Type Summary" = "Table 1 of the study: statistics by compound heatwave type, days, events, durations, ellipses per event",
   "Cell Thresholds" = "the local threshold and heatwave counts of every cell",
   "Daily Heatwave Extent" = "heatwave and exceeding cells on every day, the regional threshold and the selection flag",
   "Duration Trends" = "trend tests of the annual mean duration of Type 3 and Type 4 events")

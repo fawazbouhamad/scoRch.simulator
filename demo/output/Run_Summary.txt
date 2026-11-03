@@ -1,8 +1,8 @@
 scoRch.simulator 1.0.1 results
-Run started 2026-11-01 22:21:17, finished in 27 seconds.
+Run started 2026-11-03 08:10:31, finished in 31 seconds.
 
 INPUT
-  Source: src/inst/extdata/north_america_tmax.nc
+  Source: <installed north_america_tmax.nc>
   Area: 1800 cells on a 1 x 1 degree grid, 129.5°W to 58.5°W and 25.5°N to 49.5°N
   Period: 5490 dates from 1996-04-01 to 2025-09-30, warm-season months 4 5 6 7 8 9
 
@@ -27,10 +27,10 @@ RESULTS
            Type 4: Compound Clustering (Multi-Type): 4 events over 30 days, longest 16 days, 18.25 ellipses per event on average
 
 MODELS
-  Power law of the largest ellipse areas (Modelling/Power_Law_Model.xlsx):
+  Power law of the largest ellipse areas (modeling/Power_Law_Model.xlsx):
     daily_maxima: n = 140, tail n = 43, A_min = 2231770 km2, alpha = 5.767, bootstrap p = 0.748 (5000 repetitions)
     event_maxima: n = 29, tail n = 13, A_min = 2106524 km2, alpha = 4.412, bootstrap p = 0.582 (5000 repetitions)
-  Log-Gaussian Cox process of the 376 ellipse centroids (Modelling/Spatial_Risk_Model.xlsx):
+  Log-Gaussian Cox process of the 376 ellipse centroids (modeling/Spatial_Risk_Model.xlsx):
     (Intercept) = -10.1179
     lon = -4.28759e-05
     lat = -0.0160473
@@ -54,27 +54,27 @@ FIGURES (figures/)
   spatial_risk_model.png: the LGCP intensity with the centroids and the concentration zones
 
 FILES
-  Heatwave_Catalogs/Heatwaves.xlsx
+  catalogs/01_heatwave_events.xlsx
     Heatwave Events (65790 rows): every local heatwave of every cell (Catalog 1): dates, duration, exceeding and bridged days, peak
-  Heatwave_Catalogs/Regional_Heatwaves.xlsx
+  catalogs/02_regionally_extensive_heatwaves.xlsx
     Regional Days (140 rows): the selected regionally extensive days (Catalog 2) with their heatwave-cell counts
     Regional Day Cells (61694 rows): the heatwave cells of every selected day and their local heatwave
-  Heatwave_Catalogs/Heatwave_Clusters.xlsx
+  catalogs/03_extreme_heatwave_clusters.xlsx
     Clusters (376 rows): the DBSCAN clusters of every selected day (Catalog 3): members, core cells, eps and min_samples applied
     Cluster Cells (61694 rows): every heatwave cell of every selected day with its cluster label, core and noise flags
-  Heatwave_Catalogs/Heatwave_Ellipses.xlsx
+  catalogs/04_extreme_heatwave_ellipses.xlsx
     Ellipses (376 rows): the ellipse of every cluster (Catalog 4): centroids, axes, area, orientation, temperature weights
-  Heatwave_Catalogs/Compound_Heatwaves.xlsx
+  catalogs/05_compound_heatwave_events.xlsx
     Compound Events (29 rows): every compound heatwave event (Catalog 5): type, days, cluster counts, mean geometry, largest ellipse
     Event Days (140 rows): every day of every compound event with its clusters and largest ellipse
-  Modelling/Power_Law_Model.xlsx
+  modeling/Power_Law_Model.xlsx
     Power Law Fits (2 rows): cutoff, exponent, KS distance, bootstrap p-value and bootstrap quantiles for daily and event maxima
-  Modelling/Spatial_Risk_Model.xlsx
+  modeling/Spatial_Risk_Model.xlsx
     Parameters (7 rows): the fitted LGCP coefficients, field variance and scale
     Intensity (1800 rows): mean LGCP intensity and concentration rank of every cell
     Centroid Concentration (6 rows): share of the centroids inside the top-20% and top-50% intensity zones
   Heatwave_Statistics.xlsx
-    Event Type Summary (4 rows): statistics by compound heatwave type: days, events, durations, ellipses per event
+    Event Type Summary (4 rows): Table 1 of the study: statistics by compound heatwave type, days, events, durations, ellipses per event
     Cell Thresholds (1800 rows): the local threshold and heatwave counts of every cell
     Daily Heatwave Extent (5490 rows): heatwave and exceeding cells on every day, the regional threshold and the selection flag
     Duration Trends (2 rows): trend tests of the annual mean duration of Type 3 and Type 4 events
@@ -85,7 +85,7 @@ FILES
 WARNINGS
   None.
 
-TRACED EVENT (demo/run.R)
+TRACED EVENT
   Compound event 7 (Catalog 5): 2012-06-28 to 2012-07-04, 7 days, Temporally Clustered = Type 3, clusters per day 1-1-1-1-1-1-1
 
   Stage 2 (Catalog 2): every day of the event had at least 353 of the 1800 cells in a local heatwave,
@@ -133,13 +133,13 @@ TRACED EVENT (demo/run.R)
      2012-07-06  35.34                no             no           no       no
      2012-07-07  35.81                no             no           no       no
 
-  Figure: results/figures/consistent_multiday_events.png shows this event (named in demo/config/prepared.yaml
-  under figures: representative_events): orange cells are the clustered heatwave cells, grey cells the
+  Figure for this event type: output/figures/consistent_multiday_events.png (selected under figures: representative_events).
+  Orange cells are the clustered heatwave cells, grey cells the
   heatwave cells DBSCAN left out, the black outline is the ellipse and the dot its weighted centroid.
 
 SETTINGS OF THIS RUN (YAML)
   input:
-    file: src/inst/extdata/north_america_tmax.nc
+    file: <installed north_america_tmax.nc>
     format: daily_tmax
     variable: auto
     longitude: auto
