@@ -7,7 +7,7 @@ Celsius as 16-bit integers with scale factor 0.01. The file is unchanged.
 The authors reduced ARCO-ERA5 hourly data to UTC daily maxima at 0.25
 degrees, then averaged complete 4x4 blocks to one-degree cells.
 MD5: 526639b3a874be74fce28cee968ef36b
-Source-year checksums: .github/scripts/arco_na_manifest.txt in the repository.
+Source-year checksums: software/supporting_files/maintenance/demo_data_sources.txt in the repository.
 
 cds_daily_tmax_2012_great_plains.nc
 Internal validation fixture: genuine ERA5 daily maximum 2-m temperature,

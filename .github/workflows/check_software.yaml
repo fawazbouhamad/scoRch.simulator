@@ -4,7 +4,7 @@ on:
     branches: [main]
   pull_request:
 
-name: R-CMD-check.yaml
+name: Check software
 
 permissions: read-all
 
@@ -30,7 +30,7 @@ jobs:
           r-version: ${{ matrix.config.r }}
           use-public-rspm: true
       - name: Assemble the R package
-        run: Rscript .github/scripts/package.R .package
+        run: Rscript software/install.R .package
       - uses: r-lib/actions/setup-r-dependencies@v2
         with:
           working-directory: .package

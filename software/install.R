@@ -1,12 +1,17 @@
 # Assemble the readable repository folders into a standard R source package.
-# Rscript .github/scripts/package.R .package
+# Rscript software/install.R .package
 # Or source this file and call install_scorch() to install from GitHub.
 
 prepare_scorch_package <- function(root = ".", destination = tempfile("scoRch-package-")) {
   source <- normalizePath(file.path(root, "software"), winslash = "/", mustWork = TRUE)
-  folders <- c(scripts = "R", helpers = "man", supporting_files = "inst", tests = "tests")
+  folders <- c(scripts = "R", helpers = "man", tests = "tests",
+               "supporting_files/example_data" = "inst/extdata")
+  files <- c("supporting_files/installation_files/DESCRIPTION" = "DESCRIPTION",
+             "supporting_files/installation_files/NAMESPACE" = "NAMESPACE",
+             "supporting_files/installation_files/.Rbuildignore" = ".Rbuildignore",
+             "supporting_files/CITATION" = "inst/CITATION")
   configuration <- file.path(root, "config.yaml")
-  required <- c(file.path(source, names(folders)), file.path(source, c("DESCRIPTION", "NAMESPACE")), configuration)
+  required <- c(file.path(source, c(names(folders), names(files))), configuration)
   if (!all(file.exists(required))) stop("The repository is missing required software files.", call. = FALSE)
   parent <- normalizePath(dirname(destination), winslash = "/", mustWork = TRUE)
   destination <- file.path(parent, basename(destination))
@@ -15,22 +20,18 @@ prepare_scorch_package <- function(root = ".", destination = tempfile("scoRch-pa
   }
   if (file.exists(destination)) stop("Choose a new, empty package destination.", call. = FALSE)
   if (!dir.create(destination)) stop("Could not create the package destination.", call. = FALSE)
-  items <- list.files(source, all.files = TRUE, no.. = TRUE, full.names = TRUE)
-  for (item in items) {
-    name <- basename(item)
-    if (dir.exists(item) && !name %in% names(folders)) {
-      stop("Unrecognized software folder: ", name, call. = FALSE)
+  # Copy only package contents. Maintenance scripts and Git settings stay
+  # in the repository; installation metadata takes its standard R location.
+  for (name in names(folders)) {
+    target <- file.path(destination, folders[[name]])
+    dir.create(target, recursive = TRUE)
+    children <- list.files(file.path(source, name), all.files = TRUE, no.. = TRUE, full.names = TRUE)
+    if (length(children) && !all(file.copy(children, target, recursive = TRUE, copy.mode = TRUE))) {
+      stop("Could not copy ", name, " into the package.", call. = FALSE)
     }
-    target <- if (name %in% names(folders)) unname(folders[[name]]) else name
-    if (dir.exists(item)) {
-      # Copy into a temporary standard name; the repository stays unchanged.
-      target <- file.path(destination, target)
-      dir.create(target)
-      children <- list.files(item, all.files = TRUE, no.. = TRUE, full.names = TRUE)
-      if (length(children) && !all(file.copy(children, target, recursive = TRUE, copy.mode = TRUE))) {
-        stop("Could not copy ", name, " into the package.", call. = FALSE)
-      }
-    } else if (!file.copy(item, file.path(destination, target), copy.mode = TRUE)) {
+  }
+  for (name in names(files)) {
+    if (!file.copy(file.path(source, name), file.path(destination, files[[name]]), copy.mode = TRUE)) {
       stop("Could not copy ", name, " into the package.", call. = FALSE)
     }
   }
@@ -68,6 +69,6 @@ install_scorch <- function(path = NULL, ref = "main", lib = NULL, upgrade = "nev
 
 if (sys.nframe() == 0L) {
   args <- commandArgs(trailingOnly = TRUE)
-  if (length(args) != 1L) stop("Use: Rscript .github/scripts/package.R <new_package_folder>", call. = FALSE)
+  if (length(args) != 1L) stop("Use: Rscript software/install.R <new_package_folder>", call. = FALSE)
   cat(prepare_scorch_package(destination = args[[1L]]), "\n", sep = "")
 }
