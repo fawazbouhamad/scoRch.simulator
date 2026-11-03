@@ -1,4 +1,6 @@
 # Citation metadata for the scoRch.simulator R package (Citation File Format 1.2.0).
+# GitHub and Zenodo use this root file. .github/zenodo.json is a manual
+# deposit template, retained outside the root to avoid competing metadata sources.
 # The software release and the study's processed dataset are separate records:
 #   software: this repository, version 1.0.1, pending release
 #             (the Zenodo software DOI is added under `identifiers:` once the
@@ -26,6 +28,15 @@ abstract: >-
   function run the complete workflow on ERA5 or prepared daily maximum
   temperature; the package reproduces the catalogs, tables and model results
   of the study from its archived input.
+  The software archive is separate from the study's processed input dataset
+  (version 1.0.0, DOI 10.5281/zenodo.21717874) and the research record at
+  https://github.com/fawazbouhamad/compound-heatwave-typologies-SCORCH.
+  The bundled ERA5-derived US example contains 1,800 one-degree cells between
+  25-50 N and 130-58 W for April-September 1996-2025, prepared from ARCO-ERA5.
+  The authors' processing of the example and local ERA5 sample, and their
+  workflow and typology artwork, are CC BY 4.0. The inputs contain modified
+  Copernicus Climate Change Service information 2026; original data terms
+  and attribution are retained in src/inst/extdata/PROVENANCE.txt.
 keywords:
   - compound heatwaves
   - heatwave typology
