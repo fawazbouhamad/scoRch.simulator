@@ -33,7 +33,7 @@ graphics device or into a PNG file.
 \examples{
 \donttest{
 old <- setwd(tempdir())
-result <- run_scorch(scorch_template("scorch_config.yaml", fast = TRUE, overwrite = TRUE))
+result <- run_scorch(scorch_template("config.yaml", fast = TRUE, overwrite = TRUE))
 scorch_figure(result, "annual_event_counts_and_duration")
 setwd(old)
 }

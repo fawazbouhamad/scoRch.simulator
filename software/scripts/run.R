@@ -53,8 +53,8 @@
 #' @examples
 #' \donttest{
 #' old <- setwd(tempdir())                              # results go to tempdir()/output
-#' scorch_template("scorch_config.yaml", fast = TRUE)   # fast demonstration for the example data
-#' result <- run_scorch("scorch_config.yaml")
+#' scorch_template("config.yaml", fast = TRUE)   # fast demonstration for the example data
+#' result <- run_scorch("config.yaml")
 #' result$events$table_1
 #' setwd(old)
 #' }

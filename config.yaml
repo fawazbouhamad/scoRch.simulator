@@ -1,13 +1,13 @@
-# SCORCH configuration
-# --------------------
+# SCORCH configuration: all settings in one file
+# ------------------------------------------------
 # The settings of the SCORCH study (Bouhamad and Najibi). This file, shipped
 # with the package, is the single source of the default settings: any setting
 # left out of a user's configuration takes its value from here.
 #
 # To change settings, write an editable copy in R:
-#     write_scorch_config("scorch_config.yaml")
+#     write_scorch_config("config.yaml")
 # set input: file, change any other value, save the file and run:
-#     run_scorch("scorch_config.yaml")
+#     run_scorch("config.yaml")
 # Lines starting with # are comments. Keep the indentation as it is.
 
 input:
@@ -66,3 +66,24 @@ figures:
     type_2: null              # a date inside the Type 2 event to show
     type_3: null              # first shown day of one or two Type 3 events, e.g. ["2017-07-17", "1991-06-04"]
     type_4: null              # first of the six shown days of the Type 4 event; null = the six days with most ellipses
+
+# Demo presets: used by run_demo(). Your own run_scorch("config.yaml") uses
+# the settings above. Both demos share those scientific defaults. The hourly
+# preset changes only the prepared preset values shown here.
+demo:
+  prepared:
+    input:
+      format: daily_tmax
+    output:
+      directory: output
+    figures:
+      representative_events:
+        type_3: ["2012-06-28", "2023-08-04"]
+  hourly:
+    input:
+      format: era5
+    output:
+      directory: output/hourly
+    period:
+      start_date: '1996-04-01'
+      end_date: '2025-09-30'

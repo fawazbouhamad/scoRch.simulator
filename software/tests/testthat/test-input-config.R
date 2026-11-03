@@ -83,7 +83,7 @@ test_that("a scorch_tmax can be restricted to the configured period", {
 })
 
 test_that("the shipped SCORCH configuration is the source of the study settings", {
-  shipped <- system.file("scorch_config.yaml", package = "scoRch.simulator")
+  shipped <- system.file("config.yaml", package = "scoRch.simulator")
   expect_true(nzchar(shipped))
   defaults <- scoRch.simulator:::scorch_defaults()
   # The study settings, written out once more here so that a change to the
@@ -125,7 +125,7 @@ test_that("the shipped SCORCH configuration is the source of the study settings"
 test_that("an editable copy of the SCORCH configuration overrides only what it changes", {
   path <- tempfile(fileext = ".yaml")
   expect_identical(write_scorch_config(path), path)
-  expect_identical(readLines(path), readLines(system.file("scorch_config.yaml", package = "scoRch.simulator")))
+  expect_identical(readLines(path), readLines(system.file("config.yaml", package = "scoRch.simulator")))
   expect_error(write_scorch_config(path), "already exists")
   expect_error(scoRch.simulator:::read_config(path), "No input file is set")
   lines <- readLines(path)
@@ -151,6 +151,21 @@ test_that("an editable copy of the SCORCH configuration overrides only what it c
   expect_equal(cfg$lgcp[c("covariates", "window_margin_km")], study$lgcp[c("covariates", "window_margin_km")])
   expect_identical(cfg[-match(c("clustering", "lgcp"), names(cfg))],
                    study[-match(c("clustering", "lgcp"), names(study))])
+})
+
+test_that("one installed configuration contains both demos and excludes presets from analysis", {
+  file <- system.file("config.yaml", package = "scoRch.simulator", mustWork = TRUE)
+  installed <- system.file(package = "scoRch.simulator")
+  expect_identical(list.files(installed, pattern = "[.]ya?ml$", recursive = TRUE), "config.yaml")
+  document <- yaml::read_yaml(file)
+  expect_named(document$demo, c("prepared", "hourly"))
+  expect_identical(scoRch.simulator:::read_config(file, input_required = FALSE),
+                   scoRch.simulator:::read_config(document[names(document) != "demo"], input_required = FALSE))
+  bad <- document
+  bad$demo <- list(prepraed = list())
+  expect_error(scoRch.simulator:::read_config(bad, input_required = FALSE), "demo section")
+  bad$demo <- list(prepared = "invalid")
+  expect_error(scoRch.simulator:::read_config(bad, input_required = FALSE), "preset must contain settings")
 })
 
 test_that("the example configuration is written, read and completed with defaults", {

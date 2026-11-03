@@ -3,6 +3,8 @@
 **Turn temperature data into regional heatwave catalogs, models and figures.**
 Developed by Fawaz Bouhamad and Nasser Najibi using SCORCH: Spatiotemporal Classification of Regional Compound Heatwaves.
 
+**All settings are in [config.yaml](config.yaml), including both demo presets.**
+
 ## Start here
 
 You need **R 4.1 or newer**. Open R or RStudio and follow these three steps.
@@ -71,13 +73,13 @@ The bundled compact file is rounded to 0.01°C; an exact hourly/prepared compari
 
 ## Use your own data
 
-For your own region and period, create an editable configuration:
+For your own region and period, edit [config.yaml](config.yaml). If you installed the package without downloading the repository, create a copy first:
 
 ```r
 library(scoRch.simulator)
-write_scorch_config("scorch_config.yaml")
+if (!file.exists("config.yaml")) write_scorch_config("config.yaml")
 # Open the YAML: set input.file, input.format and your period/grid settings.
-result <- run_scorch("scorch_config.yaml")
+result <- run_scorch("config.yaml")
 ```
 
 Use `input.format: daily_tmax` for prepared daily Tmax or `input.format: era5` for local ERA5 NetCDF files.
@@ -97,7 +99,7 @@ Temperature preparation → local heatwaves → regionally extensive days → cl
 <summary><strong>For developers: source and verification</strong></summary>
 
 `software/` contains `scripts`, `helpers` (function documentation), `supporting_files` and `tests`.
-The installer assembles these into R's standard package layout in a temporary folder; `demo/run.R` calls the same installed `run_demo()` function.
+The installer includes the root `config.yaml` and assembles these folders into R's standard package layout in a temporary folder; `demo/run.R` calls the same installed `run_demo()` function.
 To install a downloaded repository, source `.github/scripts/package.R` and call `install_scorch(path = ".")`.
 From a local clone, run `Rscript demo/run.R`, then `Rscript .github/scripts/check_input_options.R` and `Rscript .github/scripts/compare_output.R`.
 [GitHub Actions](https://github.com/fawazbouhamad/scoRch.simulator/actions) checks Windows, macOS and Linux and compares the demo output with `demo/output/`.

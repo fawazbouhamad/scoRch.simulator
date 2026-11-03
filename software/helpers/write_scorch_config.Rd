@@ -4,7 +4,7 @@
 \alias{write_scorch_config}
 \title{Write an editable copy of the SCORCH configuration}
 \usage{
-write_scorch_config(path = "scorch_config.yaml", overwrite = FALSE)
+write_scorch_config(path = "config.yaml", overwrite = FALSE)
 }
 \arguments{
 \item{path}{File to write (YAML).}
@@ -16,7 +16,7 @@ The path, invisibly.
 }
 \description{
 The package ships with the configuration of the SCORCH study
-(\code{scorch_config.yaml}), the single source of the default settings. This
+(\code{config.yaml}), the single source of the default settings. This
 function copies it, unchanged and fully commented, so that individual
 settings can be changed for another application. Set \code{input: file} to the
 NetCDF file to analyse, change any other setting, and pass the copy to

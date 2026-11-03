@@ -4,7 +4,7 @@
 #' Write an editable copy of the SCORCH configuration
 #'
 #' The package ships with the configuration of the SCORCH study
-#' (`scorch_config.yaml`), the single source of the default settings. This
+#' (`config.yaml`), the single source of the default settings. This
 #' function copies it, unchanged and fully commented, so that individual
 #' settings can be changed for another application. Set `input: file` to the
 #' NetCDF file to analyse, change any other setting, and pass the copy to
@@ -19,7 +19,7 @@
 #' path <- write_scorch_config(tempfile(fileext = ".yaml"))
 #' cat(readLines(path, n = 16), sep = "\n")
 #' @export
-write_scorch_config <- function(path = "scorch_config.yaml", overwrite = FALSE) {
+write_scorch_config <- function(path = "config.yaml", overwrite = FALSE) {
   check_new_file(path, overwrite)
   writeLines(readLines(scorch_config_file()), path)
   invisible(path)
@@ -42,7 +42,7 @@ write_scorch_config <- function(path = "scorch_config.yaml", overwrite = FALSE) 
 #' path <- scorch_template(tempfile(fileext = ".yaml"), fast = TRUE)
 #' cat(readLines(path, n = 12), sep = "\n")
 #' @export
-scorch_template <- function(path = "scorch_config.yaml", fast = FALSE, overwrite = FALSE) {
+scorch_template <- function(path = "config.yaml", fast = FALSE, overwrite = FALSE) {
   check_new_file(path, overwrite)
   lines <- readLines(scorch_config_file())
   example <- system.file("extdata", "north_america_tmax.nc", package = "scoRch.simulator")
@@ -67,7 +67,7 @@ check_new_file <- function(path, overwrite) {
 
 # The SCORCH configuration installed with the package.
 scorch_config_file <- function() {
-  path <- system.file("scorch_config.yaml", package = "scoRch.simulator")
+  path <- system.file("config.yaml", package = "scoRch.simulator")
   if (!nzchar(path)) fail("The SCORCH configuration shipped with the package is missing; reinstall scoRch.simulator.")
   path
 }
@@ -76,12 +76,28 @@ scorch_config_file <- function() {
 # shipped SCORCH configuration. Whole numbers take the types R gives them in
 # code: single settings are doubles (95), lists are integers (4:9).
 scorch_defaults <- function() {
-  lapply(yaml::read_yaml(scorch_config_file()), function(section) {
+  lapply(analysis_settings(yaml::read_yaml(scorch_config_file())), function(section) {
     lapply(section, function(value) {
       value <- yaml_vector(value)
       if (is.integer(value) && length(value) == 1L) as.numeric(value) else value
     })
   })
+}
+
+# Demo presets share this file but are not analysis sections. Older user
+# configurations containing only analysis settings remain valid.
+analysis_settings <- function(config) {
+  if (is.list(config) && "demo" %in% names(config)) {
+    if (sum(names(config) == "demo") != 1L) fail("The configuration repeats the demo section.")
+    presets <- config$demo
+    if (!is.list(presets) || is.null(names(presets)) || anyNA(names(presets)) ||
+        anyDuplicated(names(presets)) || any(!names(presets) %in% c("prepared", "hourly"))) {
+      fail("The demo section must contain named prepared and/or hourly presets.")
+    }
+    if (any(!vapply(presets, is.list, logical(1)))) fail("Each demo preset must contain settings.")
+    config$demo <- NULL
+  }
+  config
 }
 
 # YAML lists of mixed integers and decimals arrive as R lists.
@@ -103,6 +119,7 @@ read_config <- function(config = NULL, input_required = TRUE) {
   } else {
     fail("`config` must be the path of a YAML configuration file, a list of settings or NULL.")
   }
+  given <- analysis_settings(given)
   defaults <- scorch_defaults()
   if (length(given) && (is.null(names(given)) || anyNA(names(given)) ||
                         any(!nzchar(names(given))))) {

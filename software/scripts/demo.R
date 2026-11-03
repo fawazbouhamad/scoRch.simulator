@@ -31,16 +31,21 @@ demo_settings <- function(config_file = "prepared", input = NULL, output = NULL)
   }
   profile <- config_file %in% c("prepared", "hourly")
   if (profile) {
-    cfg <- yaml::read_yaml(system.file("config", "prepared.yaml", package = "scoRch.simulator", mustWork = TRUE))
-    if (config_file == "hourly") {
-      overrides <- yaml::read_yaml(system.file("config", "hourly.yaml", package = "scoRch.simulator", mustWork = TRUE))
+    document <- yaml::read_yaml(scorch_config_file())
+    cfg <- scorch_defaults()
+    profiles <- c("prepared", if (config_file == "hourly") "hourly")
+    for (name in profiles) {
+      overrides <- document$demo[[name]]
+      if (is.null(overrides)) fail("The configuration is missing the ", name, " demo preset.")
+      read_config(overrides, input_required = FALSE)
       for (section in names(overrides)) for (key in names(overrides[[section]])) {
         cfg[[section]][key] <- list(overrides[[section]][[key]])
       }
-    } else cfg$input$file <- system.file("extdata", "north_america_tmax.nc", package = "scoRch.simulator", mustWork = TRUE)
+    }
+    if (config_file == "prepared") cfg$input$file <- system.file("extdata", "north_america_tmax.nc", package = "scoRch.simulator", mustWork = TRUE)
   } else {
     if (!file.exists(config_file)) fail("The configuration file does not exist: ", config_file)
-    cfg <- yaml::read_yaml(config_file)
+    cfg <- analysis_settings(yaml::read_yaml(config_file))
   }
   if (!is.null(input)) cfg$input$file <- input
   if (!is.null(output)) cfg$output$directory <- output

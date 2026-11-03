@@ -4,7 +4,7 @@
 \alias{scorch_template}
 \title{Write a configuration for the example dataset}
 \usage{
-scorch_template(path = "scorch_config.yaml", fast = FALSE, overwrite = FALSE)
+scorch_template(path = "config.yaml", fast = FALSE, overwrite = FALSE)
 }
 \arguments{
 \item{path}{File to write (YAML).}

@@ -5,7 +5,8 @@
 prepare_scorch_package <- function(root = ".", destination = tempfile("scoRch-package-")) {
   source <- normalizePath(file.path(root, "software"), winslash = "/", mustWork = TRUE)
   folders <- c(scripts = "R", helpers = "man", supporting_files = "inst", tests = "tests")
-  required <- c(file.path(source, names(folders)), file.path(source, c("DESCRIPTION", "NAMESPACE")))
+  configuration <- file.path(root, "config.yaml")
+  required <- c(file.path(source, names(folders)), file.path(source, c("DESCRIPTION", "NAMESPACE")), configuration)
   if (!all(file.exists(required))) stop("The repository is missing required software files.", call. = FALSE)
   parent <- normalizePath(dirname(destination), winslash = "/", mustWork = TRUE)
   destination <- file.path(parent, basename(destination))
@@ -32,6 +33,9 @@ prepare_scorch_package <- function(root = ".", destination = tempfile("scoRch-pa
     } else if (!file.copy(item, file.path(destination, target), copy.mode = TRUE)) {
       stop("Could not copy ", name, " into the package.", call. = FALSE)
     }
+  }
+  if (!file.copy(configuration, file.path(destination, "inst", "config.yaml"), copy.mode = TRUE)) {
+    stop("Could not include config.yaml in the package.", call. = FALSE)
   }
   destination
 }
