@@ -1,5 +1,5 @@
 # Build the demonstration data of scoRch.simulator:
-#   src/inst/extdata/north_america_tmax.nc   daily maximum 2-m temperature on 1-degree cells,
+#   software/inst/extdata/north_america_tmax.nc   daily maximum 2-m temperature on 1-degree cells,
 #                                        25-50 N and 130-58 W, every April-September day of
 #                                        1996-2025 (25 x 72 = 1,800 cells, 5,490 dates)
 # from the authors' yearly files <year>_daily_Tmax_NA.nc: ERA5 (Hersbach et al., 2020)
@@ -18,7 +18,7 @@ dir <- commandArgs(trailingOnly = TRUE)[1]
 if (is.na(dir) || !dir.exists(dir)) stop("give the folder of the yearly <year>_daily_Tmax_NA.nc files")
 years <- 1996:2025
 files <- file.path(dir, sprintf("%d_daily_Tmax_NA.nc", years))
-target <- file.path("src", "inst", "extdata", "north_america_tmax.nc")
+target <- file.path("software", "inst", "extdata", "north_america_tmax.nc")
 
 # 1. Every yearly file: structure, metadata, dates, units, missing values.
 manifest <- character()
@@ -42,7 +42,7 @@ for (k in seq_along(files)) {
   manifest <- c(manifest, sprintf("%s %d %s", unname(tools::md5sum(f)), file.size(f), basename(f)))
   cat(sprintf("%d: ok (%.1f to %.1f degC)\n", year, min(x), max(x)))
 }
-writeLines(c("# Source files of src/inst/extdata/north_america_tmax.nc: ERA5 2-m temperature from the ARCO-ERA5",
+writeLines(c("# Source files of software/inst/extdata/north_america_tmax.nc: ERA5 2-m temperature from the ARCO-ERA5",
              "# archive reduced by the authors to daily maxima (UTC days) at 0.25 degrees; columns: md5 size file",
              manifest), file.path(".github", "scripts", "arco_na_manifest.txt"))
 

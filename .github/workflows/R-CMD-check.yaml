@@ -31,11 +31,11 @@ jobs:
           use-public-rspm: true
       - uses: r-lib/actions/setup-r-dependencies@v2
         with:
-          working-directory: src
+          working-directory: software
           extra-packages: any::rcmdcheck
           needs: check
       - uses: r-lib/actions/check-r-package@v2
         with:
-          working-directory: src
+          working-directory: software
           upload-snapshots: true
           build_args: 'c("--no-manual")'

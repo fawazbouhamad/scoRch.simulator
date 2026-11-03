@@ -6,7 +6,7 @@
 library(ncdf4)
 ref <- commandArgs(trailingOnly = TRUE)[1]
 if (is.na(ref) || !dir.exists(ref)) stop("give the path of the reproducibility repository")
-out <- file.path("src", "tests", "testthat", "fixtures")
+out <- file.path("software", "tests", "testthat", "fixtures")
 # The public repository keeps the supporting results under
 # supporting_files/additional_results; the authors' earlier archive kept
 # them under output. The first existing path is used.
