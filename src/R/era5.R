@@ -160,9 +160,6 @@ read_configured_input <- function(cfg) {
             months = period$warm_season_months, start = period$start_date, end = period$end_date)
 }
 
-# "N 50, W -130, S 25, E -58" for messages and attributes.
-format_area <- function(area) sprintf("N %s, W %s, S %s, E %s", area[1], area[2], area[3], area[4])
-
 # era5 when the file holds ERA5 2-m temperature, otherwise daily_tmax.
 detect_input_format <- function(file) {
   nc <- ncdf4::nc_open(file)

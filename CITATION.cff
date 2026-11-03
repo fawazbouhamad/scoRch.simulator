@@ -1,6 +1,5 @@
 # Citation metadata for the scoRch.simulator R package (Citation File Format 1.2.0).
-# GitHub and Zenodo use this root file. .github/zenodo.json is a manual
-# deposit template, retained outside the root to avoid competing metadata sources.
+# GitHub and Zenodo use this root citation file.
 # The software release and the study's processed dataset are separate records:
 #   software: this repository, version 1.0.1, pending release
 #             (the Zenodo software DOI is added under `identifiers:` once the
