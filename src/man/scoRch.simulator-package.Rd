@@ -6,7 +6,7 @@
 \alias{scoRch.simulator-package}
 \title{scoRch.simulator: Spatiotemporal Classification of Regional Compound Heatwaves}
 \description{
-Detects local heatwaves in gridded daily maximum temperature, selects regionally extensive heatwave days, groups their heatwave cells with DBSCAN, fits principal-component ellipses with temperature-weighted centroids, classifies consecutive-day compound heatwave events into four space-time types, and fits the power-law and log-Gaussian Cox process models of the SCORCH method of Bouhamad and Najibi. One configuration file and one function run the complete workflow and write the catalogs, summary tables and model results as XLSX workbooks, descriptively named result plots and a plain-language README.
+Detects local heatwaves in gridded daily maximum temperature, selects regionally extensive heatwave days, groups their heatwave cells with DBSCAN, fits principal-component ellipses with temperature-weighted centroids, classifies consecutive-day compound heatwave events into four space-time types, and fits the power-law and log-Gaussian Cox process models of the SCORCH method of Bouhamad and Najibi. One configuration file and one function run the complete workflow and write the catalogs, summary tables and model results as XLSX workbooks, descriptively named result plots and a plain-language run summary.
 }
 \seealso{
 Useful links:

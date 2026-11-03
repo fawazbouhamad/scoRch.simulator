@@ -177,7 +177,7 @@ test_that("raw ERA5 named in the configuration gives the same analysis as its da
   b_dir <- file.path(folder, "daily")
   files <- sort(list.files(a_dir, recursive = TRUE))
   expect_identical(files, sort(list.files(b_dir, recursive = TRUE)))
-  for (f in setdiff(files, "README.txt")) {
+  for (f in setdiff(files, "Run_Summary.txt")) {
     if (grepl("[.]xlsx$", f)) {
       expect_equal(workbook_tables(file.path(a_dir, f)), workbook_tables(file.path(b_dir, f)), info = f)
     } else {
@@ -186,7 +186,7 @@ test_that("raw ERA5 named in the configuration gives the same analysis as its da
   }
   expect_true(nrow(era5$events$events) > 0)
   expect_identical(era5$plots$status, baseline$plots$status)
-  summary <- readLines(file.path(a_dir, "README.txt"))
+  summary <- readLines(file.path(a_dir, "Run_Summary.txt"))
   expect_true(any(grepl("ERA5 2-m temperature, 4 values per day reduced to the daily maximum (UTC days), averaged to 1-degree cells",
                         summary, fixed = TRUE)))
 })

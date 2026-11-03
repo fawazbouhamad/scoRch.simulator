@@ -33,7 +33,8 @@ scorch_figure <- function(result, name = NULL, file = NULL, dpi = NULL, number =
   id <- as.character(name)
   if (length(id) != 1L || is.na(id)) fail("Choose one visualization name from: ",
                                         paste(names(figure_specs()), collapse = ", "), ".")
-  aliases <- figure_number_aliases()
+  aliases <- c(figure_number_aliases(), ellipse_area_power_law = "power_law_model",
+               centroid_concentration = "spatial_risk_model")
   if (id %in% names(aliases)) id <- unname(aliases[[id]])
   spec <- figure_specs()[[id]]
   if (is.null(spec)) fail("There is no visualization named '", id,
@@ -83,8 +84,8 @@ figure_number_aliases <- function() c(
   "8" = "ellipse_geometry_by_type",
   "9" = "event_geometry_distributions",
   "10" = "annual_event_counts_and_duration",
-  "11" = "ellipse_area_power_law",
-  "12" = "centroid_concentration"
+  "11" = "power_law_model",
+  "12" = "spatial_risk_model"
 )
 
 figure_specs <- function() {
@@ -115,8 +116,8 @@ figure_specs <- function() {
     "ellipse_geometry_by_type" = list(draw = draw_ellipse_geometry_by_type, dpi = 500, size = function(result) c(12.2, 9.8)),
     "event_geometry_distributions" = list(draw = draw_event_geometry_distributions, dpi = 600, size = function(result) c(13.5, 4.8)),
     "annual_event_counts_and_duration" = list(draw = draw_annual_event_counts_and_duration, dpi = 600, size = function(result) c(9.4, 6.45)),
-    "ellipse_area_power_law" = list(draw = draw_ellipse_area_power_law, dpi = 600, size = function(result) c(10, 8.4)),
-    "centroid_concentration" = list(draw = draw_centroid_concentration, dpi = 600,
+    "power_law_model" = list(draw = draw_ellipse_area_power_law, dpi = 600, size = function(result) c(10, 8.4)),
+    "spatial_risk_model" = list(draw = draw_centroid_concentration, dpi = 600,
       size = function(result) c(6.4 + MAP_MAI[2] + MAP_MAI[4] + CBAR_WIDTH, 6.4 * extent_ratio(result) + MAP_MAI[1] + MAP_MAI[3] + 0.5)))
 }
 

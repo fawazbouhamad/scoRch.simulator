@@ -1,0 +1,265 @@
+{
+  "baseline_commit": "90b27d9d2edcafa730ba2511f448ed3a613f2799",
+  "protected_files": 43,
+  "unchanged_scientific_data_and_calculation_files": true,
+  "files": [
+    {
+      "before": "demo/results/Additional_Results/Analysis_Summary.xlsx",
+      "path": "demo/results/Heatwave_Statistics.xlsx",
+      "git_blob_sha256": "4ab88213b085c04c365a6735651cd7c02e549a609ec89dbec748c574ab609b23",
+      "working_sha256": "4ab88213b085c04c365a6735651cd7c02e549a609ec89dbec748c574ab609b23"
+    },
+    {
+      "before": "demo/results/Heatwave_Catalogs/Compound_Heatwaves.xlsx",
+      "path": "demo/results/Heatwave_Catalogs/Compound_Heatwaves.xlsx",
+      "git_blob_sha256": "9894e18584d9b18a64c9fe58f2bf29952ef325e600cc8ade2613bf448df791d8",
+      "working_sha256": "9894e18584d9b18a64c9fe58f2bf29952ef325e600cc8ade2613bf448df791d8"
+    },
+    {
+      "before": "demo/results/Heatwave_Catalogs/Heatwave_Clusters.xlsx",
+      "path": "demo/results/Heatwave_Catalogs/Heatwave_Clusters.xlsx",
+      "git_blob_sha256": "5d7840bb7b9c636b2788045d816b1ab1992cb4215ad8227db3761011e82fe428",
+      "working_sha256": "5d7840bb7b9c636b2788045d816b1ab1992cb4215ad8227db3761011e82fe428"
+    },
+    {
+      "before": "demo/results/Heatwave_Catalogs/Heatwave_Ellipses.xlsx",
+      "path": "demo/results/Heatwave_Catalogs/Heatwave_Ellipses.xlsx",
+      "git_blob_sha256": "08ddf26f958e81a5848bd45fe584a408c30e50eb6f2320e0da2e88e7959c1b02",
+      "working_sha256": "08ddf26f958e81a5848bd45fe584a408c30e50eb6f2320e0da2e88e7959c1b02"
+    },
+    {
+      "before": "demo/results/Heatwave_Catalogs/Heatwaves.xlsx",
+      "path": "demo/results/Heatwave_Catalogs/Heatwaves.xlsx",
+      "git_blob_sha256": "2ecac7b344d6b92e8db8e3e1998abd2a65632a9a23a23e69524490560462cd3f",
+      "working_sha256": "2ecac7b344d6b92e8db8e3e1998abd2a65632a9a23a23e69524490560462cd3f"
+    },
+    {
+      "before": "demo/results/Heatwave_Catalogs/Regional_Heatwaves.xlsx",
+      "path": "demo/results/Heatwave_Catalogs/Regional_Heatwaves.xlsx",
+      "git_blob_sha256": "0a9302d61478b8fcee2312f6808d6fb3ef9444938b4236a7699e62a438c765a0",
+      "working_sha256": "0a9302d61478b8fcee2312f6808d6fb3ef9444938b4236a7699e62a438c765a0"
+    },
+    {
+      "before": "demo/results/Modelling/LGCP.xlsx",
+      "path": "demo/results/Modelling/Spatial_Risk_Model.xlsx",
+      "git_blob_sha256": "3c8a7a26eba06c9ad27fe0d841a2b4263514550ddd34868edea0f373849db1d0",
+      "working_sha256": "3c8a7a26eba06c9ad27fe0d841a2b4263514550ddd34868edea0f373849db1d0"
+    },
+    {
+      "before": "demo/results/Modelling/Power_Law.xlsx",
+      "path": "demo/results/Modelling/Power_Law_Model.xlsx",
+      "git_blob_sha256": "ea26e0b539f826e06775ade8fccfea844179340d45fe0a42ea14c2bf8b74321f",
+      "working_sha256": "ea26e0b539f826e06775ade8fccfea844179340d45fe0a42ea14c2bf8b74321f"
+    },
+    {
+      "before": "demo/results/figures/annual_event_counts_and_duration.png",
+      "path": "demo/results/figures/annual_event_counts_and_duration.png",
+      "git_blob_sha256": "d5220a60026c7e1422fc0b8462d4cac6fc5ad4d9bf838e04b39f7ec124e10c4e",
+      "working_sha256": "d5220a60026c7e1422fc0b8462d4cac6fc5ad4d9bf838e04b39f7ec124e10c4e"
+    },
+    {
+      "before": "demo/results/figures/centroid_concentration.png",
+      "path": "demo/results/figures/spatial_risk_model.png",
+      "git_blob_sha256": "1a324104e2bfc6c8d235016f88ce6e364324c93939e2001c752baebcc3dcfecb",
+      "working_sha256": "1a324104e2bfc6c8d235016f88ce6e364324c93939e2001c752baebcc3dcfecb"
+    },
+    {
+      "before": "demo/results/figures/consistent_multiday_events.png",
+      "path": "demo/results/figures/consistent_multiday_events.png",
+      "git_blob_sha256": "d7869b3abc009eea33a48d228f673a2d8763bbd7740e3ef3cecbeabc92cf0e35",
+      "working_sha256": "d7869b3abc009eea33a48d228f673a2d8763bbd7740e3ef3cecbeabc92cf0e35"
+    },
+    {
+      "before": "demo/results/figures/ellipse_area_power_law.png",
+      "path": "demo/results/figures/power_law_model.png",
+      "git_blob_sha256": "e78a9cd74209bfe4bb266ed096e15d4cedb0b09e211ea3eb360a240f4202e35b",
+      "working_sha256": "e78a9cd74209bfe4bb266ed096e15d4cedb0b09e211ea3eb360a240f4202e35b"
+    },
+    {
+      "before": "demo/results/figures/ellipse_geometry_by_type.png",
+      "path": "demo/results/figures/ellipse_geometry_by_type.png",
+      "git_blob_sha256": "19e29fc1692a1dd7a06488c50e9499074358b0ab4b0cd551dae5f720a3e301bf",
+      "working_sha256": "19e29fc1692a1dd7a06488c50e9499074358b0ab4b0cd551dae5f720a3e301bf"
+    },
+    {
+      "before": "demo/results/figures/ellipse_spatial_patterns.png",
+      "path": "demo/results/figures/ellipse_spatial_patterns.png",
+      "git_blob_sha256": "0edd74423b28dbe3f7aae71239e7540c324bcc0a278400cfc9b3335cd6a1ad2b",
+      "working_sha256": "0edd74423b28dbe3f7aae71239e7540c324bcc0a278400cfc9b3335cd6a1ad2b"
+    },
+    {
+      "before": "demo/results/figures/event_geometry_distributions.png",
+      "path": "demo/results/figures/event_geometry_distributions.png",
+      "git_blob_sha256": "e94a4694bc8282e1a7b6264982be717868157c2ac816ec0a5ff781f21638418c",
+      "working_sha256": "e94a4694bc8282e1a7b6264982be717868157c2ac816ec0a5ff781f21638418c"
+    },
+    {
+      "before": "demo/results/figures/mixed_multiday_events.png",
+      "path": "demo/results/figures/mixed_multiday_events.png",
+      "git_blob_sha256": "edf2ad3a6f8b99fde649857a30b26b75e6b34e82145aacb5a1a18f8191459d4d",
+      "working_sha256": "edf2ad3a6f8b99fde649857a30b26b75e6b34e82145aacb5a1a18f8191459d4d"
+    },
+    {
+      "before": "demo/results/figures/single_day_events.png",
+      "path": "demo/results/figures/single_day_events.png",
+      "git_blob_sha256": "bff0a85a58eb39e0fce50f8d24e4863185bb42b08db60f56b57fcdeb77d0f8fc",
+      "working_sha256": "bff0a85a58eb39e0fce50f8d24e4863185bb42b08db60f56b57fcdeb77d0f8fc"
+    },
+    {
+      "before": "src/R/clustering.R",
+      "path": "src/R/clustering.R",
+      "git_blob_sha256": "6e57618e6ab254ff24774d5979fddad46a16ff20de3f1f126a25120e23a4411d",
+      "working_sha256": "48ea57d2b14d3be77d22cd494616f3c3c43eaea251564621623679808c748b0e"
+    },
+    {
+      "before": "src/R/config.R",
+      "path": "src/R/config.R",
+      "git_blob_sha256": "d0bada91d35d9f05671fda8f031e3b2226a6a32866b9a21744f773f7c513a46c",
+      "working_sha256": "dfedbaa61dc02af6d2b51bf7d4c487bfaa392de371afc3022821d9a20a795d29"
+    },
+    {
+      "before": "src/R/ellipses.R",
+      "path": "src/R/ellipses.R",
+      "git_blob_sha256": "e3a49b44ec55f3071d1f79c01a03674089e583bd268455fc9540eb08a503b34b",
+      "working_sha256": "9a62a39c301173c406437fd5e2c495c4d7463426c2cb7be591818192220ab6bf"
+    },
+    {
+      "before": "src/R/era5.R",
+      "path": "src/R/era5.R",
+      "git_blob_sha256": "13792e79ee875ff7ab2068a2bc43e71a9ed2d1f013b43c6f3fdfbaa59825ae35",
+      "working_sha256": "9699dfefac56acd704e50582d2d38e5d5a414617b3c6135a4a2c8c1bed275347"
+    },
+    {
+      "before": "src/R/events.R",
+      "path": "src/R/events.R",
+      "git_blob_sha256": "a04180c08372b9dc274d835873284e9e22c29348a37bc88a78371b2ac818c30d",
+      "working_sha256": "f326d5454307eb92bd899cd8e929031e1644d416f5d3714d1f2c2206e6ac7407"
+    },
+    {
+      "before": "src/R/figure_style.R",
+      "path": "src/R/figure_style.R",
+      "git_blob_sha256": "0b38088b8a9b8a5a315bc161a8783910d3d1a5d9806b78c512df268f3132283f",
+      "working_sha256": "5e4ecf65b2fe249e6cba1d132a95601d0a4e8a8e5d6a9d15e4d5ff1efc2328e0"
+    },
+    {
+      "before": "src/R/figures_stats.R",
+      "path": "src/R/figures_stats.R",
+      "git_blob_sha256": "d830662d2a9eb9b77c63f96b2d15ba3d520e837f63aba35115c9447e4b378935",
+      "working_sha256": "50ac8fb2f9cb662d05ababfd0463118b89147b2d2b1454e233d458540efbac35"
+    },
+    {
+      "before": "src/R/heatwaves.R",
+      "path": "src/R/heatwaves.R",
+      "git_blob_sha256": "bb74a0dfa7cc050196837c77f410e4c64681d8046493785fb897484ed7a5e186",
+      "working_sha256": "04931c22e67872ebc058dbea469e00c81d32158fcdb50388bd2ed917c9366351"
+    },
+    {
+      "before": "src/R/input.R",
+      "path": "src/R/input.R",
+      "git_blob_sha256": "11d5d3bb8a60b36b515e7d850c781481ba8a9f1750ebabdd85e62700e5b336fc",
+      "working_sha256": "e74c22e5214049bab23017a227d8d077d854f040118f6179e8ff5f0963df665e"
+    },
+    {
+      "before": "src/R/lgcp.R",
+      "path": "src/R/lgcp.R",
+      "git_blob_sha256": "d025c67d6f868e916656b0101ab010c6f7eca157c416f451ed153c73c11956ed",
+      "working_sha256": "6f1983db8890c1dec36e2982dedfcc1bb88cb9e5686cfe86310eb2395adbe8b7"
+    },
+    {
+      "before": "src/R/power_law.R",
+      "path": "src/R/power_law.R",
+      "git_blob_sha256": "4a86715fc234a4428fc3b71dbac67a435bbf40750df74f1e8ed7e6452240dd69",
+      "working_sha256": "55e4d46bd7739d894b31dda0658f243948019e9c4288aae6a4e5cada5ac9030c"
+    },
+    {
+      "before": "src/R/regional_days.R",
+      "path": "src/R/regional_days.R",
+      "git_blob_sha256": "9ee58799584e4faeed443fbe6aa4bc833c6fe557f1f9ef703587d34a73a6dbcf",
+      "working_sha256": "39d9c90b987e5a2d575815cbd896f122d6a2b002ebf5793c36fc37f108f6f70f"
+    },
+    {
+      "before": "src/R/scoRch.simulator-package.R",
+      "path": "src/R/scoRch.simulator-package.R",
+      "git_blob_sha256": "97e2756664970d8e9792d20d145cf0512f529b1680ad230e63cfce4075b21186",
+      "working_sha256": "b7cff888132b17f6e0b3f52c7b0f3e9a32a29b586c8972ae22761ef0849b952c"
+    },
+    {
+      "before": "src/R/write_tmax.R",
+      "path": "src/R/write_tmax.R",
+      "git_blob_sha256": "55bc501e9f6b4ef6b8b60bc7a94126a9919bc7217d212980dd6cf0436892106a",
+      "working_sha256": "144c304ebb67e09467b252672c9cb55402781abc8f0bdad7c82726fa4edbf85e"
+    },
+    {
+      "before": "src/inst/extdata/cds_daily_tmax_2012_great_plains.nc",
+      "path": "src/inst/extdata/cds_daily_tmax_2012_great_plains.nc",
+      "git_blob_sha256": "26664947bc04c3babc976ce1f212370aec45e35621816a476565efbee2c67f0c",
+      "working_sha256": "26664947bc04c3babc976ce1f212370aec45e35621816a476565efbee2c67f0c"
+    },
+    {
+      "before": "src/inst/extdata/north_america_tmax.nc",
+      "path": "src/inst/extdata/north_america_tmax.nc",
+      "git_blob_sha256": "59bc15d0acb9dc0484546e36a9c9e16593fe9fddf8e8ddc3df5f7f711e8dbaee",
+      "working_sha256": "59bc15d0acb9dc0484546e36a9c9e16593fe9fddf8e8ddc3df5f7f711e8dbaee"
+    },
+    {
+      "before": "src/man/figures/compound_event_types.png",
+      "path": "src/man/figures/compound_event_types.png",
+      "git_blob_sha256": "f0471caeee9709ed1100ba328edce2aa874e94857da81535f0bc1442e85af0b2",
+      "working_sha256": "f0471caeee9709ed1100ba328edce2aa874e94857da81535f0bc1442e85af0b2"
+    },
+    {
+      "before": "src/man/figures/scorch_workflow.png",
+      "path": "src/man/figures/scorch_workflow.png",
+      "git_blob_sha256": "dfbe5311f39c6f5b2625dc2e453ad268e2f5b436e659124fa6f5628745db4831",
+      "working_sha256": "dfbe5311f39c6f5b2625dc2e453ad268e2f5b436e659124fa6f5628745db4831"
+    },
+    {
+      "before": "src/tests/testthat/fixtures/study_cell_series.rds",
+      "path": "src/tests/testthat/fixtures/study_cell_series.rds",
+      "git_blob_sha256": "02818b2c4a4512461c4e094824dec24ba38a7498b4a29ffa2a862a6f0c21bb7c",
+      "working_sha256": "02818b2c4a4512461c4e094824dec24ba38a7498b4a29ffa2a862a6f0c21bb7c"
+    },
+    {
+      "before": "src/tests/testthat/fixtures/study_centroids_projected.csv",
+      "path": "src/tests/testthat/fixtures/study_centroids_projected.csv",
+      "git_blob_sha256": "0d4ebd777789567a34ad47e342b1ad05ab5ec4f1ec601d4ef1ffdaaaae9c9a3e",
+      "working_sha256": "0d4ebd777789567a34ad47e342b1ad05ab5ec4f1ec601d4ef1ffdaaaae9c9a3e"
+    },
+    {
+      "before": "src/tests/testthat/fixtures/study_cluster_cells.csv",
+      "path": "src/tests/testthat/fixtures/study_cluster_cells.csv",
+      "git_blob_sha256": "fe88f0ec41fdae425d66c1808a5a1419c5d642deb54335bf1a0424f9eb99bcfa",
+      "working_sha256": "fe88f0ec41fdae425d66c1808a5a1419c5d642deb54335bf1a0424f9eb99bcfa"
+    },
+    {
+      "before": "src/tests/testthat/fixtures/study_day_cells.csv",
+      "path": "src/tests/testthat/fixtures/study_day_cells.csv",
+      "git_blob_sha256": "bb84881bbc2e89b4e035824abbb404c202d4740d7eb23dfaf548aec55d8f78f6",
+      "working_sha256": "bb84881bbc2e89b4e035824abbb404c202d4740d7eb23dfaf548aec55d8f78f6"
+    },
+    {
+      "before": "src/tests/testthat/fixtures/study_day_settings.csv",
+      "path": "src/tests/testthat/fixtures/study_day_settings.csv",
+      "git_blob_sha256": "80e2d0fec77466263b72e693b664f5dbe2dc8c7a4bddfed96e780608a664a82c",
+      "working_sha256": "80e2d0fec77466263b72e693b664f5dbe2dc8c7a4bddfed96e780608a664a82c"
+    },
+    {
+      "before": "src/tests/testthat/fixtures/study_ellipses.csv",
+      "path": "src/tests/testthat/fixtures/study_ellipses.csv",
+      "git_blob_sha256": "8094f091e4d8c3740070f9ecddf51fdb83c7d20a5b0094c09f9f0507342bc283",
+      "working_sha256": "8094f091e4d8c3740070f9ecddf51fdb83c7d20a5b0094c09f9f0507342bc283"
+    },
+    {
+      "before": "src/tests/testthat/fixtures/study_power_law_areas.csv",
+      "path": "src/tests/testthat/fixtures/study_power_law_areas.csv",
+      "git_blob_sha256": "7fd5283510a101f04d36016d9092eee6b580ff22f248aff0af883a67fde08391",
+      "working_sha256": "7fd5283510a101f04d36016d9092eee6b580ff22f248aff0af883a67fde08391"
+    },
+    {
+      "before": "src/tests/testthat/fixtures/study_power_law_fits.csv",
+      "path": "src/tests/testthat/fixtures/study_power_law_fits.csv",
+      "git_blob_sha256": "144d9fc52e6af0f00670591afd057bfde9bdc165f22049a48ed1c992ff0b9c34",
+      "working_sha256": "144d9fc52e6af0f00670591afd057bfde9bdc165f22049a48ed1c992ff0b9c34"
+    }
+  ]
+}

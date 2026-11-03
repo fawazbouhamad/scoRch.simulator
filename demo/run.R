@@ -34,7 +34,7 @@ run_demo <- function(config_file = "demo/config/prepared.yaml", input = NULL, ou
   if (sum(contains) == 1L && trace_date %in% tmax$dates) {
     trace <- trace_event(result, tmax, trace_date, config_file)
     cat("\n", paste(trace, collapse = "\n"), "\n", sep = "")
-    readme_file <- file.path(result$output_dir, "README.txt")
+    readme_file <- file.path(result$output_dir, "Run_Summary.txt")
     readme <- readLines(readme_file, encoding = "UTF-8")
     settings_at <- grep("^SETTINGS OF THIS RUN", readme)[1]
     indented <- ifelse(nzchar(trace), paste0("  ", trace), "")

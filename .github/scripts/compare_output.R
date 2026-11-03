@@ -1,7 +1,7 @@
 # Compare the demo's results/ with demo/results/: every sheet of every
-# workbook (read with openxlsx2), README.txt apart from its run-time line
+# workbook (read with openxlsx2), Run_Summary.txt apart from its run-time line
 # (both read as UTF-8), the presence of the
-# figures, and that README.txt is the only text file. Run from the top folder
+# figures, and that Run_Summary.txt is the only text file. Run from the top folder
 # of the repository after demo/run.R; the demo workflow runs it on every
 # change. Values are compared with a relative tolerance of 1e-6 (1e-3 for the
 # LGCP workbook, whose fit can differ slightly between platforms); dates and
@@ -11,7 +11,7 @@ suppressPackageStartupMessages(library(openxlsx2))
 
 expected_dir <- "demo/results"
 results_dir <- "results"
-tolerance <- c(default = 1e-6, "Modelling/LGCP.xlsx" = 1e-3)
+tolerance <- c(default = 1e-6, "Modelling/Spatial_Risk_Model.xlsx" = 1e-3)
 problems <- character()
 note <- function(...) problems <<- c(problems, sprintf(...))
 
@@ -42,14 +42,14 @@ for (book in list.files(expected_dir, pattern = "[.]xlsx$", recursive = TRUE)) {
 }
 
 timed <- function(lines) lines[!grepl("^Run started ", lines)]
-expected_readme <- timed(readLines(file.path(expected_dir, "README.txt"), encoding = "UTF-8"))
-readme <- timed(readLines(file.path(results_dir, "README.txt"), encoding = "UTF-8"))
+expected_readme <- timed(readLines(file.path(expected_dir, "Run_Summary.txt"), encoding = "UTF-8"))
+readme <- timed(readLines(file.path(results_dir, "Run_Summary.txt"), encoding = "UTF-8"))
 if (identical(expected_readme, readme)) {
-  cat("README.txt: same apart from the run time\n")
+  cat("Run_Summary.txt: same apart from the run time\n")
 } else {
   n <- min(length(expected_readme), length(readme))
   first <- which(expected_readme[seq_len(n)] != readme[seq_len(n)])[1]
-  note("README.txt differs from the expected file (first difference at line %s; %d lines expected, %d found)",
+  note("Run_Summary.txt differs from the expected file (first difference at line %s; %d lines expected, %d found)",
        if (is.na(first)) "none" else first, length(expected_readme), length(readme))
 }
 
@@ -57,7 +57,7 @@ for (figure in list.files(file.path(expected_dir, "figures"))) {
   if (!file.exists(file.path(results_dir, "figures", figure))) note("figures/%s is missing", figure)
 }
 text_files <- list.files(results_dir, pattern = "[.]txt$", recursive = TRUE)
-if (!identical(text_files, "README.txt")) note("text files in results/: %s", paste(text_files, collapse = ", "))
+if (!identical(text_files, "Run_Summary.txt")) note("text files in results/: %s", paste(text_files, collapse = ", "))
 
 if (length(problems)) {
   stop("The demo output differs from demo/results:\n", paste(problems, collapse = "\n"), call. = FALSE)

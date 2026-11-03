@@ -27,10 +27,10 @@ RESULTS
            Type 4: Compound Clustering (Multi-Type): 4 events over 30 days, longest 16 days, 18.25 ellipses per event on average
 
 MODELS
-  Power law of the largest ellipse areas (Modelling/Power_Law.xlsx):
+  Power law of the largest ellipse areas (Modelling/Power_Law_Model.xlsx):
     daily_maxima: n = 140, tail n = 43, A_min = 2231770 km2, alpha = 5.767, bootstrap p = 0.748 (5000 repetitions)
     event_maxima: n = 29, tail n = 13, A_min = 2106524 km2, alpha = 4.412, bootstrap p = 0.582 (5000 repetitions)
-  Log-Gaussian Cox process of the 376 ellipse centroids (Modelling/LGCP.xlsx):
+  Log-Gaussian Cox process of the 376 ellipse centroids (Modelling/Spatial_Risk_Model.xlsx):
     (Intercept) = -10.1179
     lon = -4.28759e-05
     lat = -0.0160473
@@ -50,8 +50,8 @@ FIGURES (figures/)
   ellipse_geometry_by_type.png: ellipse geometry by event type
   event_geometry_distributions.png: distributions of event geometry by type
   annual_event_counts_and_duration.png: annual event counts and mean durations by type
-  ellipse_area_power_law.png: the power-law fit of the largest ellipse areas
-  centroid_concentration.png: the LGCP intensity with the centroids and the concentration zones
+  power_law_model.png: the power-law fit of the largest ellipse areas
+  spatial_risk_model.png: the LGCP intensity with the centroids and the concentration zones
 
 FILES
   Heatwave_Catalogs/Heatwaves.xlsx
@@ -67,19 +67,19 @@ FILES
   Heatwave_Catalogs/Compound_Heatwaves.xlsx
     Compound Events (29 rows): every compound heatwave event (Catalog 5): type, days, cluster counts, mean geometry, largest ellipse
     Event Days (140 rows): every day of every compound event with its clusters and largest ellipse
-  Modelling/Power_Law.xlsx
+  Modelling/Power_Law_Model.xlsx
     Power Law Fits (2 rows): cutoff, exponent, KS distance, bootstrap p-value and bootstrap quantiles for daily and event maxima
-  Modelling/LGCP.xlsx
+  Modelling/Spatial_Risk_Model.xlsx
     Parameters (7 rows): the fitted LGCP coefficients, field variance and scale
     Intensity (1800 rows): mean LGCP intensity and concentration rank of every cell
     Centroid Concentration (6 rows): share of the centroids inside the top-20% and top-50% intensity zones
-  Additional_Results/Analysis_Summary.xlsx
+  Heatwave_Statistics.xlsx
     Event Type Summary (4 rows): statistics by compound heatwave type: days, events, durations, ellipses per event
     Cell Thresholds (1800 rows): the local threshold and heatwave counts of every cell
     Daily Heatwave Extent (5490 rows): heatwave and exceeding cells on every day, the regional threshold and the selection flag
     Duration Trends (2 rows): trend tests of the annual mean duration of Type 3 and Type 4 events
   figures/: the figures listed above (PNG, 600 dpi; 500 dpi for the two largest)
-  README.txt: this file
+  Run_Summary.txt: this file
   Numbers are stored with the 15 significant digits of the XLSX format; the display formats are rounding for reading only. Empty cells are missing values, not zeros.
 
 WARNINGS

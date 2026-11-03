@@ -14,7 +14,7 @@ Description: Detects local heatwaves in gridded daily maximum temperature,
     models of the SCORCH method of Bouhamad and Najibi. One configuration
     file and one function run the complete workflow and write the catalogs,
     summary tables and model results as XLSX workbooks, descriptively named
-    result plots and a plain-language README.
+    result plots and a plain-language run summary.
 License: GPL (>= 3)
 Encoding: UTF-8
 Language: en-US

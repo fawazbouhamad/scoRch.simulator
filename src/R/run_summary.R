@@ -1,9 +1,9 @@
-# README.txt: the one text file of a results folder. It describes the input,
+# Run_Summary.txt: the one text file of a results folder. It describes the input,
 # the main settings, the counts of every stage and type, the models, the
 # figures, every workbook and sheet with its row count, the run time and
 # the warnings, in plain language, and ends with every setting of the run.
 
-# README.txt is written as UTF-8 whatever the locale of the session, so that
+# Run_Summary.txt is written as UTF-8 whatever the locale of the session, so that
 # the degree signs of the coordinates survive a session whose character
 # encoding fell back to "C" (R on Windows, for example, cannot set the
 # C.UTF-8 locale that some shells request); readers open it with
@@ -101,7 +101,7 @@ fmt <- function(x, digits) vapply(x, function(v) format(v, digits = digits), "")
 
 readme_models <- function(result) {
   pl <- result$power_law$summary
-  lines <- c("  Power law of the largest ellipse areas (Modelling/Power_Law.xlsx):",
+  lines <- c("  Power law of the largest ellipse areas (Modelling/Power_Law_Model.xlsx):",
              sprintf("    %s: n = %d, tail n = %s, A_min = %s km2, alpha = %s, bootstrap p = %s (%s repetitions)%s",
                      pl$dataset, pl$n, fmt(pl$n_tail, 7), fmt(pl$xmin_km2, 7), fmt(pl$alpha, 4),
                      fmt(pl$p_value, 3), fmt(pl$reps, 7),
@@ -119,7 +119,7 @@ readme_models <- function(result) {
                           z$n_in_zone, z$n_centroids_in_group, z$percent_in_zone), collapse = "; "))
   }, "")
   c(lines,
-    sprintf("  Log-Gaussian Cox process of the %d ellipse centroids (Modelling/LGCP.xlsx):", nrow(result$ellipses)),
+    sprintf("  Log-Gaussian Cox process of the %d ellipse centroids (Modelling/Spatial_Risk_Model.xlsx):", nrow(result$ellipses)),
     sprintf("    %s = %s", names(lgcp$parameters), fmt(lgcp$parameters, 6)),
     zone_lines,
     if (length(lgcp$warnings)) sprintf("    Warning: %s", lgcp$warnings) else "    No warnings from the fit.")
@@ -133,8 +133,8 @@ figure_descriptions <- function() c(
   "ellipse_geometry_by_type" = "ellipse geometry by event type",
   "event_geometry_distributions" = "distributions of event geometry by type",
   "annual_event_counts_and_duration" = "annual event counts and mean durations by type",
-  "ellipse_area_power_law" = "the power-law fit of the largest ellipse areas",
-  "centroid_concentration" = "the LGCP intensity with the centroids and the concentration zones")
+  "power_law_model" = "the power-law fit of the largest ellipse areas",
+  "spatial_risk_model" = "the LGCP intensity with the centroids and the concentration zones")
 
 readme_figures <- function(result) {
   plots <- result$plots
@@ -155,7 +155,7 @@ readme_files <- function(books) {
   }
   c(lines,
     "  figures/: the figures listed above (PNG, 600 dpi; 500 dpi for the two largest)",
-    "  README.txt: this file",
+    "  Run_Summary.txt: this file",
     "  Numbers are stored with the 15 significant digits of the XLSX format; the display formats are rounding for reading only. Empty cells are missing values, not zeros.")
 }
 

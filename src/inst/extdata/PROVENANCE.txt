@@ -1,0 +1,35 @@
+DATA PROVENANCE AND LICENCE
+
+north_america_tmax.nc
+ERA5-derived daily maximum 2-m temperature, April-September 1996-2025,
+25-50 N and 130-58 W: 1800 one-degree cells and 5490 dates. Stored in
+Celsius as 16-bit integers with scale factor 0.01. The file is unchanged.
+The authors reduced ARCO-ERA5 hourly data to UTC daily maxima at 0.25
+degrees, then averaged complete 4x4 blocks to one-degree cells.
+MD5: 526639b3a874be74fce28cee968ef36b
+Source-year checksums: .github/scripts/arco_na_manifest.txt in the repository.
+
+cds_daily_tmax_2012_great_plains.nc
+Internal validation fixture: genuine ERA5 daily maximum 2-m temperature,
+April-September 2012, 34-44 N and 104-94 W, 41x41 native grid points at
+0.25 degrees, 183 dates, t2m in kelvin. Downloaded unchanged from the CDS
+daily-statistics product on 11 October 2026. It tests unit conversion and
+spatial aggregation. It is not a separate user demonstration.
+MD5: d4a307cec120ca38ef41a1f753f8c194
+Product DOI: https://doi.org/10.24381/cds.4991cf48
+
+Both files contain modified Copernicus Climate Change Service information
+2026. Neither the European Commission nor ECMWF is responsible for any use
+of the information they contain. The authors' processing is CC BY 4.0;
+the ERA5 data follow the applicable Copernicus/CC BY 4.0 attribution terms.
+
+References:
+Hersbach et al. (2020), The ERA5 global reanalysis, QJRMS 146, 1999-2049.
+https://doi.org/10.1002/qj.3803
+Carver and Merose (2023), ARCO-ERA5: An Analysis-Ready Cloud-Optimized
+Reanalysis Dataset, AMS 22nd Conference on AI for Environmental Science.
+https://github.com/google-research/arco-era5
+
+The workflow and event-typology artwork in man/figures is by Bouhamad and
+Najibi, CC BY 4.0. Software source is GPL-3.0-or-later; see the repository's
+root LICENSE.txt and the installed package's DESCRIPTION licence field.

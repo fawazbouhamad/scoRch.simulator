@@ -31,14 +31,14 @@ temperature, reduced to daily maxima as described in \code{\link[=read_era5]{rea
 daily maximum temperature, see \code{\link[=read_tmax]{read_tmax()}}), runs the five
 catalog stages, fits the power-law and LGCP models, and writes the
 results to the output folder as XLSX workbooks, PNG figures and one
-\code{README.txt}: \verb{Heatwave_Catalogs/} (\code{Heatwaves.xlsx},
+\code{Run_Summary.txt}: \verb{Heatwave_Catalogs/} (\code{Heatwaves.xlsx},
 \code{Regional_Heatwaves.xlsx}, \code{Heatwave_Clusters.xlsx},
 \code{Heatwave_Ellipses.xlsx} and \code{Compound_Heatwaves.xlsx}: Catalogs 1-5 with
-their day and cell tables), \verb{Modelling/} (\code{Power_Law.xlsx} and
-\code{LGCP.xlsx}: fits, parameters, intensity and centroid concentration),
-\code{Additional_Results/Analysis_Summary.xlsx} (event type summary, cell
+their day and cell tables), \verb{Modelling/} (\code{Power_Law_Model.xlsx} and
+\code{Spatial_Risk_Model.xlsx}: fits, parameters, intensity and centroid concentration),
+\code{Heatwave_Statistics.xlsx} (event type summary, cell
 thresholds, daily heatwave extent, duration trends), \verb{figures/} (nine
-descriptively named PNG files) and \code{README.txt}, which describes the
+descriptively named PNG files) and \code{Run_Summary.txt}, which describes the
 input, the main settings, the counts, the models, every file and sheet,
 the run time and the warnings in plain language. Every sheet holds all
 rows and columns of its table as date and numeric cells with a frozen,
@@ -47,10 +47,10 @@ an XLSX sheet or a file that cannot be written stops the run with an
 error. Package-generated files are replaced after the new run is written;
 other files in those folders are preserved.
 A valid run can have an unavailable LGCP fit or a plot whose event type is
-absent. Their status and reasons are written to \code{README.txt}; an
+absent. Their status and reasons are written to \code{Run_Summary.txt}; an
 unexpected plot error stops the run without publishing its partial output.
 When no selected day forms a cluster, only Catalogs 1-3, the cell
-thresholds and the daily extent are published, and \code{README.txt} marks the
+thresholds and the daily extent are published, and \code{Run_Summary.txt} marks the
 run incomplete.
 }
 \details{

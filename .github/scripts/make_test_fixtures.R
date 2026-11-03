@@ -2,7 +2,7 @@
 # reproducibility repository (github.com/fawazbouhamad/compound-heatwave-typologies-SCORCH)
 # with the processed temperature file placed at input/tmax_processed.nc.
 # Run from the repository root:
-#   Rscript docs/development/data-raw/make_test_fixtures.R path/to/compound-heatwave-typologies-SCORCH
+#   Rscript .github/scripts/make_test_fixtures.R path/to/compound-heatwave-typologies-SCORCH
 library(ncdf4)
 ref <- commandArgs(trailingOnly = TRUE)[1]
 if (is.na(ref) || !dir.exists(ref)) stop("give the path of the reproducibility repository")

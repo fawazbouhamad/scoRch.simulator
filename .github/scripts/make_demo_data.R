@@ -9,10 +9,10 @@
 # script checks every yearly file, lets the package's read_era5() average the 4 x 4
 # points of every complete 1-degree cell, checks that mean by hand for a few cells,
 # writes the file with write_tmax() (16-bit integers, 0.01 degC) and records the
-# checksums of the source files in docs/development/data-raw/arco_na_manifest.txt.
+# checksums of the source files in .github/scripts/arco_na_manifest.txt.
 #
 # Run from the repository root, with the package installed:
-#   Rscript docs/development/data-raw/make_demo_data.R path/to/raw_daily_nc
+#   Rscript .github/scripts/make_demo_data.R path/to/raw_daily_nc
 suppressPackageStartupMessages({library(ncdf4); library(scoRch.simulator)})
 dir <- commandArgs(trailingOnly = TRUE)[1]
 if (is.na(dir) || !dir.exists(dir)) stop("give the folder of the yearly <year>_daily_Tmax_NA.nc files")
@@ -44,7 +44,7 @@ for (k in seq_along(files)) {
 }
 writeLines(c("# Source files of src/inst/extdata/north_america_tmax.nc: ERA5 2-m temperature from the ARCO-ERA5",
              "# archive reduced by the authors to daily maxima (UTC days) at 0.25 degrees; columns: md5 size file",
-             manifest), file.path("docs", "development", "data-raw", "arco_na_manifest.txt"))
+             manifest), file.path(".github", "scripts", "arco_na_manifest.txt"))
 
 # 2. The package's reduction to 1-degree cells, checked.
 tmax <- read_era5(files, variable = "Tmax_C", months = 4:9, cell_size = 1)
@@ -75,7 +75,7 @@ write_tmax(tmax, target, precision = "int16", overwrite = TRUE,
                           "at 0.25 degrees (files <year>_daily_Tmax_NA.nc), averaged to 1-degree cells by",
                           "scoRch.simulator::read_era5() and rounded to 0.01 degC"),
            licence = "CC BY 4.0 for the authors' processing; contains modified Copernicus Climate Change Service information 2026 (ERA5)",
-           history = sprintf("written on %s by docs/development/data-raw/make_demo_data.R of scoRch.simulator %s from 30 yearly files (docs/development/data-raw/arco_na_manifest.txt)",
+           history = sprintf("written on %s by .github/scripts/make_demo_data.R of scoRch.simulator %s from 30 yearly files (.github/scripts/arco_na_manifest.txt)",
                              format(Sys.Date()), as.character(packageVersion("scoRch.simulator"))))
 back <- read_tmax(target)
 stopifnot(nrow(back$cells) == 1800, length(back$dates) == 5490, !anyNA(back$tmax), max(abs(back$tmax - tmax$tmax)) <= 0.005 + 1e-9)

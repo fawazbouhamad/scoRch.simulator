@@ -26,7 +26,7 @@ input:
                               # later runs can read that file directly; leave null for prepared input
 
 output:
-  directory: results          # results folder (XLSX workbooks, figures/, README.txt); created if needed,
+  directory: results          # results folder (XLSX workbooks, figures/, Run_Summary.txt); created if needed,
                               # package-generated files of an earlier run are replaced
 
 period:

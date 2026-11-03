@@ -28,15 +28,15 @@ result_workbooks <- function(result) {
     "Heatwave_Catalogs/Compound_Heatwaves.xlsx" = list(
       "Compound Events" = result$events$events,
       "Event Days" = result$events$event_days),
-    "Modelling/Power_Law.xlsx" = list(
+    "Modelling/Power_Law_Model.xlsx" = list(
       "Power Law Fits" = result$power_law$summary))
   if (!is.null(result$lgcp)) {
-    books[["Modelling/LGCP.xlsx"]] <- list(
+    books[["Modelling/Spatial_Risk_Model.xlsx"]] <- list(
       "Parameters" = result$lgcp$parameter_table,
       "Intensity" = result$lgcp$cells,
       "Centroid Concentration" = result$lgcp$concentration)
   }
-  books[["Additional_Results/Analysis_Summary.xlsx"]] <- list(
+  books[["Heatwave_Statistics.xlsx"]] <- list(
     "Event Type Summary" = result$events$table_1,
     "Cell Thresholds" = result$heatwaves$thresholds,
     "Daily Heatwave Extent" = result$regional$daily,
@@ -56,12 +56,12 @@ partial_workbooks <- function(heatwaves, regional, clusters) {
     "Heatwave_Catalogs/Heatwave_Clusters.xlsx" = list(
       "Clusters" = clusters$clusters,
       "Cluster Cells" = clusters$cluster_cells),
-    "Additional_Results/Analysis_Summary.xlsx" = list(
+    "Heatwave_Statistics.xlsx" = list(
       "Cell Thresholds" = heatwaves$thresholds,
       "Daily Heatwave Extent" = regional$daily))
 }
 
-# One line per sheet for README.txt.
+# One line per sheet for Run_Summary.txt.
 sheet_descriptions <- function() c(
   "Heatwave Events" = "every local heatwave of every cell (Catalog 1): dates, duration, exceeding and bridged days, peak",
   "Regional Days" = "the selected regionally extensive days (Catalog 2) with their heatwave-cell counts",

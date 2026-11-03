@@ -52,7 +52,7 @@ test_that("every written workbook passes the archive check, and defects are name
   expect_equal(scoRch.simulator:::resolve_part_path("xl/", "/xl/styles.xml"), "xl/styles.xml")
 })
 
-test_that("README.txt keeps its degree signs when the session locale fell back to C", {
+test_that("Run_Summary.txt keeps its degree signs when the session locale fell back to C", {
   old <- Sys.getlocale("LC_CTYPE")
   on.exit(Sys.setlocale("LC_CTYPE", old), add = TRUE)
   skip_if_not(identical(suppressWarnings(Sys.setlocale("LC_CTYPE", "C")), "C"), "the C locale is not available")
@@ -86,8 +86,8 @@ test_that("the workbooks of a run cover every table, with the LGCP workbook opti
   books <- scoRch.simulator:::result_workbooks(result)
   expect_equal(names(books), c("Heatwave_Catalogs/Heatwaves.xlsx", "Heatwave_Catalogs/Regional_Heatwaves.xlsx",
                                "Heatwave_Catalogs/Heatwave_Clusters.xlsx", "Heatwave_Catalogs/Heatwave_Ellipses.xlsx",
-                               "Heatwave_Catalogs/Compound_Heatwaves.xlsx", "Modelling/Power_Law.xlsx",
-                               "Modelling/LGCP.xlsx", "Additional_Results/Analysis_Summary.xlsx"))
+                               "Heatwave_Catalogs/Compound_Heatwaves.xlsx", "Modelling/Power_Law_Model.xlsx",
+                               "Modelling/Spatial_Risk_Model.xlsx", "Heatwave_Statistics.xlsx"))
   expect_equal(unname(lapply(books, names)),
                list("Heatwave Events", c("Regional Days", "Regional Day Cells"), c("Clusters", "Cluster Cells"),
                     "Ellipses", c("Compound Events", "Event Days"), "Power Law Fits",
@@ -98,10 +98,10 @@ test_that("the workbooks of a run cover every table, with the LGCP workbook opti
   expect_false(any(grepl("Table 1", c(names(books), sheets))))
   expect_true(all(names(books) %in% scoRch.simulator:::managed_output_files()))
   result$lgcp <- NULL
-  expect_false("Modelling/LGCP.xlsx" %in% names(scoRch.simulator:::result_workbooks(result)))
+  expect_false("Modelling/Spatial_Risk_Model.xlsx" %in% names(scoRch.simulator:::result_workbooks(result)))
   partial <- scoRch.simulator:::partial_workbooks(result$heatwaves, result$regional, result$clusters)
   expect_equal(names(partial), c("Heatwave_Catalogs/Heatwaves.xlsx", "Heatwave_Catalogs/Regional_Heatwaves.xlsx",
-                                 "Heatwave_Catalogs/Heatwave_Clusters.xlsx", "Additional_Results/Analysis_Summary.xlsx"))
+                                 "Heatwave_Catalogs/Heatwave_Clusters.xlsx", "Heatwave_Statistics.xlsx"))
   expect_equal(names(partial[[4]]), c("Cell Thresholds", "Daily Heatwave Extent"))
 })
 
