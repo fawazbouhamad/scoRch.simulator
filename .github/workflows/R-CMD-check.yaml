@@ -29,13 +29,15 @@ jobs:
         with:
           r-version: ${{ matrix.config.r }}
           use-public-rspm: true
+      - name: Assemble the R package
+        run: Rscript .github/scripts/package.R .package
       - uses: r-lib/actions/setup-r-dependencies@v2
         with:
-          working-directory: software
+          working-directory: .package
           extra-packages: any::rcmdcheck
           needs: check
       - uses: r-lib/actions/check-r-package@v2
         with:
-          working-directory: software
+          working-directory: .package
           upload-snapshots: true
           build_args: 'c("--no-manual")'

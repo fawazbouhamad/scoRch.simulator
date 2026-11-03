@@ -1,4 +1,4 @@
-# Source files of software/inst/extdata/north_america_tmax.nc: ERA5 2-m temperature from the ARCO-ERA5
+# Source files of software/supporting_files/extdata/north_america_tmax.nc: ERA5 2-m temperature from the ARCO-ERA5
 # archive reduced by the authors to daily maxima (UTC days) at 0.25 degrees; columns: md5 size file
 75e60ca4594551804690a428edf57bc8 12601934 1996_daily_Tmax_NA.nc
 f86f385239caed8eea3e7003c348d90d 12581679 1997_daily_Tmax_NA.nc

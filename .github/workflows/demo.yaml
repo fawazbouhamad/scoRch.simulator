@@ -22,9 +22,11 @@ jobs:
         with:
           r-version: 'release'
           use-public-rspm: true
+      - name: Assemble the R package
+        run: Rscript .github/scripts/package.R .package
       - uses: r-lib/actions/setup-r-dependencies@v2
         with:
-          working-directory: software
+          working-directory: .package
           extra-packages: local::.
           needs: check
       - name: Run the demonstration
