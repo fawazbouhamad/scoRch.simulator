@@ -27,8 +27,9 @@ jobs:
       - uses: r-lib/actions/setup-r-dependencies@v2
         with:
           working-directory: .package
-          extra-packages: local::.
           needs: check
+      - name: Install the assembled package
+        run: R CMD INSTALL .package
       - name: Run the demonstration
         run: Rscript demo/run.R
       - name: Check the two local input options
