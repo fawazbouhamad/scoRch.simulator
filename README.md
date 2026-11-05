@@ -26,7 +26,7 @@ scoRch.simulator::run_demo()
 
 The package includes the prepared US data. You do not need to download this repository, choose a configuration or edit any files.
 The example covers April–September 1996–2025: 1,800 one-degree cells and 5,490 dates, in a file of about 12 MB.
-You can also download the same [prepared input file](demo/input/north_america_tmax.nc) from [demo/input/](demo/input/), which documents the data and how to use the file directly.
+You can also download the same [processed Tmax input file](demo/input/north_america_processed_tmax.nc).
 It uses the study settings, including 5,000 bootstrap repetitions and fixed seeds.
 
 **3. Open your results.** Wait for the run to finish. R prints the full folder path to open.
