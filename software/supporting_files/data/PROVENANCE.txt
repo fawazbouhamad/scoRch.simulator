@@ -1,20 +1,20 @@
 DATA PROVENANCE AND LICENCE
 
-north_america_tmax.nc
+Demo input: demo/input/north_america_processed_tmax.nc
+Installed as extdata/north_america_tmax.nc.
 ERA5-derived daily maximum 2-m temperature, April-September 1996-2025,
 25-50 N and 130-58 W: 1800 one-degree cells and 5490 dates. Stored in
-Celsius as 16-bit integers with scale factor 0.01. The file is unchanged.
-The authors reduced ARCO-ERA5 hourly data to UTC daily maxima at 0.25
-degrees, then averaged complete 4x4 blocks to one-degree cells.
+Celsius as 16-bit integers with scale factor 0.01.
+The authors calculated UTC daily maxima from ARCO-ERA5 hourly data at
+0.25 degrees, then averaged complete 4x4 blocks to one-degree cells.
 MD5: 526639b3a874be74fce28cee968ef36b
-Source-year checksums: software/supporting_files/maintenance/demo_data_sources.txt in the repository.
+Source-year file checksums: source_checksums.txt in this folder.
 
-cds_daily_tmax_2012_great_plains.nc
-Internal validation fixture: genuine ERA5 daily maximum 2-m temperature,
-April-September 2012, 34-44 N and 104-94 W, 41x41 native grid points at
-0.25 degrees, 183 dates, t2m in kelvin. Downloaded unchanged from the CDS
-daily-statistics product on 11 October 2026. It tests unit conversion and
-spatial aggregation. It is not a separate user demonstration.
+Validation input: cds_daily_tmax_2012_great_plains.nc
+ERA5 daily maximum 2-m temperature, April-September 2012, 34-44 N and
+104-94 W: 41x41 grid points at 0.25 degrees, 183 dates, t2m in kelvin.
+Downloaded unchanged from CDS daily statistics on 11 October 2026.
+Used to check unit conversion and spatial aggregation.
 MD5: d4a307cec120ca38ef41a1f753f8c194
 Product DOI: https://doi.org/10.24381/cds.4991cf48
 

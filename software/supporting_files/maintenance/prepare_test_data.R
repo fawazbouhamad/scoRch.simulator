@@ -1,15 +1,11 @@
-# Build the small test fixtures in tests/testthat/fixtures from the study's
-# reproducibility repository (github.com/fawazbouhamad/compound-heatwave-typologies-SCORCH)
-# with the processed temperature file placed at input/tmax_processed.nc.
-# Run from the repository root:
-#   Rscript software/supporting_files/maintenance/prepare_test_data.R path/to/compound-heatwave-typologies-SCORCH
+# Rebuild fixtures from compound-heatwave-typologies-SCORCH with input/tmax_processed.nc.
+# From the repository root:
+# Rscript software/supporting_files/maintenance/prepare_test_data.R path/to/study_repository
 library(ncdf4)
 ref <- commandArgs(trailingOnly = TRUE)[1]
 if (is.na(ref) || !dir.exists(ref)) stop("give the path of the reproducibility repository")
 out <- file.path("software", "tests", "testthat", "fixtures")
-# The public repository keeps the supporting results under
-# supporting_files/additional_results; the authors' earlier archive kept
-# them under output. The first existing path is used.
+# Accept the current results layout and earlier study archives.
 first_existing <- function(...) {
   paths <- file.path(ref, c(...))
   found <- paths[file.exists(paths)]
@@ -44,8 +40,7 @@ saveRDS(list(cell_id = cell_id, lon = lon[c$lon_index], lat = lat[c$lat_index], 
 days <- format(seq(as.Date("1987-07-23"), as.Date("1987-07-27"), by = "day"))
 cells <- read.csv(file.path(catalogs, "03_extreme_heatwave_clusters", "cluster_cells.csv"))
 settings <- read.csv(daily_settings_file)
-# The authors' earlier archive named the pooled settings event_*; the package
-# and the public repository name them sequence_*.
+# Normalize historical pooled-setting column names.
 if (!"sequence_start_date" %in% names(settings)) {
   settings$sequence_start_date <- ave(settings$date, settings$compound_event_id, FUN = min)
   names(settings)[match(c("event_eps", "event_min_samples"), names(settings))] <- c("sequence_eps", "sequence_min_samples")

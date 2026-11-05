@@ -1,0 +1,19 @@
+citHeader("Please cite the software and the study:")
+
+bibentry(
+  bibtype = "Manual",
+  title = "scoRch.simulator: Spatiotemporal Classification of Regional Compound Heatwaves",
+  author = c(person("Fawaz", "Bouhamad"), person("Nasser", "Najibi")),
+  year = "2026",
+  note = "R package version 1.0.1",
+  url = "https://github.com/fawazbouhamad/scoRch.simulator"
+)
+
+bibentry(
+  bibtype = "Unpublished",
+  title = "Understanding Compound Space-Time Typologies of Large-Scale Extreme Heatwaves",
+  author = c(person("Fawaz", "Bouhamad"), person("Nasser", "Najibi")),
+  year = "2026",
+  note = "Manuscript in preparation",
+  url = "https://github.com/fawazbouhamad/compound-heatwave-typologies-SCORCH"
+)

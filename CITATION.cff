@@ -35,7 +35,7 @@ abstract: >-
   The authors' processing of the example and local ERA5 sample, and their
   workflow and typology artwork, are CC BY 4.0. The inputs contain modified
   Copernicus Climate Change Service information 2026; original data terms
-  and attribution are retained in software/supporting_files/example_data/PROVENANCE.txt.
+  and attribution are retained in software/supporting_files/data/PROVENANCE.txt.
 keywords:
   - compound heatwaves
   - heatwave typology
@@ -81,6 +81,6 @@ references:
     doi: "10.5281/zenodo.21717874"
     repository: "https://zenodo.org/records/21717874"
     notes: >-
-      Input of the study reproduction (tests/testthat/test-reference-study.R).
+      Input of the study reproduction (software/tests/testthat/test-reference-study.R).
       Contains modified Copernicus Climate Change Service information 2026
       (ERA5); the processing is CC BY 4.0.

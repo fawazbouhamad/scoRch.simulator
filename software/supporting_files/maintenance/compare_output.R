@@ -1,12 +1,6 @@
-# Compare the demo's output/ with demo/output/: every sheet of every
-# workbook (read with openxlsx2), Run_Summary.txt apart from its run-time line
-# (both read as UTF-8), the presence of the
-# figures, and that Run_Summary.txt is the only text file. Run from the top folder
-# of the repository after demo/run.R; the demo workflow runs it on every
-# change. Values are compared with a relative tolerance of 1e-6 (1e-3 for the
-# LGCP workbook, whose fit can differ slightly between platforms); dates and
-# text must be identical.
-
+# Compare output/ (or the supplied folder) with demo/output/.
+# Check workbook sheets (1e-6 tolerance; LGCP 1e-3), the summary except run time,
+# figure presence and the expected text files. Run from the repository root.
 suppressPackageStartupMessages(library(openxlsx2))
 
 expected_dir <- "demo/output"

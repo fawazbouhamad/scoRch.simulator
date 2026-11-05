@@ -1,7 +1,4 @@
-# Offline check of prepared input and locally supplied ERA5 preprocessing.
-# The shipped CDS sample is a real daily-max ERA5 file at 0.25 degrees.
-# It checks local-file handling and aggregation; hourly maxima are tested
-# separately in tests/testthat/test-era5.R with independently known values.
+# Verify local ERA5 aggregation against the prepared example and NetCDF round trips.
 library(scoRch.simulator)
 
 sample <- system.file("extdata", "cds_daily_tmax_2012_great_plains.nc", package = "scoRch.simulator")

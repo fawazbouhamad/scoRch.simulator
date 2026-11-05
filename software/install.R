@@ -5,13 +5,12 @@
 prepare_scorch_package <- function(root = ".", destination = tempfile("scoRch-package-")) {
   source <- normalizePath(file.path(root, "software"), winslash = "/", mustWork = TRUE)
   folders <- c(scripts = "R", helpers = "man", tests = "tests",
-               "supporting_files/example_data" = "inst/extdata")
-  files <- c("supporting_files/installation_files/DESCRIPTION" = "DESCRIPTION",
-             "supporting_files/installation_files/NAMESPACE" = "NAMESPACE",
-             "supporting_files/installation_files/.Rbuildignore" = ".Rbuildignore",
-             "supporting_files/CITATION" = "inst/CITATION")
+               "supporting_files/data" = "inst/extdata")
+  files <- c(DESCRIPTION = "DESCRIPTION", NAMESPACE = "NAMESPACE",
+             CITATION = "inst/CITATION")
   configuration <- file.path(root, "config.yaml")
-  required <- c(file.path(source, c(names(folders), names(files))), configuration)
+  example <- file.path(root, "demo", "input", "north_america_processed_tmax.nc")
+  required <- c(file.path(source, c(names(folders), names(files))), configuration, example)
   if (!all(file.exists(required))) stop("The repository is missing required software files.", call. = FALSE)
   parent <- normalizePath(dirname(destination), winslash = "/", mustWork = TRUE)
   destination <- file.path(parent, basename(destination))
@@ -37,6 +36,10 @@ prepare_scorch_package <- function(root = ".", destination = tempfile("scoRch-pa
   }
   if (!file.copy(configuration, file.path(destination, "inst", "config.yaml"), copy.mode = TRUE)) {
     stop("Could not include config.yaml in the package.", call. = FALSE)
+  }
+  # Keep the installed filename stable for existing R examples and scripts.
+  if (!file.copy(example, file.path(destination, "inst", "extdata", "north_america_tmax.nc"), copy.mode = TRUE)) {
+    stop("Could not include the prepared demo input.", call. = FALSE)
   }
   destination
 }

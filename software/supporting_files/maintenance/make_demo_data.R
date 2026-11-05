@@ -1,24 +1,13 @@
-# Build the demonstration data of scoRch.simulator:
-#   software/supporting_files/example_data/north_america_tmax.nc   daily maximum 2-m temperature on 1-degree cells,
-#                                        25-50 N and 130-58 W, every April-September day of
-#                                        1996-2025 (25 x 72 = 1,800 cells, 5,490 dates)
-# from the authors' yearly files <year>_daily_Tmax_NA.nc: ERA5 (Hersbach et al., 2020)
-# hourly 2-m temperature read from the ARCO-ERA5 archive on Google Cloud (Carver and
-# Merose, 2023) and reduced to the daily maximum of each UTC calendar day on the
-# 0.25-degree ERA5 grid (variable Tmax_C, degrees Celsius; 289 x 101 points). This
-# script checks every yearly file, lets the package's read_era5() average the 4 x 4
-# points of every complete 1-degree cell, checks that mean by hand for a few cells,
-# writes the file with write_tmax() (16-bit integers, 0.01 degC) and records the
-# checksums of the source files in software/supporting_files/maintenance/demo_data_sources.txt.
-#
-# Run from the repository root, with the package installed:
-#   Rscript software/supporting_files/maintenance/make_demo_data.R path/to/raw_daily_nc
+# Build demo/input/north_america_processed_tmax.nc from 1996-2025 yearly ERA5 Tmax files.
+# Validate the 0.25-degree inputs, average to one-degree cells and record source checksums.
+# From the repository root, with the package installed:
+# Rscript software/supporting_files/maintenance/make_demo_data.R path/to/raw_daily_nc
 suppressPackageStartupMessages({library(ncdf4); library(scoRch.simulator)})
 dir <- commandArgs(trailingOnly = TRUE)[1]
 if (is.na(dir) || !dir.exists(dir)) stop("give the folder of the yearly <year>_daily_Tmax_NA.nc files")
 years <- 1996:2025
 files <- file.path(dir, sprintf("%d_daily_Tmax_NA.nc", years))
-target <- file.path("software", "supporting_files", "example_data", "north_america_tmax.nc")
+target <- file.path("demo", "input", "north_america_processed_tmax.nc")
 
 # 1. Every yearly file: structure, metadata, dates, units, missing values.
 manifest <- character()
@@ -42,9 +31,9 @@ for (k in seq_along(files)) {
   manifest <- c(manifest, sprintf("%s %d %s", unname(tools::md5sum(f)), file.size(f), basename(f)))
   cat(sprintf("%d: ok (%.1f to %.1f degC)\n", year, min(x), max(x)))
 }
-writeLines(c("# Source files of software/supporting_files/example_data/north_america_tmax.nc: ERA5 2-m temperature from the ARCO-ERA5",
-             "# archive reduced by the authors to daily maxima (UTC days) at 0.25 degrees; columns: md5 size file",
-             manifest), file.path("software", "supporting_files", "maintenance", "demo_data_sources.txt"))
+writeLines(c("# Source files for demo/input/north_america_processed_tmax.nc (ARCO-ERA5 daily Tmax, 0.25 degrees).",
+             "# Columns: md5 size_bytes filename",
+             manifest), file.path("software", "supporting_files", "data", "source_checksums.txt"))
 
 # 2. The package's reduction to 1-degree cells, checked.
 tmax <- read_era5(files, variable = "Tmax_C", months = 4:9, cell_size = 1)
@@ -75,7 +64,7 @@ write_tmax(tmax, target, precision = "int16", overwrite = TRUE,
                           "at 0.25 degrees (files <year>_daily_Tmax_NA.nc), averaged to 1-degree cells by",
                           "scoRch.simulator::read_era5() and rounded to 0.01 degC"),
            licence = "CC BY 4.0 for the authors' processing; contains modified Copernicus Climate Change Service information 2026 (ERA5)",
-           history = sprintf("written on %s by software/supporting_files/maintenance/make_demo_data.R of scoRch.simulator %s from 30 yearly files (software/supporting_files/maintenance/demo_data_sources.txt)",
+           history = sprintf("written on %s by software/supporting_files/maintenance/make_demo_data.R of scoRch.simulator %s from 30 yearly files (software/supporting_files/data/source_checksums.txt)",
                              format(Sys.Date()), as.character(packageVersion("scoRch.simulator"))))
 back <- read_tmax(target)
 stopifnot(nrow(back$cells) == 1800, length(back$dates) == 5490, !anyNA(back$tmax), max(abs(back$tmax - tmax$tmax)) <= 0.005 + 1e-9)
