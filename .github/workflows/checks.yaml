@@ -67,7 +67,7 @@ jobs:
       - name: Run the demonstration
         run: Rscript demo/run.R
       - name: Compare the demo output with demo/output
-        run: Rscript software/supporting_files/maintenance/compare_output.R
+        run: Rscript software/maintenance.R compare
       - uses: actions/upload-artifact@v4
         with:
           name: demo-output

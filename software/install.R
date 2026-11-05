@@ -4,7 +4,7 @@
 
 prepare_scorch_package <- function(root = ".", destination = tempfile("scoRch-package-")) {
   source <- normalizePath(file.path(root, "software"), winslash = "/", mustWork = TRUE)
-  folders <- c(scripts = "R", helpers = "man", tests = "tests")
+  folders <- c(scripts = "R", man = "man", tests = "tests")
   files <- c(DESCRIPTION = "DESCRIPTION", NAMESPACE = "NAMESPACE",
              CITATION = "inst/CITATION")
   configuration <- file.path(root, "config.yaml")

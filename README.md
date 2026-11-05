@@ -92,22 +92,22 @@ Omitted settings retain the study defaults. `?run_scorch`, `?read_tmax` and `?re
 
 Temperature preparation → local heatwaves → regionally extensive days → clusters → ellipses → compound events → models, workbooks and figures.
 
-<img src="software/helpers/figures/scorch_workflow.png" width="600" alt="SCORCH software workflow">
+<img src="software/man/figures/scorch_workflow.png" width="600" alt="SCORCH software workflow">
 
 </details>
 
 <details>
 <summary><strong>For developers: source and verification</strong></summary>
 
-`software/` contains `scripts`, `helpers` (function documentation), `supporting_files` and `tests`.
+`software/` contains numbered source modules in `scripts/`, R help in `man/`, tests and package metadata. Developer commands share `maintenance.R`.
 The R modules in [`software/scripts/`](software/scripts/) have two-digit prefixes in workflow reading order: `00`–`04` cover package setup, configuration and temperature input; `05`–`09` produce Catalogs 1–5; `10`–`11` fit the models; `12`–`16` write and draw the outputs; and `17`–`18` run the full workflow and demo. These are package source modules: `run_scorch()` and `run_demo()` control execution, so users do not need to source them individually.
 The installer includes the root `config.yaml` and assembles these folders into R's standard package layout in a temporary folder; `demo/run.R` calls the same installed `run_demo()` function.
 To install a downloaded repository, source `software/install.R` and call `install_scorch(path = ".")`.
-From a local clone, run `Rscript demo/run.R`, then `Rscript software/supporting_files/maintenance/compare_output.R`. Optional real-data validation uses `Rscript software/supporting_files/maintenance/check_input_options.R path/to/sample.nc`; the sample stays local.
+From a local clone, run `Rscript demo/run.R`, then `Rscript software/maintenance.R compare`. Optional real-data validation uses `Rscript software/maintenance.R check-input path/to/sample.nc`; the sample stays local.
 [GitHub Actions](https://github.com/fawazbouhamad/scoRch.simulator/actions) checks Windows, macOS and Linux and compares the demo output with `demo/output/`.
 The fixed prepared reference has 65,790 local heatwaves, 140 selected days, 376 ellipses and 29 compound events.
 Comparisons cover all 16 worksheets; portable tolerances are 1e-6, or 1e-3 for LGCP fits. Same-system preservation checks use zero tolerance.
-Source/fixture build scripts are in `software/supporting_files/maintenance/`; run them from the repository root. The data builder writes source checksums to ignored `local_validation/`; demo attribution is in `demo/PROVENANCE.txt`. `Rscript software/install.R .package` assembles the package for `devtools::check(".package")`.
+Run `Rscript software/maintenance.R --help` for data and fixture rebuild commands. The data builder writes source checksums to ignored `local_validation/`; demo attribution is in `demo/PROVENANCE.txt`. `Rscript software/install.R .package` assembles the package for `devtools::check(".package")`.
 GitHub and Zenodo read `CITATION.cff`.
 Before release, synchronize version/citation/archive metadata, verify the reference results and tag the tested commit. Version 1.0.1 is not yet a tagged release.
 The authors developed the method and study implementation; Claude Code and Codex assisted with packaging, documentation, input interfaces, figure alignment and validation. The authors retain responsibility for the software and manuscript.
