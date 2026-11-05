@@ -103,11 +103,11 @@ Temperature preparation → local heatwaves → regionally extensive days → cl
 The R modules in [`software/scripts/`](software/scripts/) have two-digit prefixes in workflow reading order: `00`–`04` cover package setup, configuration and temperature input; `05`–`09` produce Catalogs 1–5; `10`–`11` fit the models; `12`–`16` write and draw the outputs; and `17`–`18` run the full workflow and demo. These are package source modules: `run_scorch()` and `run_demo()` control execution, so users do not need to source them individually.
 The installer includes the root `config.yaml` and assembles these folders into R's standard package layout in a temporary folder; `demo/run.R` calls the same installed `run_demo()` function.
 To install a downloaded repository, source `software/install.R` and call `install_scorch(path = ".")`.
-From a local clone, run `Rscript demo/run.R`, then `Rscript software/supporting_files/maintenance/check_input_options.R` and `Rscript software/supporting_files/maintenance/compare_output.R`.
+From a local clone, run `Rscript demo/run.R`, then `Rscript software/supporting_files/maintenance/compare_output.R`. Optional real-data validation uses `Rscript software/supporting_files/maintenance/check_input_options.R path/to/sample.nc`; the sample stays local.
 [GitHub Actions](https://github.com/fawazbouhamad/scoRch.simulator/actions) checks Windows, macOS and Linux and compares the demo output with `demo/output/`.
 The fixed prepared reference has 65,790 local heatwaves, 140 selected days, 376 ellipses and 29 compound events.
 Comparisons cover all 16 worksheets; portable tolerances are 1e-6, or 1e-3 for LGCP fits. Same-system preservation checks use zero tolerance.
-Source/fixture build scripts are in `software/supporting_files/maintenance/`; run them from the repository root. Source checksums and attribution are in `software/supporting_files/data/`. `Rscript software/install.R .package` assembles the package for `devtools::check(".package")`.
+Source/fixture build scripts are in `software/supporting_files/maintenance/`; run them from the repository root. The data builder writes source checksums to ignored `local_validation/`; demo attribution is in `demo/PROVENANCE.txt`. `Rscript software/install.R .package` assembles the package for `devtools::check(".package")`.
 GitHub and Zenodo read `CITATION.cff`.
 Before release, synchronize version/citation/archive metadata, verify the reference results and tag the tested commit. Version 1.0.1 is not yet a tagged release.
 The authors developed the method and study implementation; Claude Code and Codex assisted with packaging, documentation, input interfaces, figure alignment and validation. The authors retain responsibility for the software and manuscript.
@@ -116,6 +116,6 @@ The authors developed the method and study implementation; Claude Code and Codex
 
 ## Citation and support
 
-Use [CITATION.cff](CITATION.cff) or `citation("scoRch.simulator")`. Code is [GPL-3.0-or-later](LICENSE.txt); [data provenance and attribution](software/supporting_files/data/PROVENANCE.txt) are retained with the inputs.
+Use [CITATION.cff](CITATION.cff) or `citation("scoRch.simulator")`. Code is [GPL-3.0-or-later](LICENSE.txt); [data provenance and attribution](demo/PROVENANCE.txt) are retained with the inputs.
 The EMME study dataset is archived separately on [Zenodo](https://doi.org/10.5281/zenodo.21717874).
 For help, open an [issue](https://github.com/fawazbouhamad/scoRch.simulator/issues) with your R/package versions, configuration and error.

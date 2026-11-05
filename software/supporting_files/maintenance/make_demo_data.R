@@ -10,6 +10,8 @@ files <- file.path(dir, sprintf("%d_daily_Tmax_NA.nc", years))
 target <- file.path("demo", "input", "north_america_processed_tmax.nc")
 
 # 1. Every yearly file: structure, metadata, dates, units, missing values.
+records <- "local_validation"
+if (!dir.exists(records)) dir.create(records)
 manifest <- character()
 for (k in seq_along(files)) {
   f <- files[k]; year <- years[k]
@@ -33,7 +35,7 @@ for (k in seq_along(files)) {
 }
 writeLines(c("# Source files for demo/input/north_america_processed_tmax.nc (ARCO-ERA5 daily Tmax, 0.25 degrees).",
              "# Columns: md5 size_bytes filename",
-             manifest), file.path("software", "supporting_files", "data", "source_checksums.txt"))
+             manifest), file.path(records, "source_checksums.txt"))
 
 # 2. The package's reduction to 1-degree cells, checked.
 tmax <- read_era5(files, variable = "Tmax_C", months = 4:9, cell_size = 1)
@@ -64,7 +66,7 @@ write_tmax(tmax, target, precision = "int16", overwrite = TRUE,
                           "at 0.25 degrees (files <year>_daily_Tmax_NA.nc), averaged to 1-degree cells by",
                           "scoRch.simulator::read_era5() and rounded to 0.01 degC"),
            licence = "CC BY 4.0 for the authors' processing; contains modified Copernicus Climate Change Service information 2026 (ERA5)",
-           history = sprintf("written on %s by software/supporting_files/maintenance/make_demo_data.R of scoRch.simulator %s from 30 yearly files (software/supporting_files/data/source_checksums.txt)",
+           history = sprintf("written on %s by software/supporting_files/maintenance/make_demo_data.R of scoRch.simulator %s from 30 yearly files (local_validation/source_checksums.txt)",
                              format(Sys.Date()), as.character(packageVersion("scoRch.simulator"))))
 back <- read_tmax(target)
 stopifnot(nrow(back$cells) == 1800, length(back$dates) == 5490, !anyNA(back$tmax), max(abs(back$tmax - tmax$tmax)) <= 0.005 + 1e-9)

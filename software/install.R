@@ -4,13 +4,13 @@
 
 prepare_scorch_package <- function(root = ".", destination = tempfile("scoRch-package-")) {
   source <- normalizePath(file.path(root, "software"), winslash = "/", mustWork = TRUE)
-  folders <- c(scripts = "R", helpers = "man", tests = "tests",
-               "supporting_files/data" = "inst/extdata")
+  folders <- c(scripts = "R", helpers = "man", tests = "tests")
   files <- c(DESCRIPTION = "DESCRIPTION", NAMESPACE = "NAMESPACE",
              CITATION = "inst/CITATION")
   configuration <- file.path(root, "config.yaml")
   example <- file.path(root, "demo", "input", "north_america_processed_tmax.nc")
-  required <- c(file.path(source, c(names(folders), names(files))), configuration, example)
+  provenance <- file.path(root, "demo", "PROVENANCE.txt")
+  required <- c(file.path(source, c(names(folders), names(files))), configuration, example, provenance)
   if (!all(file.exists(required))) stop("The repository is missing required software files.", call. = FALSE)
   parent <- normalizePath(dirname(destination), winslash = "/", mustWork = TRUE)
   destination <- file.path(parent, basename(destination))
@@ -29,6 +29,9 @@ prepare_scorch_package <- function(root = ".", destination = tempfile("scoRch-pa
       stop("Could not copy ", name, " into the package.", call. = FALSE)
     }
   }
+  if (!dir.create(file.path(destination, "inst", "extdata"), recursive = TRUE, showWarnings = FALSE)) {
+    stop("Could not create the package data folder.", call. = FALSE)
+  }
   for (name in names(files)) {
     if (!file.copy(file.path(source, name), file.path(destination, files[[name]]), copy.mode = TRUE)) {
       stop("Could not copy ", name, " into the package.", call. = FALSE)
@@ -40,6 +43,9 @@ prepare_scorch_package <- function(root = ".", destination = tempfile("scoRch-pa
   # Keep the installed filename stable for existing R examples and scripts.
   if (!file.copy(example, file.path(destination, "inst", "extdata", "north_america_tmax.nc"), copy.mode = TRUE)) {
     stop("Could not include the prepared demo input.", call. = FALSE)
+  }
+  if (!file.copy(provenance, file.path(destination, "inst", "extdata", "PROVENANCE.txt"), copy.mode = TRUE)) {
+    stop("Could not include the demo data attribution.", call. = FALSE)
   }
   destination
 }

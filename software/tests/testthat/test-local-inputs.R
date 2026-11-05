@@ -8,7 +8,9 @@ test_that("the configuration accepts only local input and gives a useful migrati
 })
 
 test_that("locally downloaded ERA5 can save a reusable prepared input", {
-  file <- system.file("extdata", "cds_daily_tmax_2012_great_plains.nc", package = "scoRch.simulator")
+  file <- Sys.getenv("SCORCH_VALIDATION_FILE", unset = test_path("..", "..", "..", "local_validation",
+                                                                "cds_daily_tmax_2012_great_plains.nc"))
+  skip_if_not(file.exists(file), "Optional local ERA5 validation file is not available")
   saved <- file.path(tempfile("local-era5"), "processed.nc")
   cfg <- scoRch.simulator:::read_config(list(input = list(file = file, format = "era5", processed_file = saved)))
   prepared <- suppressMessages(scoRch.simulator:::read_configured_input(cfg))

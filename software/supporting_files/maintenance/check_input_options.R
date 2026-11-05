@@ -1,7 +1,12 @@
 # Verify local ERA5 aggregation against the prepared example and NetCDF round trips.
 library(scoRch.simulator)
 
-sample <- system.file("extdata", "cds_daily_tmax_2012_great_plains.nc", package = "scoRch.simulator")
+args <- commandArgs(trailingOnly = TRUE)
+sample <- if (length(args)) args[1] else Sys.getenv("SCORCH_VALIDATION_FILE", unset =
+  file.path("local_validation", "cds_daily_tmax_2012_great_plains.nc"))
+if (!file.exists(sample)) {
+  stop("Supply the local ERA5 sample path: Rscript software/supporting_files/maintenance/check_input_options.R path/to/sample.nc", call. = FALSE)
+}
 whole <- read_tmax(system.file("extdata", "north_america_tmax.nc", package = "scoRch.simulator"),
                    start = "2012-01-01", end = "2012-12-31")
 processed <- read_era5(sample, months = 4:9, cell_size = 1)

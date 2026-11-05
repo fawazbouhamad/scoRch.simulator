@@ -22,8 +22,10 @@ test_that("write_tmax() writes a file that read_tmax() reads back", {
 })
 
 
-test_that("the shipped CDS sample reduces to the cells of the demonstration data", {
-  sample <- system.file("extdata", "cds_daily_tmax_2012_great_plains.nc", package = "scoRch.simulator")
+test_that("a local CDS sample reduces to the cells of the demonstration data", {
+  sample <- Sys.getenv("SCORCH_VALIDATION_FILE", unset = test_path("..", "..", "..", "local_validation",
+                                                                  "cds_daily_tmax_2012_great_plains.nc"))
+  skip_if_not(file.exists(sample), "Optional local ERA5 validation file is not available")
   demo <- system.file("extdata", "north_america_tmax.nc", package = "scoRch.simulator")
   skip_if(!nzchar(demo), "the demonstration data are not installed")
   from_cds <- suppressMessages(read_era5(sample, months = 4:9, cell_size = 1))

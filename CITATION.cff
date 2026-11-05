@@ -32,10 +32,10 @@ abstract: >-
   https://github.com/fawazbouhamad/compound-heatwave-typologies-SCORCH.
   The bundled ERA5-derived US example contains 1,800 one-degree cells between
   25-50 N and 130-58 W for April-September 1996-2025, prepared from ARCO-ERA5.
-  The authors' processing of the example and local ERA5 sample, and their
+  The authors' processing of the example, and their
   workflow and typology artwork, are CC BY 4.0. The inputs contain modified
   Copernicus Climate Change Service information 2026; original data terms
-  and attribution are retained in software/supporting_files/data/PROVENANCE.txt.
+  and attribution are retained in demo/PROVENANCE.txt.
 keywords:
   - compound heatwaves
   - heatwave typology

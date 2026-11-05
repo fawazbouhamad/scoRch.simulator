@@ -22,3 +22,6 @@ era5_tmax_1deg.nc
 
 # Generated standard R package; readable sources remain in software/.
 /.package/
+
+# Optional validation data and source-file records stay local.
+/local_validation/
