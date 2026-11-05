@@ -1,4 +1,4 @@
-% Generated from R/demo.R; documentation kept with the exported entry point.
+% Generated from R/18_demo.R; documentation kept with the exported entry point.
 \name{run_demo}
 \alias{run_demo}
 \title{Run the US demonstration}

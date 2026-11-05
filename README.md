@@ -100,6 +100,7 @@ Temperature preparation → local heatwaves → regionally extensive days → cl
 <summary><strong>For developers: source and verification</strong></summary>
 
 `software/` contains `scripts`, `helpers` (function documentation), `supporting_files` and `tests`.
+The R modules in [`software/scripts/`](software/scripts/) have two-digit prefixes in workflow reading order: `00`–`04` cover package setup, configuration and temperature input; `05`–`09` produce Catalogs 1–5; `10`–`11` fit the models; `12`–`16` write and draw the outputs; and `17`–`18` run the full workflow and demo. These are package source modules: `run_scorch()` and `run_demo()` control execution, so users do not need to source them individually.
 The installer includes the root `config.yaml` and assembles these folders into R's standard package layout in a temporary folder; `demo/run.R` calls the same installed `run_demo()` function.
 To install a downloaded repository, source `software/install.R` and call `install_scorch(path = ".")`.
 From a local clone, run `Rscript demo/run.R`, then `Rscript software/supporting_files/maintenance/check_input_options.R` and `Rscript software/supporting_files/maintenance/compare_output.R`.
