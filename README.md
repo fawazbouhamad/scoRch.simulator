@@ -108,7 +108,7 @@ From a local clone, run `Rscript demo/run.R`, then `Rscript software/maintenance
 The fixed prepared reference has 65,790 local heatwaves, 140 selected days, 376 ellipses and 29 compound events.
 Comparisons cover all 16 worksheets; portable tolerances are 1e-6, or 1e-3 for LGCP fits. Same-system preservation checks use zero tolerance.
 Run `Rscript software/maintenance.R --help` for data and fixture rebuild commands. The data builder writes source checksums to ignored `local_validation/`; demo attribution is in `demo/PROVENANCE.txt`. `Rscript software/install.R .package` assembles the package for `devtools::check(".package")`.
-GitHub and Zenodo read `CITATION.cff`.
+GitHub, Zenodo and R citations share the root `CITATION.cff`; the installer bundles it and generates R's citation entry point.
 Before release, synchronize version/citation/archive metadata, verify the reference results and tag the tested commit. Version 1.0.1 is not yet a tagged release.
 The authors developed the method and study implementation; Claude Code and Codex assisted with packaging, documentation, input interfaces, figure alignment and validation. The authors retain responsibility for the software and manuscript.
 

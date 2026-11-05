@@ -31,3 +31,29 @@ check_number <- function(value, name, lower = -Inf, upper = Inf, integer = FALSE
 # Sort cells west to east, then south to north: the cell order used by the
 # clustering, which decides which cluster a border cell joins first.
 longitude_major_order <- function(lon, lat) order(lon, lat)
+
+# R's generated CITATION entry point reads the bundled canonical CFF metadata.
+scorch_citation <- function(meta = NULL, cff = yaml::read_yaml(system.file(
+  "extdata", "scorch.cff", package = "scoRch.simulator", mustWork = TRUE))) {
+  people <- function(authors) do.call(c, lapply(authors, function(p) {
+    utils::person(given = p[["given-names"]], family = p[["family-names"]],
+                  comment = if (!is.null(p$orcid)) c(ORCID = sub("^https?://orcid.org/", "", p$orcid)))
+  }))
+  if (!is.list(meta)) meta <- list()
+  # Pending releases fall back to the package build year.
+  dates <- c(as.character(cff[["date-released"]]), meta[["Date/Publication"]],
+             meta$Date, meta$Built, as.character(Sys.Date()))
+  year <- regmatches(dates, regexpr("[12][0-9]{3}", dates))[1]
+  software <- utils::bibentry(
+    bibtype = "Manual", title = cff$title, author = people(cff$authors), year = year,
+    note = paste("R package version", cff$version), url = cff$url, doi = cff$doi)
+  # Dataset references are conditional on use of the study data, as the CFF message explains.
+  studies <- Filter(function(r) r$type %in% c("unpublished", "article"), cff$references)
+  entries <- lapply(studies, function(r) utils::bibentry(
+    bibtype = if (r$type == "article") "Article" else "Unpublished",
+    title = r$title, author = people(r$authors), year = as.character(r$year),
+    journal = r$journal, volume = r$volume, number = r$issue,
+    pages = if (!is.null(r$start)) paste(r$start, r$end, sep = "--") else r$pages,
+    note = sub("[.]$", "", r$notes), url = r$url, doi = r$doi))
+  do.call(c, c(list(utils::citHeader(cff$message), software), entries))
+}
