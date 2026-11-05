@@ -1,0 +1,76 @@
+# Package checks on Windows, macOS and Linux, plus the demo and reference comparison.
+# Pushes and pull requests run both jobs; manual runs retain demo-only behavior.
+name: Software checks
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions: read-all
+
+jobs:
+  R-CMD-check:
+    # Preserve the existing demo-only manual trigger.
+    if: github.event_name != 'workflow_dispatch'
+    runs-on: ${{ matrix.config.os }}
+    name: ${{ matrix.config.os }} (${{ matrix.config.r }})
+    strategy:
+      fail-fast: false
+      matrix:
+        config:
+          - {os: macos-latest, r: 'release'}
+          - {os: windows-latest, r: 'release'}
+          - {os: ubuntu-latest, r: 'release'}
+    env:
+      GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
+      R_KEEP_PKG_SOURCE: yes
+    steps:
+      - uses: actions/checkout@v4
+      - uses: r-lib/actions/setup-pandoc@v2
+      - uses: r-lib/actions/setup-r@v2
+        with:
+          r-version: ${{ matrix.config.r }}
+          use-public-rspm: true
+      - name: Assemble the R package
+        run: Rscript software/install.R .package
+      - uses: r-lib/actions/setup-r-dependencies@v2
+        with:
+          working-directory: .package
+          extra-packages: any::rcmdcheck
+          needs: check
+      - uses: r-lib/actions/check-r-package@v2
+        with:
+          working-directory: .package
+          upload-snapshots: true
+          build_args: 'c("--no-manual")'
+
+  demo:
+    runs-on: ubuntu-latest
+    env:
+      GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: r-lib/actions/setup-r@v2
+        with:
+          r-version: 'release'
+          use-public-rspm: true
+      - name: Assemble the R package
+        run: Rscript software/install.R .package
+      - uses: r-lib/actions/setup-r-dependencies@v2
+        with:
+          working-directory: .package
+          needs: check
+      - name: Install the assembled package
+        run: R CMD INSTALL .package
+      - name: Run the demonstration
+        run: Rscript demo/run.R
+      - name: Check the two local input options
+        run: Rscript software/supporting_files/maintenance/check_input_options.R
+      - name: Compare the demo output with demo/output
+        run: Rscript software/supporting_files/maintenance/compare_output.R
+      - uses: actions/upload-artifact@v4
+        with:
+          name: demo-output
+          path: output
