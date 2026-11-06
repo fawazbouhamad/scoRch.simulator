@@ -19,6 +19,6 @@ Carver and Merose (2023), ARCO-ERA5: An Analysis-Ready Cloud-Optimized
 Reanalysis Dataset, AMS 22nd Conference on AI for Environmental Science.
 https://github.com/google-research/arco-era5
 
-The workflow and event-typology artwork in man/figures is by Bouhamad and
+The workflow and event-typology artwork in software/figures is by Bouhamad and
 Najibi, CC BY 4.0. Software source is GPL-3.0-or-later; see the repository's
 root LICENSE.txt and the installed package's DESCRIPTION licence field.

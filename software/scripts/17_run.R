@@ -36,10 +36,10 @@
 #'
 #' @param config Path of a YAML configuration file (an edited copy from
 #'   [write_scorch_config()] or [scorch_template()]), or a list with the same
-#'   structure. `NULL` (the default) runs with the SCORCH study settings; the
-#'   temperature must then be given as `tmax`, because the shipped
-#'   configuration names no input file, and the results are written to
-#'   `output/` in the working directory.
+#'   structure. With no arguments, reads `config.yaml` in the working folder
+#'   and creates it from the installed configuration if absent. A YAML file
+#'   with a null input runs the bundled US example. Explicit `NULL` uses the
+#'   study defaults and requires temperature supplied as `tmax`.
 #' @param tmax Optional `scorch_tmax` object (from [read_tmax()] or
 #'   [tmax_from_array()]) to analyse instead of reading the file named in the
 #'   configuration. The configured warm-season months and date limits also
@@ -65,6 +65,15 @@ run_scorch <- function(config = NULL, tmax = NULL, trace_date = NULL) {
     if (length(trace_date) != 1L || is.na(trace_date)) fail("trace_date must be one calendar date, e.g. '2012-06-30'.")
   }
   started <- Sys.time()
+  if (missing(config) && is.null(tmax)) {
+    if (!file.exists("config.yaml")) write_scorch_config("config.yaml")
+    config <- "config.yaml"
+  }
+  if (is.character(config) && length(config) == 1L && is.null(tmax)) {
+    config <- demo_settings(config)
+    example <- system.file("extdata", "north_america_tmax.nc", package = "scoRch.simulator")
+    if (is.null(trace_date) && identical(config$input$file, example)) trace_date <- as.Date("2012-06-30")
+  }
   cfg <- read_config(config, input_required = is.null(tmax))
   out <- cfg$output$directory
   published <- FALSE
@@ -178,6 +187,7 @@ run_scorch <- function(config = NULL, tmax = NULL, trace_date = NULL) {
     step("Done in %.1f minutes", result$elapsed_minutes)
   }
   print(result)
+  message("Open your results: ", normalizePath(out, winslash = "/"))
   invisible(result)
 }
 

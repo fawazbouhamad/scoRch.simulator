@@ -18,8 +18,8 @@ The path, invisibly.
 The package ships with the configuration of the SCORCH study
 (\code{config.yaml}), the single source of the default settings. This
 function copies it, unchanged and fully commented, so that individual
-settings can be changed for another application. Set \code{input: file} to the
-NetCDF file to analyse, change any other setting, and pass the copy to
+settings can be changed for another application. Leave \code{input: file} null
+for the bundled example, or set it to your temperature input, then run
 \code{\link[=run_scorch]{run_scorch()}}. Settings deleted from the copy keep their study values.
 }
 \examples{

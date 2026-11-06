@@ -34,7 +34,7 @@ jobs:
           r-version: ${{ matrix.config.r }}
           use-public-rspm: true
       - name: Assemble the R package
-        run: Rscript software/install.R .package
+        run: Rscript software/setup/install.R .package
       - uses: r-lib/actions/setup-r-dependencies@v2
         with:
           working-directory: .package
@@ -57,7 +57,7 @@ jobs:
           r-version: 'release'
           use-public-rspm: true
       - name: Assemble the R package
-        run: Rscript software/install.R .package
+        run: Rscript software/setup/install.R .package
       - uses: r-lib/actions/setup-r-dependencies@v2
         with:
           working-directory: .package
@@ -67,7 +67,7 @@ jobs:
       - name: Run the demonstration
         run: Rscript demo/run.R
       - name: Compare the demo output with demo/output
-        run: Rscript software/maintenance.R compare
+        run: Rscript software/setup/maintenance.R compare
       - uses: actions/upload-artifact@v4
         with:
           name: demo-output

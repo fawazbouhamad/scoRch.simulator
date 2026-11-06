@@ -9,17 +9,18 @@ run_scorch(config = NULL, tmax = NULL, trace_date = NULL)
 \arguments{
 \item{config}{Path of a YAML configuration file (an edited copy from
 \code{\link[=write_scorch_config]{write_scorch_config()}} or \code{\link[=scorch_template]{scorch_template()}}), or a list with the same
-structure. \code{NULL} (the default) runs with the SCORCH study settings; the
-temperature must then be given as \code{tmax}, because the shipped
-configuration names no input file, and the results are written to
-\verb{output/} in the working directory.}
+structure. With no arguments, reads \code{config.yaml} in the working folder
+and creates it from the installed configuration if absent. A YAML file
+with a null input runs the bundled US example. Explicit \code{NULL} uses the
+study defaults and requires temperature supplied as \code{tmax}.}
 
 \item{tmax}{Optional \code{scorch_tmax} object (from \code{\link[=read_tmax]{read_tmax()}} or
 \code{\link[=tmax_from_array]{tmax_from_array()}}) to analyse instead of reading the file named in the
 configuration. The configured warm-season months and date limits also
 apply to this object.}
-\item{trace_date}{Optional date to explain in the run summary, if it belongs to a compound event in this run.}
 
+\item{trace_date}{Optional date to explain in the run summary. A trace is
+included if the date belongs to one of the compound events in this run.}
 }
 \value{
 A \code{scorch_result} list (invisibly) with the configuration, the
@@ -33,9 +34,9 @@ temperature, reduced to daily maxima as described in \code{\link[=read_era5]{rea
 daily maximum temperature, see \code{\link[=read_tmax]{read_tmax()}}), runs the five
 catalog stages, fits the power-law and LGCP models, and writes the
 results to the output folder as XLSX workbooks, PNG figures and one
-\code{Run_Summary.txt}: \verb{catalogs/} (\code{01_heatwave_events.xlsx},
-\code{02_regionally_extensive_heatwaves.xlsx}, \code{03_extreme_heatwave_clusters.xlsx},
-\code{04_extreme_heatwave_ellipses.xlsx} and \code{05_compound_heatwave_events.xlsx}: Catalogs 1-5 with
+\code{Run_Summary.txt}: \verb{catalogs/} (\verb{01_heatwave_events.xlsx},
+\verb{02_regionally_extensive_heatwaves.xlsx}, \verb{03_extreme_heatwave_clusters.xlsx},
+\verb{04_extreme_heatwave_ellipses.xlsx} and \verb{05_compound_heatwave_events.xlsx}: Catalogs 1-5 with
 their day and cell tables), \verb{modeling/} (\code{Power_Law_Model.xlsx} and
 \code{Spatial_Risk_Model.xlsx}: fits, parameters, intensity and centroid concentration),
 \code{Heatwave_Statistics.xlsx} (event type summary, cell

@@ -119,7 +119,7 @@ test_that("the shipped SCORCH configuration is the source of the study settings"
   expect_identical(scoRch.simulator:::read_config(NULL, input_required = FALSE),
                    scoRch.simulator:::read_config(list(), input_required = FALSE))
   expect_error(scoRch.simulator:::read_config(NULL), "No input file is set")
-  expect_error(run_scorch(), "No input file is set")
+  expect_error(run_scorch(config = NULL), "No input file is set")
 })
 
 test_that("an editable copy of the SCORCH configuration overrides only what it changes", {

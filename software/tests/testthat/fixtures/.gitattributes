@@ -1,2 +1,2 @@
 # Preserve the original archived CSV fixtures, including their line endings.
-tests/testthat/fixtures/*.csv -text
+*.csv -text

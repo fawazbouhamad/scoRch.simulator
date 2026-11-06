@@ -1,121 +1,125 @@
 # scoRch.simulator
 
-**Turn temperature data into regional heatwave catalogs, models and figures.**
-Developed by Fawaz Bouhamad and Nasser Najibi using SCORCH: Spatiotemporal Classification of Regional Compound Heatwaves.
+**Supply temperature data. Run once. Get every catalog, model, table and figure.**
 
-**All settings are in [config.yaml](config.yaml), including both demo presets.**
+An R implementation of SCORCH: Spatiotemporal Classification of Regional Compound Heatwaves, developed by Fawaz Bouhamad and Nasser Najibi. The software identifies and characterizes heatwaves in supplied temperature data.
 
-## Start here
+**[config.yaml](config.yaml) is the only file you edit.** A complete example is included, so the first run needs no data download or configuration changes.
 
-You need **R 4.1 or newer**. Open R or RStudio and follow these three steps.
+## Install once
 
-**1. Install once.** Paste this into the R console:
+You need **R 4.1 or newer**. Open R or RStudio and paste:
 
 ```r
 options(repos = c(CRAN = "https://cloud.r-project.org"))
 install.packages("remotes")
-source("https://raw.githubusercontent.com/fawazbouhamad/scoRch.simulator/main/software/install.R")
+source("https://raw.githubusercontent.com/fawazbouhamad/scoRch.simulator/main/software/setup/install.R")
 install_scorch()
 ```
 
-**2. Run the example.** Paste:
+## Run the software
 
 ```r
-scoRch.simulator::run_demo()
+scoRch.simulator::run_scorch()
 ```
 
-The package includes the prepared US data. You do not need to download this repository, choose a configuration or edit any files.
-The example covers April–September 1996–2025: 1,800 one-degree cells and 5,490 dates, in a file of about 12 MB.
-You can also download the same [processed Tmax input file](demo/input/north_america_processed_tmax.nc).
-It uses the study settings, including 5,000 bootstrap repetitions and fixed seeds.
+The software reads `config.yaml` in your working folder, creating a copy automatically if absent. It processes the input and runs the entire analysis. You never need to run the numbered scripts individually.
 
-**3. Open your results.** Wait for the run to finish. R prints the full folder path to open.
-By default, the folder is called `output` inside your current working folder. To choose a destination:
+<img src="software/figures/how_to_run.gif" width="720" alt="Install once, run scoRch.simulator, open results, and change only config.yaml">
 
-```r
-scoRch.simulator::run_demo(output = "C:/path/to/my_results")
-```
+The supplied settings run the US example: April–September 1996–2025, 1,800 one-degree cells and 5,490 dates in about 12 MB. The domain includes adjacent waters. A reference run took 31 seconds; time varies by computer. The analysis uses 5,000 bootstrap repetitions and fixed seeds.
 
-## Find your results
+## Open your results
 
-You can also browse the [supplied example output](demo/output/) before running anything.
-The catalog names and numbering follow the [reproducibility repository](https://github.com/fawazbouhamad/compound-heatwave-typologies-SCORCH).
+R prints the full results-folder path. **Open `Run_Summary.txt` first:** it explains the settings, results and warnings, and traces one event through the analysis. Results go to `output/` inside your working folder; `getwd()` in R shows that folder.
 
-| Open the result | What you will find |
+| Supplied example result | Contents |
 |---|---|
-| [Catalog 1: heatwave events](demo/output/catalogs/01_heatwave_events.xlsx) | Dates, duration, peaks and bridged days for every cell |
-| [Catalog 2: regionally extensive heatwaves](demo/output/catalogs/02_regionally_extensive_heatwaves.xlsx) | Selected days, cell counts and selected cells |
-| [Catalog 3: extreme heatwave clusters](demo/output/catalogs/03_extreme_heatwave_clusters.xlsx) | Cluster characteristics and cell membership |
-| [Catalog 4: extreme heatwave ellipses](demo/output/catalogs/04_extreme_heatwave_ellipses.xlsx) | Area, axes, orientation, centroids and temperatures |
-| [Catalog 5: compound heatwave events](demo/output/catalogs/05_compound_heatwave_events.xlsx) | Event type, dates, duration, geometry and event-day details |
-| [Power-law model](demo/output/modeling/Power_Law_Model.xlsx) | Fits, exponents and bootstrap results |
-| [Spatial risk model](demo/output/modeling/Spatial_Risk_Model.xlsx) | LGCP parameters, spatial intensity and centroid concentration |
-| [Heatwave statistics](demo/output/Heatwave_Statistics.xlsx) | **Event Type Summary** (study Table 1), **Cell Thresholds**, **Daily Heatwave Extent**, **Duration Trends** |
-| [Figures](demo/output/figures/) | Nine figures, including the power-law and spatial risk models |
-| [Run summary](demo/output/Run_Summary.txt) | Input, counts, models, warnings and a walkthrough of an observed event |
+| [Run summary](demo/output/Run_Summary.txt) | Counts, settings, files, warnings and a traced event |
+| [Heatwave statistics](demo/output/Heatwave_Statistics.xlsx) | Event-type summary, cell thresholds, daily extent and duration trends |
+| [Catalogs 1–5](demo/output/catalogs/) | Local heatwaves → regional days → clusters → ellipses → compound events |
+| [Models](demo/output/modeling/) | Power-law fits and the spatial model of ellipse centroids |
+| [Figures](demo/output/figures/) | Nine maps and statistical plots |
 
-The spatial risk model describes heatwave-centroid occurrence intensity; exposure and vulnerability are not modelled.
-The run summary records unavailable models or figures and incomplete runs. Workbooks retain their full tables and stored values.
+Reruns replace package-generated files in the chosen output folder. Change `output: directory` to keep separate runs. Empty spreadsheet cells mean missing values. The summary identifies incomplete runs, unavailable models and skipped figures. The spatial model describes centroid occurrence intensity; exposure and vulnerability are not modeled, and concentration rank is not a heatwave probability.
 
-## Try hourly processing
+## Change only the configuration
 
-If you have the matching US hourly ERA5 NetCDF files, run:
+Open `config.yaml`, edit the settings you need, save it and run **the same command** again. Keep the indentation. Quote paths and use forward slashes, for example `"C:/data/temperature.nc"`. Relative paths use R's working folder.
 
-```r
-scoRch.simulator::run_demo("hourly", input = "C:/path/to/hourly_folder")
+| Setting | What it controls |
+|---|---|
+| `input: file` | `null` runs the bundled example; otherwise enter your file or ERA5 folder |
+| `input: format` | `daily_tmax` for prepared daily maxima; `era5` for local ERA5 temperature |
+| `output: directory` | Destination for all results |
+| `period` | Months and dates to analyze |
+| Other sections | Heatwave thresholds, clustering, ellipses, models and figure choices |
+
+For your own data, replace the matching sections with your paths and period:
+
+```yaml
+input:
+  file: "C:/data/my_era5_folder"
+  format: era5
+  processed_file: "C:/data/prepared_tmax.nc"
+output:
+  directory: "output/my_analysis"
+period:
+  warm_season_months: [4, 5, 6, 7, 8, 9]
+  start_date: "1996-04-01"
+  end_date: "2025-09-30"
 ```
 
-The package converts **hourly temperature → daily Tmax → one-degree cells**, then runs the same analysis.
-At 0.25° input, daily maxima from each complete 4×4 block are averaged into a 1° cell.
-Results go to `output/hourly/`, including a reusable `prepared_tmax.nc` file. It uses local files and requires no API key.
+The software converts hourly temperature to UTC daily maxima, averages complete blocks into one-degree cells, saves prepared input when requested, and runs every analysis stage. Obtain local NetCDF files for your chosen region first; no API key is used by the software. Hourly files need complete UTC days on the same regular grid without overlapping dates. Prepared input needs a complete record in every retained cell. `?read_era5` and `?read_tmax` explain the accepted formats.
 
-**The prepared example is available now.** The complete 30-year hourly archive and its matching prepared file are still being acquired and validated for a separate data deposit.
-The bundled compact file is rounded to 0.01°C; an exact hourly/prepared comparison uses the float64 prepared file saved from those same hourly inputs.
+Review the study defaults when changing region, season or period. Local thresholds use all analyzed dates; temperature-weighted centroids require positive Celsius Tmax in every cluster cell. The `demo` section supplies example-only figure choices and the optional hourly preset. Your own input uses the main settings above it. A different configuration can be passed to `run_scorch("C:/analysis/config.yaml")`.
 
-## Use your own data
+## Understand the workflow
 
-For your own region and period, edit [config.yaml](config.yaml). If you installed the package without downloading the repository, create a copy first:
+Temperature → local heatwaves → regionally extensive days → spatial clusters → ellipses → compound events → models, tables and figures.
 
-```r
-library(scoRch.simulator)
-if (!file.exists("config.yaml")) write_scorch_config("config.yaml")
-# Open the YAML: set input.file, input.format and your period/grid settings.
-result <- run_scorch("config.yaml")
-```
+<img src="software/figures/scorch_workflow.png" width="720" alt="Software workflow from temperature input through processing, detection, clustering, classification and models to all outputs">
 
-Use `input.format: daily_tmax` for prepared daily Tmax or `input.format: era5` for local ERA5 NetCDF files.
-Hourly input must contain complete UTC days on a shared regular grid, without overlapping dates.
-Omitted settings retain the study defaults. `?run_scorch`, `?read_tmax` and `?read_era5` give the detailed options in R.
+Local heatwaves belong to individual grid cells. Consecutive regionally extensive days form compound events, classified by their daily cluster counts:
+
+| Type | Pattern |
+|---|---|
+| 1 | One day with one cluster |
+| 2 | One day with several clusters |
+| 3 | Several days, each with one cluster, or each with several clusters |
+| 4 | Several days mixing those patterns, or including a day without a cluster |
+
+<img src="software/figures/compound_event_types.png" width="720" alt="The four SCORCH compound-event types">
+
+The original study covers the Eastern Mediterranean and Middle East, 1940–2025. The bundled US example applies the same method to another input. The [research reproduction](https://github.com/fawazbouhamad/compound-heatwave-typologies-SCORCH) and [study dataset](https://doi.org/10.5281/zenodo.21717874) are separate records.
+
+## Repository guide
+
+| Location | Purpose |
+|---|---|
+| [config.yaml](config.yaml) | Your editable settings |
+| [software/scripts/](software/scripts/) | Numbered analysis modules |
+| [software/help/](software/help/) | R help pages; `.Rd` means R documentation |
+| [software/figures/](software/figures/) | Workflow, event types and demonstration |
+| [software/setup/](software/setup/) | Installation, package metadata and maintenance |
+| [software/tests/](software/tests/) | Automated checks; `testthat` is the library, fixtures are reference data |
+| [demo/](demo/) | Example input, saved results, attribution and optional launcher |
 
 <details>
-<summary><strong>See the workflow</strong></summary>
+<summary>Developer setup and verification</summary>
 
-Temperature preparation → local heatwaves → regionally extensive days → clusters → ellipses → compound events → models, workbooks and figures.
+The installer maps `scripts/` to R's `R/`, `help/` to `man/`, and setup metadata to the package root. `DESCRIPTION` lists package information and dependencies; `NAMESPACE` lists exported functions. Fixture-local `.gitattributes` preserves CSV line endings.
 
-<img src="software/man/figures/scorch_workflow.png" width="600" alt="SCORCH software workflow">
+To install a downloaded repository, source `software/setup/install.R` and call `install_scorch(path = ".")`. From the repository root, `Rscript demo/run.R` runs the same workflow; `Rscript software/setup/maintenance.R compare` checks it against `demo/output/`. Use `--help` for validation and rebuild commands. Assemble with `Rscript software/setup/install.R .package`, then check with `devtools::check(".package")`.
 
-</details>
+[GitHub Actions](https://github.com/fawazbouhamad/scoRch.simulator/actions) checks Windows, macOS and Linux and compares the demonstration. The reference has 65,790 local heatwaves, 140 selected days, 376 ellipses and 29 compound events. All 16 worksheets are compared at portable tolerances of 1e-6, or 1e-3 for LGCP fits. Optional full-study tests require the separate reference input. The matching 30-year hourly archive is still being acquired and validated for a separate deposit. The bundled compact input is rounded to 0.01°C; exact hourly/prepared comparisons use float64 input saved from those same hourly files.
 
-<details>
-<summary><strong>For developers: source and verification</strong></summary>
-
-`software/` contains numbered source modules in `scripts/`, R help in `man/`, tests and package metadata. Developer commands share `maintenance.R`.
-The R modules in [`software/scripts/`](software/scripts/) have two-digit prefixes in workflow reading order: `00`–`04` cover package setup, configuration and temperature input; `05`–`09` produce Catalogs 1–5; `10`–`11` fit the models; `12`–`16` write and draw the outputs; and `17`–`18` run the full workflow and demo. These are package source modules: `run_scorch()` and `run_demo()` control execution, so users do not need to source them individually.
-The installer includes the root `config.yaml` and assembles these folders into R's standard package layout in a temporary folder; `demo/run.R` calls the same installed `run_demo()` function.
-To install a downloaded repository, source `software/install.R` and call `install_scorch(path = ".")`.
-From a local clone, run `Rscript demo/run.R`, then `Rscript software/maintenance.R compare`. Optional real-data validation uses `Rscript software/maintenance.R check-input path/to/sample.nc`; the sample stays local.
-[GitHub Actions](https://github.com/fawazbouhamad/scoRch.simulator/actions) checks Windows, macOS and Linux and compares the demo output with `demo/output/`.
-The fixed prepared reference has 65,790 local heatwaves, 140 selected days, 376 ellipses and 29 compound events.
-Comparisons cover all 16 worksheets; portable tolerances are 1e-6, or 1e-3 for LGCP fits. Same-system preservation checks use zero tolerance.
-Run `Rscript software/maintenance.R --help` for data and fixture rebuild commands. The data builder writes source checksums to ignored `local_validation/`; demo attribution is in `demo/PROVENANCE.txt`. `Rscript software/install.R .package` assembles the package for `devtools::check(".package")`.
-GitHub, Zenodo and R citations share the root `CITATION.cff`; the installer bundles it and generates R's citation entry point.
-Before release, synchronize version/citation/archive metadata, verify the reference results and tag the tested commit. Version 1.0.1 is not yet a tagged release.
-The authors developed the method and study implementation; Claude Code and Codex assisted with packaging, documentation, input interfaces, figure alignment and validation. The authors retain responsibility for the software and manuscript.
+The authors developed the method and study implementation. Claude Code and Codex assisted with packaging, documentation, input interfaces, figure alignment and validation. The authors retain responsibility for the software and manuscript.
 
 </details>
 
 ## Citation and support
 
-Use [CITATION.cff](CITATION.cff) or `citation("scoRch.simulator")`. Code is [GPL-3.0-or-later](LICENSE.txt); [data provenance and attribution](demo/PROVENANCE.txt) are retained with the inputs.
-The EMME study dataset is archived separately on [Zenodo](https://doi.org/10.5281/zenodo.21717874).
-For help, open an [issue](https://github.com/fawazbouhamad/scoRch.simulator/issues) with your R/package versions, configuration and error.
+Use [CITATION.cff](CITATION.cff) or `citation("scoRch.simulator")`. Code is [GPL-3.0-or-later](LICENSE.txt); [data provenance](demo/PROVENANCE.txt) accompanies the example. Version 1.0.1 is in development. The historical `scoRch.generator` release has different commands and folders; follow this page for the current software.
+
+If installation fails, read the first dependency error. Input errors identify the affected file or setting. For help, open an [issue](https://github.com/fawazbouhamad/scoRch.simulator/issues) with the error, R/package versions and configuration.

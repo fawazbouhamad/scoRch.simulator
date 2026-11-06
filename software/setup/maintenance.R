@@ -34,15 +34,15 @@ compare_output <- function(results_dir = "output") {
     }
   }
 
-  timed <- function(lines) {
+  normalize_summary <- function(lines) {
     lines <- lines[!grepl("^Run started ", lines)]
-    # The installed example's absolute library path varies across platforms.
-    sub("^(  Source: |    file: ).*north_america_tmax[.]nc.*$", "\\1<installed north_america_tmax.nc>", lines)
+    lines <- sub("^(  Source: |    file: ).*north_america_tmax[.]nc.*$", "\\1<installed north_america_tmax.nc>", lines)
+    sub("^(  Figure for this event type: ).*/figures/", "\\1<output>/figures/", lines)
   }
-  expected_readme <- timed(readLines(file.path(expected_dir, "Run_Summary.txt"), encoding = "UTF-8"))
-  readme <- timed(readLines(file.path(results_dir, "Run_Summary.txt"), encoding = "UTF-8"))
+  expected_readme <- normalize_summary(readLines(file.path(expected_dir, "Run_Summary.txt"), encoding = "UTF-8"))
+  readme <- normalize_summary(readLines(file.path(results_dir, "Run_Summary.txt"), encoding = "UTF-8"))
   if (identical(expected_readme, readme)) {
-    cat("Run_Summary.txt: same apart from the run time\n")
+    cat("Run_Summary.txt: same apart from run time and local paths\n")
   } else {
     n <- min(length(expected_readme), length(readme))
     first <- which(expected_readme[seq_len(n)] != readme[seq_len(n)])[1]
@@ -67,7 +67,7 @@ check_input <- function(sample = Sys.getenv("SCORCH_VALIDATION_FILE", unset =
   library(scoRch.simulator)
 
   if (!file.exists(sample)) {
-    stop("Supply the local ERA5 sample path: Rscript software/maintenance.R check-input path/to/sample.nc", call. = FALSE)
+    stop("Supply the local ERA5 sample path: Rscript software/setup/maintenance.R check-input path/to/sample.nc", call. = FALSE)
   }
   whole <- read_tmax(system.file("extdata", "north_america_tmax.nc", package = "scoRch.simulator"),
                      start = "2012-01-01", end = "2012-12-31")
@@ -149,7 +149,7 @@ make_demo_data <- function(dir = NA_character_) {
                             "at 0.25 degrees (files <year>_daily_Tmax_NA.nc), averaged to 1-degree cells by",
                             "scoRch.simulator::read_era5() and rounded to 0.01 degC"),
              licence = "CC BY 4.0 for the authors' processing; contains modified Copernicus Climate Change Service information 2026 (ERA5)",
-             history = sprintf("written on %s by software/maintenance.R make-demo of scoRch.simulator %s from 30 yearly files (local_validation/source_checksums.txt)",
+             history = sprintf("written on %s by software/setup/maintenance.R make-demo of scoRch.simulator %s from 30 yearly files (local_validation/source_checksums.txt)",
                                format(Sys.Date()), as.character(packageVersion("scoRch.simulator"))))
   back <- read_tmax(target)
   stopifnot(nrow(back$cells) == 1800, length(back$dates) == 5490, !anyNA(back$tmax), max(abs(back$tmax - tmax$tmax)) <= 0.005 + 1e-9)
@@ -238,10 +238,10 @@ prepare_test_data <- function(ref = NA_character_) {
 maintenance_help <- function() {
   cat(paste0(
     "Run from the repository root:\n",
-    "  Rscript software/maintenance.R compare [output_folder]\n",
-    "  Rscript software/maintenance.R check-input [local_sample.nc]\n",
-    "  Rscript software/maintenance.R make-demo <raw_daily_folder>\n",
-    "  Rscript software/maintenance.R prepare-fixtures <study_repository>\n"
+    "  Rscript software/setup/maintenance.R compare [output_folder]\n",
+    "  Rscript software/setup/maintenance.R check-input [local_sample.nc]\n",
+    "  Rscript software/setup/maintenance.R make-demo <raw_daily_folder>\n",
+    "  Rscript software/setup/maintenance.R prepare-fixtures <study_repository>\n"
   ))
 }
 
