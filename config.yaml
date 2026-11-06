@@ -1,18 +1,15 @@
 # SCORCH configuration: all settings in one file
 # ------------------------------------------------
-# The settings of the SCORCH study (Bouhamad and Najibi). This file, shipped
-# with the package, is the single source of the default settings: any setting
-# left out of a user's configuration takes its value from here.
-#
-# To change settings, write an editable copy in R:
-#     write_scorch_config("config.yaml")
-# set input: file, change any other value, save the file and run:
-#     run_scorch("config.yaml")
-# Lines starting with # are comments. Keep the indentation as it is.
+# Run scoRch.simulator::run_scorch() from this file's folder.
+# The software reads this file and produces all results automatically.
+# Leave input: file null to run the bundled example. For your own analysis,
+# enter your input path and change the settings below, then run again.
+# Missing settings use the installed study defaults (Bouhamad and Najibi).
+# Lines starting with # are comments. Keep the indentation.
 
 input:
-  file: null                  # prepared daily Tmax: one NetCDF file; downloaded ERA5: one file,
-                              # a list of files, or a folder of NetCDF files
+  file: null                  # null = bundled example; otherwise a quoted NetCDF path,
+                              # or an ERA5 folder/list of files; use forward slashes in paths
   format: auto                # auto detects the format; daily_tmax uses a prepared file;
                               # era5 processes downloaded hourly or daily ERA5 temperature
   variable: auto              # temperature variable: tmax (prepared) or t2m (ERA5)
@@ -36,8 +33,8 @@ period:
 
 heatwaves:                    # local heatwaves (Catalog 1)
   threshold_percentile: 95    # a cell's threshold is this percentile of its daily Tmax
-  min_duration_days: 3        # a heatwave spans at least this many days ...
-  min_exceeding_days: 3       # ... and has at least this many days at or above the threshold
+  min_duration_days: 3        # minimum length of a local heatwave, including bridged days
+  min_exceeding_days: 3       # minimum number of days at or above the threshold
 
 regional_days:                # regionally extensive heatwave days (Catalog 2)
   percentile: 97.5            # days whose heatwave-cell count reaches this percentile are selected
@@ -67,15 +64,10 @@ figures:
     type_3: null              # first shown day of one or two Type 3 events, e.g. ["2017-07-17", "1991-06-04"]
     type_4: null              # first of the six shown days of the Type 4 event; null = the six days with most ellipses
 
-# Demo presets: used by run_demo(). Your own run_scorch("config.yaml") uses
-# the settings above. Both demos share those scientific defaults. The hourly
-# preset changes only the prepared preset values shown here.
+# Example presets: used only for the bundled example or run_demo("hourly").
+# Your own input uses the settings above. Scientific settings are shared.
 demo:
   prepared:
-    input:
-      format: daily_tmax
-    output:
-      directory: output
     figures:
       representative_events:
         type_3: ["2012-06-28", "2023-08-04"]

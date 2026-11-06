@@ -17,6 +17,39 @@ test_that("the installed demo profiles preserve the scientific and figure choice
   expect_error(run_scorch(trace_date = "invalid-date"), "trace_date must be")
 })
 
+test_that("the demo reads local settings and respects a configured input", {
+  folder <- tempfile("scorch-config-")
+  dir.create(folder)
+  previous <- setwd(folder)
+  on.exit(setwd(previous), add = TRUE)
+  write_scorch_config()
+  config <- yaml::read_yaml("config.yaml")
+  config$output$directory <- "my-results"
+  config$heatwaves$threshold_percentile <- 90
+  config$power_law$bootstrap_repetitions <- 200
+  config$figures$representative_events$type_3 <- "2012-06-28"
+  yaml::write_yaml(config, "config.yaml")
+  settings <- scoRch.simulator:::demo_settings()
+  expect_equal(settings$output$directory, "my-results")
+  expect_equal(settings$heatwaves$threshold_percentile, 90)
+  expect_equal(settings$power_law$bootstrap_repetitions, 200)
+  expect_equal(settings$figures$representative_events$type_3, "2012-06-28")
+  expect_true(file.exists(settings$input$file))
+  expect_identical(settings, scoRch.simulator:::demo_settings("config.yaml"))
+
+  config$input$file <- system.file("extdata", "north_america_tmax.nc", package = "scoRch.simulator")
+  config$figures$representative_events <- list(type_1 = NULL, type_2 = NULL, type_3 = NULL, type_4 = NULL)
+  yaml::write_yaml(config, "config.yaml")
+  settings <- scoRch.simulator:::demo_settings()
+  expect_equal(settings$input$file, config$input$file)
+  expect_null(settings$figures$representative_events$type_3)
+  expect_equal(settings$output$directory, "my-results")
+  config$input$file <- NULL
+  config$input$format <- "era5"
+  yaml::write_yaml(config, "config.yaml")
+  expect_error(scoRch.simulator:::demo_settings(), "Set input: file")
+})
+
 test_that("successful publishing retires former names and preserves user files", {
   out <- tempfile("scorch-migration-")
   dir.create(file.path(out, "Heatwave_Catalogs"), recursive = TRUE)

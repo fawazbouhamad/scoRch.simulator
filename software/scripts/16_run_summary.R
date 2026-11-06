@@ -1,13 +1,5 @@
-# Run_Summary.txt: the one text file of a results folder. It describes the input,
-# the main settings, the counts of every stage and type, the models, the
-# figures, every workbook and sheet with its row count, the run time and
-# the warnings, in plain language, and ends with every setting of the run.
-
-# Run_Summary.txt is written as UTF-8 whatever the locale of the session, so that
-# the degree signs of the coordinates survive a session whose character
-# encoding fell back to "C" (R on Windows, for example, cannot set the
-# C.UTF-8 locale that some shells request); readers open it with
-# encoding = "UTF-8".
+# Run summary: input, settings, stage counts, models, files and warnings.
+# Write UTF-8 so coordinate symbols survive changes in the session locale.
 write_text_file <- function(lines, path) {
   writeLines(enc2utf8(lines), path, useBytes = TRUE)
   invisible(path)

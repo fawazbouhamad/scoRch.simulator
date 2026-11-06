@@ -1,12 +1,13 @@
 # Source this file and call install_scorch(), or assemble with:
-# Rscript software/install.R .package
+# Rscript software/setup/install.R .package
 
 prepare_scorch_package <- function(root = ".", destination = tempfile("scoRch-package-")) {
   software <- normalizePath(file.path(root, "software"), winslash = "/", mustWork = TRUE)
   inputs <- c(
-    R = file.path(software, "scripts"), man = file.path(software, "man"),
-    tests = file.path(software, "tests"), DESCRIPTION = file.path(software, "DESCRIPTION"),
-    NAMESPACE = file.path(software, "NAMESPACE"),
+    R = file.path(software, "scripts"), man = file.path(software, "help"),
+    "man/figures" = file.path(software, "figures"),
+    tests = file.path(software, "tests"), DESCRIPTION = file.path(software, "setup", "DESCRIPTION"),
+    NAMESPACE = file.path(software, "setup", "NAMESPACE"),
     "inst/config.yaml" = file.path(root, "config.yaml"),
     "inst/extdata/scorch.cff" = file.path(root, "CITATION.cff"),
     "inst/extdata/north_america_tmax.nc" = file.path(root, "demo", "input", "north_america_processed_tmax.nc"),
@@ -62,6 +63,6 @@ install_scorch <- function(path = NULL, ref = "main", lib = NULL, upgrade = "nev
 
 if (sys.nframe() == 0L) {
   args <- commandArgs(trailingOnly = TRUE)
-  if (length(args) != 1L) stop("Use: Rscript software/install.R <new_package_folder>", call. = FALSE)
+  if (length(args) != 1L) stop("Use: Rscript software/setup/install.R <new_package_folder>", call. = FALSE)
   cat(prepare_scorch_package(destination = args[[1L]]), "\n", sep = "")
 }

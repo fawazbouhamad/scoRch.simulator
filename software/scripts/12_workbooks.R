@@ -117,11 +117,7 @@ write_workbook <- function(path, sheets) {
   invisible(path)
 }
 
-# openxlsx2 zips a workbook with the first zipper it finds: a system zip
-# program, bsdtar, or the zip package. The programs differ between sessions
-# and machines (R CMD check on this machine found a zip program that was
-# not there), so the pure-R zip package, an import of this package, is used
-# every time.
+# Use the R zip package for consistent workbook archives across platforms.
 save_workbook <- function(wb, path) {
   old_options <- options(openxlsx2.no_utils_zip = TRUE, openxlsx2.no_bsdtar = TRUE, openxlsx2.no_maybe_zip = TRUE)
   on.exit(options(old_options), add = TRUE)
@@ -206,14 +202,7 @@ column_widths <- function(table) {
 
 # Validation of a written workbook ------------------------------------------
 #
-# Microsoft Excel repairs or ignores small defects of an XLSX archive that
-# stricter readers refuse: openxlsx 4.2, for example, wrote every sheet with
-# relationships to drawing parts that did not exist and declared a dimension
-# of A1 whatever the table, so Python's openpyxl could not open the files.
-# After every save the archive is therefore checked without any external
-# tool: every relationship target of every part must exist in the archive,
-# every sheet must declare the dimension of its table, and the sheet names
-# must be the ones requested.
+# Check archive relationships, table dimensions and sheet names after saving.
 
 check_workbook_archive <- function(path, sheets) {
   entries <- zip::zip_list(path)$filename

@@ -1,13 +1,12 @@
-# The SCORCH configuration: the shipped settings, copies to edit, reading and
-# validation.
+# Configuration files, study defaults and validation.
 
 #' Write an editable copy of the SCORCH configuration
 #'
 #' The package ships with the configuration of the SCORCH study
 #' (`config.yaml`), the single source of the default settings. This
 #' function copies it, unchanged and fully commented, so that individual
-#' settings can be changed for another application. Set `input: file` to the
-#' NetCDF file to analyse, change any other setting, and pass the copy to
+#' settings can be changed for another application. Leave `input: file` null
+#' for the bundled example, or set it to your temperature input, then run
 #' [run_scorch()]. Settings deleted from the copy keep their study values.
 #'
 #' @param path File to write (YAML).
@@ -76,12 +75,7 @@ scorch_config_file <- function() {
 # shipped SCORCH configuration. Whole numbers take the types R gives them in
 # code: single settings are doubles (95), lists are integers (4:9).
 scorch_defaults <- function() {
-  lapply(analysis_settings(yaml::read_yaml(scorch_config_file())), function(section) {
-    lapply(section, function(value) {
-      value <- yaml_vector(value)
-      if (is.integer(value) && length(value) == 1L) as.numeric(value) else value
-    })
-  })
+  lapply(analysis_settings(yaml::read_yaml(scorch_config_file())), function(section) lapply(section, yaml_vector))
 }
 
 # Demo presets share this file but are not analysis sections. Older user
@@ -100,10 +94,11 @@ analysis_settings <- function(config) {
   config
 }
 
-# YAML lists of mixed integers and decimals arrive as R lists.
+# Normalize YAML scalars and numeric lists to the types used by the R defaults.
 yaml_vector <- function(value) {
   if (is.list(value) && length(value) && is.null(names(value)) &&
-      all(lengths(value) == 1L)) unlist(value) else value
+      all(lengths(value) == 1L)) value <- unlist(value)
+  if (is.integer(value) && length(value) == 1L) as.numeric(value) else value
 }
 
 # Read a configuration (file path, list or NULL), check its keys and fill in
