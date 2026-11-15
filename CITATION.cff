@@ -1,7 +1,7 @@
 # Citation metadata for the scoRch.simulator R package (Citation File Format 1.2.0).
 # GitHub and Zenodo use this root citation file.
 # The software release, North America demo data and EMME study data are separate records:
-#   software: this repository, version 1.1.0, released 15 November 2026
+#   software: this repository, version 1.1.1, released 15 November 2026
 #             (the Zenodo software DOI is added under `identifiers:` once the
 #             release is archived; see README.md)
 #   dataset:  "Processed ERA5 daily maximum temperature data for SCORCH,
@@ -14,7 +14,7 @@ message: >-
   dataset (DOI 10.5281/zenodo.21717874).
 type: software
 title: "scoRch.simulator: Spatiotemporal Classification of Regional Compound Heatwaves"
-version: 1.1.0
+version: 1.1.1
 date-released: '2026-11-15'
 license: GPL-3.0-or-later
 repository-code: "https://github.com/fawazbouhamad/scoRch.simulator"

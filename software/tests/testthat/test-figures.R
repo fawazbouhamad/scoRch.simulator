@@ -58,9 +58,12 @@ test_that("every event has one global filename and every day in one canvas", {
   grid <- scoRch.simulator:::event_figure_grid(result)
   expect_gte(grid$rows * grid$cols, 28L)
   expect_gt(scoRch.simulator:::event_figure_size(result)[2], 10)
+  expect_equal(scoRch.simulator:::event_figure_size(result)[2],
+    grid$rows * (grid$width * scoRch.simulator:::extent_ratio(result) + 0.3 + 0.1) + 0.5)
   drawn <- as.Date(character())
   headings <- character()
-  testthat::local_mocked_bindings(draw_snapshot = function(result, date, time_label) {
+  testthat::local_mocked_bindings(draw_snapshot = function(result, date, time_label = NULL, mai) {
+    expect_null(time_label)
     drawn <<- c(drawn, date)
     graphics::plot.new()
   }, snapshot_legend = function() graphics::plot.new(), .package = "scoRch.simulator")
@@ -70,9 +73,10 @@ test_that("every event has one global filename and every day in one canvas", {
     original_text(x, y, labels, ...)
   }, .package = "graphics")
   grDevices::pdf(tempfile(fileext = ".pdf"), width = 16, height = 20)
+  graphics::par(mai = rep(0, 4))
   tryCatch(scoRch.simulator:::draw_event(result), finally = grDevices::dev.off())
   expect_identical(drawn, dates)
-  expect_true("Event 2 | Type 3" %in% headings)
+  expect_length(headings, 0L)
   expect_false(any(grepl("^\\(?[a-eA-E]\\)?$", headings)))
   result$figure_event_id <- 99L
   expect_error(scoRch.simulator:::event_figure_dates(result), "event_id")

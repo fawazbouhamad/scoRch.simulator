@@ -55,6 +55,7 @@ in Catalog 5; numbering does not restart for each type. Leading zeros keep
 filenames in order: `Event_007.png` is Event 7. All four type folders exist;
 a type with no events has an empty folder and a zero count in Summary.txt.
 Every multi-day event has one image whose canvas grows to fit every day.
+Event PNGs contain only the dated snapshots and shared legend.
 Figures use 600 dpi, or 500 dpi for `Ellipses_by_type.png`, with descriptive
 headings and no paper panel letters.
 
@@ -152,7 +153,7 @@ The installer maps `scripts/` to R's `R/`, `help/` to `man/`, and setup metadata
 
 To install a downloaded repository, source `software/setup/install.R` and call `install_scorch(path = ".")`. From the repository root, `Rscript demo/run.R` runs the same workflow; `Rscript software/setup/maintenance.R compare` checks it against `demo/output/`. Use `--help` for validation and rebuild commands. To restore the exact published demo input, run `Rscript software/setup/maintenance.R make-demo path/to/SCORCH_NA_processed_1996_2025.nc`; it verifies the published checksum before copying the file. Assemble with `Rscript software/setup/install.R .package`, then check with `devtools::check(".package")`.
 
-The installer defaults to the stable `v1.1.0` tag. Developers can request `install_scorch(ref = "main")` or another Git ref. Reinstallation is enabled by default so a same-version development build can be replaced; dependency upgrades remain disabled unless requested.
+The installer defaults to the stable `v1.1.1` tag. Developers can request `install_scorch(ref = "main")` or another Git ref. Reinstallation is enabled by default so a same-version development build can be replaced; dependency upgrades remain disabled unless requested.
 
 [GitHub Actions](https://github.com/fawazbouhamad/scoRch.simulator/actions) checks Windows, macOS and Linux and compares the demonstration. The reference has 65,409 local heatwaves, 140 selected days, 379 ellipses and 30 compound events (Types 1–4: 1, 5, 20 and 4). All 16 worksheets are compared at portable tolerances of 1e-6, or 1e-3 for LGCP fits. Optional full-study tests require the separate reference input. The bundled input is byte-for-byte identical to the published float64 NetCDF, without additional rounding or integer packing. Full 30-year validation of the accompanying hourly archive and processed input gave identical scientific results and all 16 worksheets.
 
