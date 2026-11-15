@@ -1,14 +1,14 @@
 scoRch.simulator 1.0.1 results
-Run started 2026-11-03 08:10:31, finished in 31 seconds.
+Run started 2026-11-14 21:35:17, finished in 31 seconds.
 
 INPUT
-  Source: <installed north_america_tmax.nc>
+  Source: C:/Users/fawaw/Documents/Codex/2026-11-12/new-chat-2/work/na-demo-lib/scoRch.simulator/extdata/north_america_tmax.nc
   Area: 1800 cells on a 1 x 1 degree grid, 129.5°W to 58.5°W and 25.5°N to 49.5°N
   Period: 5490 dates from 1996-04-01 to 2025-09-30, warm-season months 4 5 6 7 8 9
 
 MAIN SETTINGS
   Local heatwave: at least 3 consecutive days with at least 3 of them at or above the cell's 95th percentile of daily maximum temperature (days below it inside the run are bridged).
-  Regionally extensive day: a day whose number of heatwave cells reaches the 97.5th percentile of all days (353 cells in this run).
+  Regionally extensive day: a day whose number of heatwave cells reaches the 97.5th percentile of all days (351 cells in this run).
   Clustering: DBSCAN of the heatwave cells of each selected day; eps candidates 1, 1.5, 2, 2.5, 3, 3.5, 4 grid cells, min_samples candidates 4, 5, 6, 7, 8, 9, 10, 11, 12; one pair is chosen for each run of consecutive days.
   Ellipses: principal axes of each cluster scaled by 1.25, centroids weighted by temperature.
   Power law: 5000 bootstrap repetitions (seeds 20261020 for daily maxima, 20261120 for event maxima).
@@ -16,30 +16,30 @@ MAIN SETTINGS
   Figures: representative events chosen in the configuration: Type 3 2012-06-28, 2023-08-04.
 
 RESULTS
-  Stage 1  Local heatwaves: 65790
-  Stage 2  Regionally extensive days: 140 of 5490 days (regional threshold 353 heatwave cells)
-  Stage 3  Clusters: 376
-  Stage 4  Ellipses: 376
-  Stage 5  Compound heatwave events: 29
+  Stage 1  Local heatwaves: 65409
+  Stage 2  Regionally extensive days: 140 of 5490 days (regional threshold 351 heatwave cells)
+  Stage 3  Clusters: 379
+  Stage 4  Ellipses: 379
+  Stage 5  Compound heatwave events: 30
            Type 1: Widespread (Isolated): 1 event over 1 day, longest 1 day, 1 ellipse per event on average
-           Type 2: Spatially Clustered: 4 events over 4 days, longest 1 day, 3.5 ellipses per event on average
-           Type 3: Temporally Clustered: 20 events over 105 days, longest 28 days, 14.4 ellipses per event on average
+           Type 2: Spatially Clustered: 5 events over 5 days, longest 1 day, 3.6 ellipses per event on average
+           Type 3: Temporally Clustered: 20 events over 104 days, longest 28 days, 14.35 ellipses per event on average
            Type 4: Compound Clustering (Multi-Type): 4 events over 30 days, longest 16 days, 18.25 ellipses per event on average
 
 MODELS
   Power law of the largest ellipse areas (modeling/Power_Law_Model.xlsx):
-    daily_maxima: n = 140, tail n = 43, A_min = 2231770 km2, alpha = 5.767, bootstrap p = 0.748 (5000 repetitions)
-    event_maxima: n = 29, tail n = 13, A_min = 2106524 km2, alpha = 4.412, bootstrap p = 0.582 (5000 repetitions)
-  Log-Gaussian Cox process of the 376 ellipse centroids (modeling/Spatial_Risk_Model.xlsx):
-    (Intercept) = -10.1179
-    lon = -4.28759e-05
-    lat = -0.0160473
-    mean_tmax = -0.00757498
-    std_tmax = 0.020096
-    var_sigma2 = 1.64228
-    scale_km = 168.14
-    Centroids inside the top-20% intensity zone: all centroids 66 of 376 (17.6%); daily largest 5 of 140 (3.6%); event largest 3 of 29 (10.3%)
-    Centroids inside the top-50% intensity zone: all centroids 203 of 376 (54.0%); daily largest 68 of 140 (48.6%); event largest 10 of 29 (34.5%)
+    daily_maxima: n = 140, tail n = 42, A_min = 2242981 km2, alpha = 5.855, bootstrap p = 0.749 (5000 repetitions)
+    event_maxima: n = 30, tail n = 13, A_min = 2108890 km2, alpha = 4.437, bootstrap p = 0.519 (5000 repetitions)
+  Log-Gaussian Cox process of the 379 ellipse centroids (modeling/Spatial_Risk_Model.xlsx):
+    (Intercept) = -9.96525
+    lon = 0.000346698
+    lat = -0.0186624
+    mean_tmax = -0.00963033
+    std_tmax = 0.0281007
+    var_sigma2 = 1.65639
+    scale_km = 159.611
+    Centroids inside the top-20% intensity zone: all centroids 68 of 379 (17.9%); daily largest 7 of 140 (5.0%); event largest 3 of 30 (10.0%)
+    Centroids inside the top-50% intensity zone: all centroids 208 of 379 (54.9%); daily largest 64 of 140 (45.7%); event largest 10 of 30 (33.3%)
     No warnings from the fit.
 
 FIGURES (figures/)
@@ -55,17 +55,17 @@ FIGURES (figures/)
 
 FILES
   catalogs/01_heatwave_events.xlsx
-    Heatwave Events (65790 rows): every local heatwave of every cell (Catalog 1): dates, duration, exceeding and bridged days, peak
+    Heatwave Events (65409 rows): every local heatwave of every cell (Catalog 1): dates, duration, exceeding and bridged days, peak
   catalogs/02_regionally_extensive_heatwaves.xlsx
     Regional Days (140 rows): the selected regionally extensive days (Catalog 2) with their heatwave-cell counts
-    Regional Day Cells (61694 rows): the heatwave cells of every selected day and their local heatwave
+    Regional Day Cells (61392 rows): the heatwave cells of every selected day and their local heatwave
   catalogs/03_extreme_heatwave_clusters.xlsx
-    Clusters (376 rows): the DBSCAN clusters of every selected day (Catalog 3): members, core cells, eps and min_samples applied
-    Cluster Cells (61694 rows): every heatwave cell of every selected day with its cluster label, core and noise flags
+    Clusters (379 rows): the DBSCAN clusters of every selected day (Catalog 3): members, core cells, eps and min_samples applied
+    Cluster Cells (61392 rows): every heatwave cell of every selected day with its cluster label, core and noise flags
   catalogs/04_extreme_heatwave_ellipses.xlsx
-    Ellipses (376 rows): the ellipse of every cluster (Catalog 4): centroids, axes, area, orientation, temperature weights
+    Ellipses (379 rows): the ellipse of every cluster (Catalog 4): centroids, axes, area, orientation, temperature weights
   catalogs/05_compound_heatwave_events.xlsx
-    Compound Events (29 rows): every compound heatwave event (Catalog 5): type, days, cluster counts, mean geometry, largest ellipse
+    Compound Events (30 rows): every compound heatwave event (Catalog 5): type, days, cluster counts, mean geometry, largest ellipse
     Event Days (140 rows): every day of every compound event with its clusters and largest ellipse
   modeling/Power_Law_Model.xlsx
     Power Law Fits (2 rows): cutoff, exponent, KS distance, bootstrap p-value and bootstrap quantiles for daily and event maxima
@@ -88,34 +88,34 @@ WARNINGS
 TRACED EVENT
   Compound event 7 (Catalog 5): 2012-06-28 to 2012-07-04, 7 days, Temporally Clustered = Type 3, clusters per day 1-1-1-1-1-1-1
 
-  Stage 2 (Catalog 2): every day of the event had at least 353 of the 1800 cells in a local heatwave,
+  Stage 2 (Catalog 2): every day of the event had at least 351 of the 1800 cells in a local heatwave,
   the regional threshold (the 97.5th percentile of the daily heatwave-cell counts):
            date heatwave_cells exceeding_cells clusters
-     2012-06-28            359             385        1
-     2012-06-29            386             420        1
-     2012-06-30            365             375        1
-     2012-07-01            379             397        1
-     2012-07-02            378             320        1
-     2012-07-03            370             386        1
+     2012-06-28            356             382        1
+     2012-06-29            385             419        1
+     2012-06-30            364             375        1
+     2012-07-01            378             396        1
+     2012-07-02            376             319        1
+     2012-07-03            370             385        1
      2012-07-04            379             404        1
 
   Stage 3 (Catalog 3): DBSCAN grouped the heatwave cells of each day into these clusters
   (eps in grid cells and min_samples cells are the settings chosen for the run of days):
            date cluster_id member_cells core_cells   eps min_samples noise_cells
-     2012-06-28         51          357        353 3.075           8           2
-     2012-06-29         52          385        378 3.075           8           1
-     2012-06-30         53          365        359 3.075           8           0
-     2012-07-01         54          379        376 3.075           8           0
-     2012-07-02         55          378        375 3.075           8           0
+     2012-06-28         51          355        352 3.075           8           1
+     2012-06-29         52          384        378 3.075           8           1
+     2012-06-30         53          364        358 3.075           8           0
+     2012-07-01         54          378        375 3.075           8           0
+     2012-07-02         55          376        373 3.075           8           0
      2012-07-03         56          370        364 3.075           8           0
      2012-07-04         57          379        377 3.075           8           0
 
   Stage 4 (Catalog 4): the largest ellipse of the event is ellipse 54, fitted to cluster 54 on 2012-07-01:
-    379 member cells; axes 2203 km x 1218 km; area 2106524 km2; major axis -86 degrees from north (nearly east-west);
-    Tmax-weighted centroid 39.50 N, 92.13 W; member Tmax 23.7 to 41.3 C.
+    378 member cells; axes 2205 km x 1218 km; area 2108890 km2; major axis -86 degrees from north (nearly east-west);
+    Tmax-weighted centroid 39.51 N, 92.13 W; member Tmax 23.7 to 41.3 C.
 
-  Stage 1 (Catalog 1): the hottest of those cells is cell 625 (33.5 N, 81.5 W). Its threshold is 35.84 C,
-  the 95th percentile of its 5490 daily maxima. Local heatwave 22173 of that cell ran from 2012-06-28 to 2012-07-05:
+  Stage 1 (Catalog 1): the hottest of those cells is cell 625 (33.5 N, 81.5 W). Its threshold is 35.83 C,
+  the 95th percentile of its 5490 daily maxima. Local heatwave 22007 of that cell ran from 2012-06-28 to 2012-07-05:
   8 days, 7 of them at or above the threshold, peak 42.20 C on 2012-06-30.
 
   The temperature data of that cell around the heatwave (daily maximum 2-m temperature, degrees C):
@@ -123,7 +123,7 @@ TRACED EVENT
      2012-06-26  30.27                no             no           no       no
      2012-06-27  32.08                no             no           no       no
      2012-06-28  36.78               yes            yes          yes      yes
-     2012-06-29  41.82               yes            yes          yes      yes
+     2012-06-29  41.81               yes            yes          yes      yes
      2012-06-30  42.20               yes            yes          yes      yes
      2012-07-01  41.33               yes            yes          yes      yes
      2012-07-02  35.08                no            yes          yes      yes
@@ -139,7 +139,7 @@ TRACED EVENT
 
 SETTINGS OF THIS RUN (YAML)
   input:
-    file: <installed north_america_tmax.nc>
+    file: C:/Users/fawaw/Documents/Codex/2026-11-12/new-chat-2/work/na-demo-lib/scoRch.simulator/extdata/north_america_tmax.nc
     format: daily_tmax
     variable: auto
     longitude: auto

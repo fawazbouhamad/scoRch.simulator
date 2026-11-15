@@ -1,6 +1,6 @@
 # Citation metadata for the scoRch.simulator R package (Citation File Format 1.2.0).
 # GitHub and Zenodo use this root citation file.
-# The software release and the study's processed dataset are separate records:
+# The software release, North America demo data and EMME study data are separate records:
 #   software: this repository, version 1.0.1, pending release
 #             (the Zenodo software DOI is added under `identifiers:` once the
 #             release is archived; see README.md)
@@ -9,7 +9,8 @@
 cff-version: 1.2.0
 message: >-
   If you use scoRch.simulator, please cite the software and the study it
-  implements. When you use the study's results, also cite the processed
+  implements. When you use the North America example, also cite its dataset
+  (DOI 10.5281/zenodo.24232552). When you use the study's results, cite its processed
   dataset (DOI 10.5281/zenodo.21717874).
 type: software
 title: "scoRch.simulator: Spatiotemporal Classification of Regional Compound Heatwaves"
@@ -30,8 +31,10 @@ abstract: >-
   The software archive is separate from the study's processed input dataset
   (version 1.0.0, DOI 10.5281/zenodo.21717874) and the research record at
   https://github.com/fawazbouhamad/compound-heatwave-typologies-SCORCH.
-  The bundled ERA5-derived US example contains 1,800 one-degree cells between
-  25-50 N and 130-58 W for April-September 1996-2025, prepared from ARCO-ERA5.
+  The bundled ERA5-derived North America example contains 1,800 one-degree cells between
+  25–50 N and 130–58 W for April–September 1996–2025, prepared from CDS ERA5
+  hourly data and retained at float64 precision. Its hourly archive and
+  processed input are archived at DOI 10.5281/zenodo.24232552.
   The authors' processing of the example, and their
   workflow and typology artwork, are CC BY 4.0. The inputs contain modified
   Copernicus Climate Change Service information 2026; original data terms
@@ -84,3 +87,15 @@ references:
       Input of the study reproduction (software/tests/testthat/test-reference-study.R).
       Contains modified Copernicus Climate Change Service information 2026
       (ERA5); the processing is CC BY 4.0.
+  - type: data
+    title: "ERA5 Hourly and Processed Daily Maximum Temperature for the scoRch.simulator North America Demonstration, April–September 1996–2025"
+    authors:
+      - family-names: Bouhamad
+        given-names: Fawaz
+      - family-names: Najibi
+        given-names: Nasser
+    year: 2026
+    version: 1.0.0
+    doi: "10.5281/zenodo.24232552"
+    repository: "https://zenodo.org/records/24232552"
+    notes: "North America demonstration input; hourly archive and full-precision processed NetCDF."

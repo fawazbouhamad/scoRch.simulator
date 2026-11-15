@@ -1,3 +1,15 @@
+test_that("the bundled demo is the published full-precision Zenodo input", {
+  file <- system.file("extdata", "north_america_tmax.nc", package = "scoRch.simulator", mustWork = TRUE)
+  expect_identical(unname(tools::md5sum(file)), "77cad2b8cfe2e291f31c07a5173ebfca")
+  nc <- ncdf4::nc_open(file)
+  on.exit(ncdf4::nc_close(nc))
+  expect_identical(nc$var$tmax$prec, "double")
+  expect_false(ncdf4::ncatt_get(nc, "tmax", "scale_factor")$hasatt)
+  expect_false(ncdf4::ncatt_get(nc, "tmax", "add_offset")$hasatt)
+  expect_match(ncdf4::ncatt_get(nc, 0, "raw_source_archive")$value,
+               "SCORCH_NA_unprocessed_1996_2025.zip", fixed = TRUE)
+})
+
 test_that("write_tmax() writes a file that read_tmax() reads back", {
   dates <- as.Date("2000-06-01") + 0:9
   values <- array(20 + seq_len(10 * 2 * 3) / 7, c(10, 2, 3))
@@ -35,8 +47,8 @@ test_that("a local CDS sample reduces to the cells of the demonstration data", {
   columns <- match(paste(from_cds$cells$lon, from_cds$cells$lat), paste(whole$cells$lon, whole$cells$lat))
   expect_false(anyNA(columns))
   expect_equal(whole$dates, from_cds$dates)
-  # the same ERA5 values from two sources (ARCO-ERA5 and the CDS), float32
-  # rounding apart, plus the 0.01-degree packing of the demonstration file
-  expect_lte(max(abs(whole$tmax[, columns] - from_cds$tmax)), 0.0065)
+  # The independently obtained CDS sample may differ in source precision.
+  # The bundled reference itself is float64 with no integer packing.
+  expect_lte(max(abs(whole$tmax[, columns] - from_cds$tmax)), 0.0015)
 })
 
