@@ -33,6 +33,7 @@ demo_settings <- function(config_file = "prepared", input = NULL, output = NULL)
   if (!file.exists(file)) fail("The configuration file does not exist: ", file)
   document <- yaml::read_yaml(file)
   cfg <- read_config(document, input_required = FALSE)
+  default_period <- identical(cfg$period, read_config(input_required = FALSE)$period)
   example <- is.null(cfg$input$file) && is.null(input) && config_file != "hourly"
   if (example || identical(config_file, "hourly")) {
     profiles <- c("prepared", if (identical(config_file, "hourly")) "hourly")
@@ -43,6 +44,10 @@ demo_settings <- function(config_file = "prepared", input = NULL, output = NULL)
       for (section in names(overrides)) for (key in names(overrides[[section]])) {
         value <- overrides[[section]][[key]]
         if (section == "figures" && key == "representative_events") {
+          # Changing the period can reclassify events even when a preset date
+          # remains in range. Use automatic choices unless dates were supplied
+          # in the main figures settings.
+          if (!default_period) next
           for (type in names(value)) {
             if (is.null(cfg$figures$representative_events[[type]])) {
               cfg$figures$representative_events[type] <- value[type]
@@ -64,7 +69,9 @@ demo_settings <- function(config_file = "prepared", input = NULL, output = NULL)
   if (!is.null(output)) cfg$output$directory <- output
   if (identical(cfg$input$format, "era5")) {
     if (is.null(cfg$input$file)) fail("Supply your local hourly ERA5 folder: run_demo('hourly', input = 'path/to/hourly_folder').")
-    cfg$input$processed_file <- file.path(if (is.null(cfg$output$directory)) "output" else cfg$output$directory, "prepared_tmax.nc")
+    if (identical(config_file, "hourly") && is.null(cfg$input$processed_file)) {
+      cfg$input$processed_file <- file.path(if (is.null(cfg$output$directory)) "output" else cfg$output$directory, "prepared_tmax.nc")
+    }
   }
   cfg
 }
