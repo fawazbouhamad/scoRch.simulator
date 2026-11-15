@@ -26,6 +26,26 @@ test_that("a workbook keeps every value, blank missing cells and date cells", {
   expect_match(sheet_xml, "<autoFilter")                             # ... and can be filtered
 })
 
+test_that("long text wraps and identifying columns remain visible without changing data", {
+  sequence <- paste(rep(2, 40), collapse = "-")
+  table <- data.frame(date = as.Date("2000-07-01") + 0:20, cell_id = 1:21,
+                      daily_cluster_counts = c(rep(paste(rep(2, 20), collapse = "-"), 20), sequence),
+                      count = 1:21, value = seq(0.1, 2.1, 0.1))
+  path <- tempfile(fileext = ".xlsx")
+  scoRch.simulator:::write_workbook(path, list(Catalog = table))
+  back <- openxlsx2::read_xlsx(path)
+  rownames(back) <- NULL
+  expect_equal(back, table)
+  xml <- scoRch.simulator:::read_archive_part(path, "xl/worksheets/sheet1.xml")
+  expect_match(xml, 'xSplit="2"')
+  expect_match(xml, 'topLeftCell="C2"')
+  last_row <- regmatches(xml, regexpr('<row[^>]*r="22"[^>]*>', xml))
+  height <- as.numeric(sub('.*ht="([^"]+)".*', '\\1', last_row))
+  expect_gt(height, 15)
+  styles <- scoRch.simulator:::read_archive_part(path, "xl/styles.xml")
+  expect_match(styles, 'wrapText="1"')
+})
+
 test_that("every written workbook passes the archive check, and defects are named", {
   path <- file.path(tempfile("archive-"), "Checked.xlsx")
   dir.create(dirname(path))

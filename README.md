@@ -13,17 +13,31 @@ You need **R 4.1 or newer**. Open R or RStudio and paste:
 ```r
 options(repos = c(CRAN = "https://cloud.r-project.org"))
 install.packages("remotes")
-source("https://raw.githubusercontent.com/fawazbouhamad/scoRch.simulator/main/software/setup/install.R")
+source("https://raw.githubusercontent.com/fawazbouhamad/scoRch.simulator/v1.0.1/software/setup/install.R")
 install_scorch()
 ```
 
-## Run the software
+To update an existing installation, restart R and run this block again. Your analysis configuration and data stay in your project folder.
+
+## Use your own data
+
+Open an RStudio project for your analysis, then create the configuration once:
+
+```r
+scoRch.simulator::write_scorch_config()
+```
+
+Open `config.yaml` in RStudio's Files pane. Set your data path and format under `input`, choose the results folder under `output`, and set the months and dates under `period`. See the [configuration example](#change-only-the-configuration) below. Save the file and run:
 
 ```r
 scoRch.simulator::run_scorch()
 ```
 
-The software reads `config.yaml` in your working folder, creating a copy automatically if absent. It processes the input and runs the entire analysis. You never need to run the numbered scripts individually.
+The software processes your input and runs the entire analysis. For later runs, edit the same configuration and use the same command. You never need to run the numbered scripts individually.
+
+## Try the bundled example
+
+In a new RStudio project, run `scoRch.simulator::run_scorch()` without configuring an input. It creates `config.yaml` if absent and announces that it is using the bundled North America example. No data download is needed.
 
 <img src="software/figures/how_to_run.gif" width="720" alt="Install once, run scoRch.simulator, open results, and change only config.yaml">
 
@@ -31,7 +45,7 @@ The supplied settings run the North America example: April–September 1996–20
 
 ## Open your results
 
-R prints the full results-folder path. **Open `Run_Summary.txt` first:** it explains the settings, results and warnings, and traces one event through the analysis. Results go to `output/` inside your working folder; `getwd()` in R shows that folder.
+R prints the completion status, any warnings and the full results-folder path. **Open `Run_Summary.txt` first:** its status and warnings appear at the top, followed by the input, settings, results and files. Results go to `output/` inside your working folder unless configured otherwise; `getwd()` in R shows that folder.
 
 | Supplied example result | Contents |
 |---|---|
@@ -41,7 +55,7 @@ R prints the full results-folder path. **Open `Run_Summary.txt` first:** it expl
 | [Models](demo/output/modeling/) | Power-law fits and the spatial model of ellipse centroids |
 | [Figures](demo/output/figures/) | Nine maps and statistical plots |
 
-Reruns replace package-generated files in the chosen output folder. Change `output: directory` to keep separate runs. Empty spreadsheet cells mean missing values. The summary identifies incomplete runs, unavailable models and skipped figures. The spatial model describes centroid occurrence intensity; exposure and vulnerability are not modeled, and concentration rank is not a heatwave probability.
+Reruns replace package-generated files in the chosen output folder. Change `output: directory` to keep separate runs. Spreadsheet headers and identifying columns stay visible when scrolling wide catalogs, and long text wraps without changing stored values. Empty cells mean missing values. The summary identifies incomplete runs, unavailable models and skipped figures. The spatial model describes centroid occurrence intensity; exposure and vulnerability are not modeled, and concentration rank is not a heatwave probability.
 
 ## Change only the configuration
 
@@ -125,6 +139,8 @@ The installer maps `scripts/` to R's `R/`, `help/` to `man/`, and setup metadata
 
 To install a downloaded repository, source `software/setup/install.R` and call `install_scorch(path = ".")`. From the repository root, `Rscript demo/run.R` runs the same workflow; `Rscript software/setup/maintenance.R compare` checks it against `demo/output/`. Use `--help` for validation and rebuild commands. To restore the exact published demo input, run `Rscript software/setup/maintenance.R make-demo path/to/SCORCH_NA_processed_1996_2025.nc`; it verifies the published checksum before copying the file. Assemble with `Rscript software/setup/install.R .package`, then check with `devtools::check(".package")`.
 
+The installer defaults to the stable `v1.0.1` tag. Developers can request `install_scorch(ref = "main")` or another Git ref. Reinstallation is enabled by default so a same-version development build can be replaced; dependency upgrades remain disabled unless requested.
+
 [GitHub Actions](https://github.com/fawazbouhamad/scoRch.simulator/actions) checks Windows, macOS and Linux and compares the demonstration. The reference has 65,409 local heatwaves, 140 selected days, 379 ellipses and 30 compound events (Types 1–4: 1, 5, 20 and 4). All 16 worksheets are compared at portable tolerances of 1e-6, or 1e-3 for LGCP fits. Optional full-study tests require the separate reference input. The bundled input is byte-for-byte identical to the published float64 NetCDF, without additional rounding or integer packing. Full 30-year validation of the accompanying hourly archive and processed input gave identical scientific results and all 16 worksheets.
 
 The authors developed the method and study implementation. Claude Code and Codex assisted with packaging, documentation, input interfaces, figure alignment and validation. The authors retain responsibility for the software and manuscript.
@@ -133,6 +149,6 @@ The authors developed the method and study implementation. Claude Code and Codex
 
 ## Citation and support
 
-Use [CITATION.cff](CITATION.cff) or `citation("scoRch.simulator")` for the software and study. When using the North America example, also cite its [dataset DOI](https://doi.org/10.5281/zenodo.24232552); this is a data citation, separate from the software release. Code is [GPL-3.0-or-later](LICENSE.txt); [data provenance](demo/PROVENANCE.txt) accompanies the example. Version 1.0.1 is in development. The historical `scoRch.generator` release has different commands and folders; follow this page for the current software.
+Use [CITATION.cff](CITATION.cff) or `citation("scoRch.simulator")` for the software and study. When using the North America example, also cite its [dataset DOI](https://doi.org/10.5281/zenodo.24232552); this is a data citation, separate from the software release. Code is [GPL-3.0-or-later](LICENSE.txt); [data provenance](demo/PROVENANCE.txt) accompanies the example. The stable release is [scoRch.simulator 1.0.1](https://github.com/fawazbouhamad/scoRch.simulator/releases/tag/v1.0.1). The historical `scoRch.generator` release has different commands and folders; follow this page for the current software.
 
 If installation fails, read the first dependency error. Input errors identify the affected file or setting. For help, open an [issue](https://github.com/fawazbouhamad/scoRch.simulator/issues) with the error, R/package versions and configuration.

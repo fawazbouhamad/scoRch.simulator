@@ -9,13 +9,13 @@ run_readme <- function(result, books) {
   cfg <- result$config
   complete <- !is.null(result$events)
   c(readme_heading(result, complete),
+    "", "WARNINGS", readme_warnings(result),
     "", "INPUT", readme_input(result, cfg),
     "", "MAIN SETTINGS", readme_settings(result, cfg),
     "", "RESULTS", readme_results(result),
     if (complete) c("", "MODELS", readme_models(result)),
     if (complete) c("", "FIGURES (figures/)", readme_figures(result)),
     "", "FILES", readme_files(books),
-    "", "WARNINGS", readme_warnings(result),
     if (!is.null(result$trace)) c("", "TRACED EVENT", ifelse(nzchar(result$trace), paste0("  ", result$trace), "")),
     "", "SETTINGS OF THIS RUN (YAML)",
     paste0("  ", strsplit(yaml::as.yaml(cfg[setdiff(names(cfg), "output")]), "\n")[[1]]))
@@ -30,14 +30,20 @@ readme_heading <- function(result, complete) {
              "No ellipses, compound events, models or figures were produced."))
   }
   seconds <- result$elapsed_minutes * 60
-  c(sprintf("scoRch.simulator %s results", result$package_version),
+  c(sprintf("scoRch.simulator %s results: %s", result$package_version, run_status(result)),
     sprintf("Run started %s, finished in %s.", started,
             if (seconds < 120) sprintf("%.0f seconds", seconds) else sprintf("%.1f minutes", seconds / 60)))
 }
 
+run_status <- function(result) {
+  if (is.null(result$events)) return("INCOMPLETE RUN")
+  if (identical(readme_warnings(result), "  None.")) "COMPLETE" else "COMPLETE WITH WARNINGS"
+}
+
 readme_input <- function(result, cfg) {
   input <- result$input
-  c(sprintf("  Source: %s", input$source),
+  c(if (!is.null(input$mode)) sprintf("  Mode: %s", input$mode),
+    sprintf("  Source: %s", input$source),
     if (!is.null(input$preprocessing)) sprintf("  Preprocessing: %s", input$preprocessing),
     sprintf("  Area: %d cells on a %g x %g degree grid, %s to %s and %s to %s", nrow(input$cells),
             input$grid$lon_step, input$grid$lat_step,

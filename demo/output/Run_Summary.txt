@@ -1,8 +1,12 @@
-scoRch.simulator 1.0.1 results
-Run started 2026-11-14 21:35:17, finished in 31 seconds.
+scoRch.simulator 1.0.1 results: COMPLETE
+Run started 2026-11-15 00:44:41, finished in 28 seconds.
+
+WARNINGS
+  None.
 
 INPUT
-  Source: C:/Users/fawaw/Documents/Codex/2026-11-12/new-chat-2/work/na-demo-lib/scoRch.simulator/extdata/north_america_tmax.nc
+  Mode: Bundled North America example
+  Source: <installed north_america_tmax.nc>
   Area: 1800 cells on a 1 x 1 degree grid, 129.5°W to 58.5°W and 25.5°N to 49.5°N
   Period: 5490 dates from 1996-04-01 to 2025-09-30, warm-season months 4 5 6 7 8 9
 
@@ -82,9 +86,6 @@ FILES
   Run_Summary.txt: this file
   Numbers are stored with the 15 significant digits of the XLSX format; the display formats are rounding for reading only. Empty cells are missing values, not zeros.
 
-WARNINGS
-  None.
-
 TRACED EVENT
   Compound event 7 (Catalog 5): 2012-06-28 to 2012-07-04, 7 days, Temporally Clustered = Type 3, clusters per day 1-1-1-1-1-1-1
 
@@ -133,13 +134,13 @@ TRACED EVENT
      2012-07-06  35.34                no             no           no       no
      2012-07-07  35.81                no             no           no       no
 
-  Figure for this event type: output/figures/consistent_multiday_events.png (selected under figures: representative_events).
+  Figure for this event type: <output>/figures/consistent_multiday_events.png (selected under figures: representative_events).
   Orange cells are the clustered heatwave cells, grey cells the
   heatwave cells DBSCAN left out, the black outline is the ellipse and the dot its weighted centroid.
 
 SETTINGS OF THIS RUN (YAML)
   input:
-    file: C:/Users/fawaw/Documents/Codex/2026-11-12/new-chat-2/work/na-demo-lib/scoRch.simulator/extdata/north_america_tmax.nc
+    file: <installed north_america_tmax.nc>
     format: daily_tmax
     variable: auto
     longitude: auto

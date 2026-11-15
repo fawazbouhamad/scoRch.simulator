@@ -136,7 +136,10 @@ add_sheet <- function(wb, name, table) {
   columns <- ncol(table)
   wb$add_worksheet(name)
   wb$add_data(x = table, with_filter = nrow(table) > 0, na.strings = NULL)
-  wb$freeze_pane(first_row = TRUE)
+  identifiers <- names(table) %in% c("date", "start_date", "end_date", "cell_id",
+                                    "local_event_id", "cluster_id", "ellipse_id", "compound_event_id")
+  frozen <- if (columns >= 5L) sum(cumprod(identifiers)) else 0L
+  wb$freeze_pane(first_active_row = 2L, first_active_col = min(frozen, columns - 1L) + 1L)
   header <- sprintf("A1:%s1", column_letter(columns))
   wb$add_font(dims = header, bold = TRUE)
   wb$add_fill(dims = header, color = openxlsx2::wb_color(hex = "FFE7E6E6"))
@@ -150,7 +153,24 @@ add_sheet <- function(wb, name, table) {
       }
     }
   }
-  wb$set_col_widths(cols = seq_len(columns), widths = column_widths(table))
+  widths <- column_widths(table)
+  wb$set_col_widths(cols = seq_len(columns), widths = widths)
+  # Wrap only overflowing text cells; ordinary catalog rows retain their height.
+  lines <- rep(1, nrow(table))
+  for (j in which(vapply(table, is.character, logical(1)))) {
+    needed <- ceiling(nchar(table[[j]]) / max(1, widths[j] - 2))
+    long <- which(!is.na(needed) & needed > 1)
+    for (i in long) {
+      wb$add_cell_style(dims = sprintf("%s%d", column_letter(j), i + 1L),
+                         wrap_text = TRUE, vertical = "top")
+    }
+    lines[long] <- pmax(lines[long], needed[long])
+  }
+  wrapped <- which(lines > 1)
+  if (length(wrapped)) {
+    # Excel limits a row to 409.5 points. Stored text is never shortened.
+    wb$set_row_heights(rows = wrapped + 1L, heights = pmin(409.5, 15 * lines[wrapped] + 3))
+  }
   invisible(name)
 }
 
