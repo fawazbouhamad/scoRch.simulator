@@ -14,6 +14,10 @@ test_that("installed R citations use the bundled CFF software and study metadata
   expect_identical(entries[[2]]$year, as.character(study$year))
   expect_identical(entries[[2]]$url, study$url)
   expect_identical(entries[[2]]$note, sub("[.]$", "", study$notes))
+  data <- Filter(function(x) identical(x$type, "data"), cff$references)
+  expect_setequal(vapply(data, `[[`, "", "doi"),
+                  c("10.5281/zenodo.24232552", "10.5281/zenodo.21717874"))
+  expect_false(identical(entries[[1]]$doi, "10.5281/zenodo.24232552"))
 })
 
 test_that("citation fields follow CFF changes and use release dates before build dates", {

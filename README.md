@@ -27,7 +27,7 @@ The software reads `config.yaml` in your working folder, creating a copy automat
 
 <img src="software/figures/how_to_run.gif" width="720" alt="Install once, run scoRch.simulator, open results, and change only config.yaml">
 
-The supplied settings run the US example: April–September 1996–2025, 1,800 one-degree cells and 5,490 dates in about 12 MB. The domain includes adjacent waters. A reference run took 31 seconds; time varies by computer. The analysis uses 5,000 bootstrap repetitions and fixed seeds.
+The supplied settings run the North America example: April–September 1996–2025, 1,800 one-degree cells and 5,490 dates in about 34 MB. The domain includes adjacent waters. Run time varies by computer. The analysis uses 5,000 bootstrap repetitions and fixed seeds.
 
 ## Open your results
 
@@ -74,6 +74,28 @@ The software converts hourly temperature to UTC daily maxima, averages complete 
 
 Review the study defaults when changing region, season or period. Local thresholds use all analyzed dates; temperature-weighted centroids require positive Celsius Tmax in every cluster cell. The `demo` section supplies example-only figure choices and the optional hourly preset. Your own input uses the main settings above it. A different configuration can be passed to `run_scorch("C:/analysis/config.yaml")`.
 
+## Download the demonstration data
+
+The [North America dataset on Zenodo](https://doi.org/10.5281/zenodo.24232552) offers two independent downloads:
+
+| File | Use |
+|---|---|
+| [SCORCH_NA_processed_1996_2025.nc](https://zenodo.org/records/24232552/files/SCORCH_NA_processed_1996_2025.nc?download=1) (33,841,054 bytes) | Ready to analyze; the same data are bundled with the software. For a downloaded copy, set `input: file` to its path and `input: format` to `daily_tmax`. |
+| [SCORCH_NA_unprocessed_1996_2025.zip](https://zenodo.org/records/24232552/files/SCORCH_NA_unprocessed_1996_2025.zip?download=1) (6,333,591,973 bytes) | Extract once. Set `input: file` to the extracted `SCORCH_NA_unprocessed_1996_2025/` folder containing the 30 yearly NetCDF files, and `input: format` to `era5`. |
+
+Both cover April–September 1996–2025. Processing takes the maximum of each native point's 24 hourly temperatures per UTC day, converts Kelvin to Celsius, then takes the equal-weight arithmetic mean of each complete 4×4 block of 0.25° points. Each point has weight 1/16; this temperature aggregation does not use latitude, area or temperature weights. Output is float64. Temperature weighting is used separately for ellipse centroids. See [provenance](demo/PROVENANCE.txt) for checksums and attribution.
+
+## Download the demonstration data
+
+The [North America dataset on Zenodo](https://doi.org/10.5281/zenodo.24232552) offers two independent downloads:
+
+| File | Use |
+|---|---|
+| [SCORCH_NA_processed_1996_2025.nc](https://zenodo.org/records/24232552/files/SCORCH_NA_processed_1996_2025.nc?download=1) (33,841,054 bytes) | Ready to analyze; the same data are bundled with the software. For a downloaded copy, set `input: file` to its path and `input: format` to `daily_tmax`. |
+| [SCORCH_NA_unprocessed_1996_2025.zip](https://zenodo.org/records/24232552/files/SCORCH_NA_unprocessed_1996_2025.zip?download=1) (6,333,591,973 bytes) | Extract once. Set `input: file` to the extracted `SCORCH_NA_unprocessed_1996_2025/` folder containing the 30 yearly NetCDF files, and `input: format` to `era5`. |
+
+Both cover April–September 1996–2025. Processing takes the maximum of each native point's 24 hourly temperatures per UTC day, converts Kelvin to Celsius, then takes the equal-weight arithmetic mean of each complete 4×4 block of 0.25° points. Each point has weight 1/16; this temperature aggregation does not use latitude, area or temperature weights. Output is float64. Temperature weighting is used separately for ellipse centroids. See [provenance](demo/PROVENANCE.txt) for checksums and attribution.
+
 ## Understand the workflow
 
 Temperature → local heatwaves → regionally extensive days → spatial clusters → ellipses → compound events → models, tables and figures.
@@ -91,7 +113,7 @@ Local heatwaves belong to individual grid cells. Consecutive regionally extensiv
 
 <img src="software/figures/compound_event_types.png" width="720" alt="The four SCORCH compound-event types">
 
-The original study covers the Eastern Mediterranean and Middle East, 1940–2025. The bundled US example applies the same method to another input. The [research reproduction](https://github.com/fawazbouhamad/compound-heatwave-typologies-SCORCH) and [study dataset](https://doi.org/10.5281/zenodo.21717874) are separate records.
+The original study covers the Eastern Mediterranean and Middle East, 1940–2025. The bundled North America example applies the same method to another input. The [research reproduction](https://github.com/fawazbouhamad/compound-heatwave-typologies-SCORCH) and [study dataset](https://doi.org/10.5281/zenodo.21717874) are separate records.
 
 ## Repository guide
 
@@ -110,9 +132,9 @@ The original study covers the Eastern Mediterranean and Middle East, 1940–2025
 
 The installer maps `scripts/` to R's `R/`, `help/` to `man/`, and setup metadata to the package root. `DESCRIPTION` lists package information and dependencies; `NAMESPACE` lists exported functions. Fixture-local `.gitattributes` preserves CSV line endings.
 
-To install a downloaded repository, source `software/setup/install.R` and call `install_scorch(path = ".")`. From the repository root, `Rscript demo/run.R` runs the same workflow; `Rscript software/setup/maintenance.R compare` checks it against `demo/output/`. Use `--help` for validation and rebuild commands. Assemble with `Rscript software/setup/install.R .package`, then check with `devtools::check(".package")`.
+To install a downloaded repository, source `software/setup/install.R` and call `install_scorch(path = ".")`. From the repository root, `Rscript demo/run.R` runs the same workflow; `Rscript software/setup/maintenance.R compare` checks it against `demo/output/`. Use `--help` for validation and rebuild commands. To restore the exact published demo input, run `Rscript software/setup/maintenance.R make-demo path/to/SCORCH_NA_processed_1996_2025.nc`; it verifies the published checksum before copying the file. To restore the exact published demo input, run `Rscript software/setup/maintenance.R make-demo path/to/SCORCH_NA_processed_1996_2025.nc`; it verifies the published checksum before copying the file. Assemble with `Rscript software/setup/install.R .package`, then check with `devtools::check(".package")`.
 
-[GitHub Actions](https://github.com/fawazbouhamad/scoRch.simulator/actions) checks Windows, macOS and Linux and compares the demonstration. The reference has 65,790 local heatwaves, 140 selected days, 376 ellipses and 29 compound events. All 16 worksheets are compared at portable tolerances of 1e-6, or 1e-3 for LGCP fits. Optional full-study tests require the separate reference input. The matching 30-year hourly archive is still being acquired and validated for a separate deposit. The bundled compact input is rounded to 0.01°C; exact hourly/prepared comparisons use float64 input saved from those same hourly files.
+[GitHub Actions](https://github.com/fawazbouhamad/scoRch.simulator/actions) checks Windows, macOS and Linux and compares the demonstration. The reference has 65,409 local heatwaves, 140 selected days, 379 ellipses and 30 compound events (Types 1–4: 1, 5, 20 and 4). All 16 worksheets are compared at portable tolerances of 1e-6, or 1e-3 for LGCP fits. Optional full-study tests require the separate reference input. The bundled input is byte-for-byte identical to the published float64 NetCDF, without additional rounding or integer packing. Full 30-year validation of the accompanying hourly archive and processed input gave identical scientific results and all 16 worksheets.
 
 The authors developed the method and study implementation. Claude Code and Codex assisted with packaging, documentation, input interfaces, figure alignment and validation. The authors retain responsibility for the software and manuscript.
 
@@ -120,6 +142,6 @@ The authors developed the method and study implementation. Claude Code and Codex
 
 ## Citation and support
 
-Use [CITATION.cff](CITATION.cff) or `citation("scoRch.simulator")`. Code is [GPL-3.0-or-later](LICENSE.txt); [data provenance](demo/PROVENANCE.txt) accompanies the example. Version 1.0.1 is in development. The historical `scoRch.generator` release has different commands and folders; follow this page for the current software.
+Use [CITATION.cff](CITATION.cff) or `citation("scoRch.simulator")` for the software and study. When using the North America example, also cite its [dataset DOI](https://doi.org/10.5281/zenodo.24232552); this is a data citation, separate from the software release. Code is [GPL-3.0-or-later](LICENSE.txt); [data provenance](demo/PROVENANCE.txt) accompanies the example. Version 1.0.1 is in development. The historical `scoRch.generator` release has different commands and folders; follow this page for the current software.
 
 If installation fails, read the first dependency error. Input errors identify the affected file or setting. For help, open an [issue](https://github.com/fawazbouhamad/scoRch.simulator/issues) with the error, R/package versions and configuration.
