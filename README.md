@@ -47,6 +47,8 @@ Reruns replace package-generated files in the chosen output folder. Change `outp
 
 Open `config.yaml`, edit the settings you need, save it and run **the same command** again. Keep the indentation. Quote paths and use forward slashes, for example `"C:/data/temperature.nc"`. Relative paths use R's working folder.
 
+Start with `input`, `output` and `period` at the top. The remaining sections mark optional scientific settings, advanced model settings and figure choices. All existing study defaults are retained unless you change them.
+
 | Setting | What it controls |
 |---|---|
 | `input: file` | `null` runs the bundled example; otherwise enter your file or ERA5 folder |
@@ -70,9 +72,9 @@ period:
   end_date: "2025-09-30"
 ```
 
-The software converts hourly temperature to UTC daily maxima, averages complete blocks into one-degree cells, saves prepared input when requested, and runs every analysis stage. Obtain local NetCDF files for your chosen region first; no API key is used by the software. Hourly files need complete UTC days on the same regular grid without overlapping dates. Prepared input needs a complete record in every retained cell. `?read_era5` and `?read_tmax` explain the accepted formats.
+The software converts hourly temperature to UTC daily maxima, averages complete blocks into one-degree cells, saves prepared input when requested, and runs every analysis stage. Save prepared input outside the folder of ERA5 source files so later runs read only the source files. Obtain local NetCDF files for your chosen region first; no API key is used by the software. Hourly files need complete UTC days on the same regular grid without overlapping dates. Prepared input needs a complete record in every retained cell. `?read_era5` and `?read_tmax` explain the accepted formats.
 
-Review the study defaults when changing region, season or period. Local thresholds use all analyzed dates; temperature-weighted centroids require positive Celsius Tmax in every cluster cell. The `demo` section supplies example-only figure choices and the optional hourly preset. Your own input uses the main settings above it. A different configuration can be passed to `run_scorch("C:/analysis/config.yaml")`.
+Review the study defaults when changing region, season or period. Local thresholds use all analyzed dates; temperature-weighted centroids require positive Celsius Tmax in every cluster cell. Demonstration presets are kept inside the software and apply only to the bundled example or the explicit hourly demonstration. Your own input uses the settings in `config.yaml`. A different configuration can be passed to `run_scorch("C:/analysis/config.yaml")`.
 
 ## Download the demonstration data
 
