@@ -37,7 +37,7 @@ compare_output <- function(results_dir = "output") {
   normalize_summary <- function(lines) {
     lines <- lines[!grepl("^Run started ", lines)]
     lines <- sub("^(  Source: |    file: ).*north_america_tmax[.]nc.*$", "\\1<installed north_america_tmax.nc>", lines)
-    sub("^(  Figure for this event type: ).*/figures/", "\\1<output>/figures/", lines)
+    sub("^(  Figure for this event: ).*/figures/", "\\1<output>/figures/", lines)
   }
   expected_readme <- normalize_summary(readLines(file.path(expected_dir, "Summary.txt"), encoding = "UTF-8"))
   readme <- normalize_summary(readLines(file.path(results_dir, "Summary.txt"), encoding = "UTF-8"))
@@ -50,9 +50,12 @@ compare_output <- function(results_dir = "output") {
          if (is.na(first)) "none" else first, length(expected_readme), length(readme))
   }
 
-  for (figure in list.files(file.path(expected_dir, "figures"))) {
+  for (figure in list.files(file.path(expected_dir, "figures"), pattern = "[.]png$", recursive = TRUE)) {
     if (!file.exists(file.path(results_dir, "figures", figure))) note("figures/%s is missing", figure)
   }
+  expected_figures <- list.files(file.path(expected_dir, "figures"), pattern = "[.]png$", recursive = TRUE)
+  actual_figures <- list.files(file.path(results_dir, "figures"), pattern = "[.]png$", recursive = TRUE)
+  if (!identical(expected_figures, actual_figures)) note("The figure inventory differs from demo/output.")
   text_files <- list.files(results_dir, pattern = "[.]txt$", recursive = TRUE)
   if (!identical(text_files, "Summary.txt")) note("text files in output/: %s", paste(text_files, collapse = ", "))
 

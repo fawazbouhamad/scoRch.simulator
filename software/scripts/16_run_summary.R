@@ -125,21 +125,34 @@ readme_models <- function(result) {
 }
 
 figure_descriptions <- function() c(
-  "ellipse_spatial_patterns" = "maps of all ellipses: centroids with their axes, footprint density, axis ratio, area and orientation",
-  "single_day_events" = "snapshots of representative single-day events (Types 1 and 2)",
-  "consistent_multiday_events" = "the first two days of representative Type 3 events",
-  "mixed_multiday_events" = "six consecutive days of a representative Type 4 event",
   "ellipse_geometry_by_type" = "ellipse geometry by event type",
   "event_geometry_distributions" = "distributions of event geometry by type",
-  "annual_event_counts_and_duration" = "annual event counts and mean durations by type",
+  "annual_frequency" = "annual event counts by type",
+  "annual_duration" = "annual mean durations of Type 3 and Type 4 events",
   "power_law_model" = "the power-law fit of the largest ellipse areas",
-  "spatial_risk_model" = "the LGCP intensity with the centroids and the concentration zones")
+  "spatial_risk_model" = "the LGCP intensity with the centroids and concentration zones",
+  "centroids_and_axes" = "all ellipse centroids with their major and minor axes",
+  "ellipse_overlap" = "ellipse footprints per fine-grid point",
+  "axis_ratio" = "ellipse axis ratios at their centroids",
+  "area" = "ellipse areas at their centroids",
+  "orientation" = "ellipse orientations at their centroids")
 
 readme_figures <- function(result) {
   plots <- result$plots
   descriptions <- figure_descriptions()
-  sprintf("  %s.png: %s%s", plots$name, ifelse(plots$name %in% names(descriptions), descriptions[plots$name], ""),
-          ifelse(plots$status == "generated", "", paste0(" [not drawn: ", plots$reason, "]")))
+  labels <- unname(descriptions[plots$name])
+  for (i in which(plots$name == "event")) {
+    event <- result$events$events[result$events$events$compound_event_id == plots$event_id[i], ]
+    labels[i] <- sprintf("Event %d (Catalog 5), Type %d: %s to %s, all %d day(s)",
+      event$compound_event_id, event$event_type, event$start_date, event$end_date, event$duration_days)
+  }
+  types <- tabulate(result$events$events$event_type, 4)
+  c("  Event IDs match Catalog 5 and follow the full chronological catalog, across all types.",
+    "  Filenames use leading zeros for sorting; Event_001.png is Event 1.",
+    sprintf("  events/Type_%d/: %d event PNG(s)%s", 1:4, types,
+      ifelse(types == 0, " (empty: no events of this type)", "")),
+    sprintf("  %s: %s%s", plots$path, labels,
+      ifelse(plots$status == "generated", "", paste0(" [not drawn: ", plots$reason, "]"))))
 }
 
 readme_files <- function(books) {
@@ -153,7 +166,7 @@ readme_files <- function(books) {
     }
   }
   c(lines,
-    "  figures/: the figures listed above (PNG, 600 dpi; 500 dpi for the two largest)",
+    "  figures/: the figures listed above (PNG, 600 dpi; 500 dpi for Ellipses_by_type.png)",
     "  Summary.txt: this file",
     "  Numbers are stored with the 15 significant digits of the XLSX format; the display formats are rounding for reading only. Empty cells are missing values, not zeros.")
 }
@@ -172,7 +185,7 @@ readme_warnings <- function(result) {
   }
   if (!is.null(result$plots)) {
     skipped <- result$plots[result$plots$status != "generated", ]
-    if (nrow(skipped)) warnings <- c(warnings, sprintf("  Figure %s.png was not drawn: %s", skipped$name, skipped$reason))
+    if (nrow(skipped)) warnings <- c(warnings, sprintf("  Figure %s was not drawn: %s", skipped$path, skipped$reason))
   }
   if (length(warnings)) warnings else "  None."
 }
@@ -244,9 +257,9 @@ trace_event <- function(result, tmax, date) {
                   local_heatwave = ifelse(window >= heatwave$start_date & window <= heatwave$end_date, "yes", "no"),
                   selected_day = ifelse(window %in% result$regional$selected_days$date, "yes", "no"),
                   in_event = ifelse(window >= event$start_date & window <= event$end_date, "yes", "no")))
-  figure <- c("single_day_events", "single_day_events", "consistent_multiday_events", "mixed_multiday_events")[event$event_type]
   say("")
-  say("Figure for this event type: %s/figures/%s.png (selected under figures: representative_events).", result$output_dir, figure)
+  say("Figure for this event: %s/figures/%s", result$output_dir,
+      event_figure_path(event$compound_event_id, event$event_type))
   say("Orange cells are the clustered heatwave cells, grey cells the")
   say("heatwave cells DBSCAN left out, the black outline is the ellipse and the dot its weighted centroid.")
   lines

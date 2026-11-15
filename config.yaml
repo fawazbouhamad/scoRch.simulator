@@ -61,8 +61,9 @@ lgcp:                         # log-Gaussian Cox process of the ellipse centroid
   window_margin_km: 80        # margin beyond cell centres, plus one raster pixel (km);
                               # chosen for 1-degree cells; review for other grid resolutions
 
-# OPTIONAL FIGURE CHOICES: null uses automatic selection for your own data.
-# Automatic choices favour longer events, then larger ellipses; absent types are skipped.
+# OPTIONAL MANUAL COMPARISONS: used only when redrawing legacy comparison figures.
+# Automatic run output includes every event and every day, regardless of these choices.
+# For manual comparisons, null favours longer events, then larger ellipses.
 figures:
   representative_events:
     type_1: null              # a date inside the Type 1 event to show

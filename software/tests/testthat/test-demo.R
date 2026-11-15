@@ -1,4 +1,5 @@
 test_that("the installed demo profiles preserve the scientific and figure choices", {
+  local_figure_test_dpi()
   prepared <- scoRch.simulator:::demo_settings()
   hourly <- scoRch.simulator:::demo_settings("hourly", input = "hourly-input")
   a <- scoRch.simulator:::read_config(prepared, input_required = FALSE)
@@ -18,6 +19,7 @@ test_that("the installed demo profiles preserve the scientific and figure choice
 })
 
 test_that("legacy demo blocks retain their defaults and explicit overrides", {
+  local_figure_test_dpi()
   legacy <- yaml::read_yaml(test_path("fixtures", "legacy-config.yaml"))
   folder <- tempfile("scorch-legacy-config-")
   dir.create(folder)
@@ -54,6 +56,7 @@ test_that("legacy demo blocks retain their defaults and explicit overrides", {
 })
 
 test_that("an intentionally omitted legacy demo profile stays omitted", {
+  local_figure_test_dpi()
   folder <- tempfile("scorch-legacy-profiles-")
   dir.create(folder)
   previous <- setwd(folder)
@@ -69,6 +72,7 @@ test_that("an intentionally omitted legacy demo profile stays omitted", {
 })
 
 test_that("the demo reads local settings and respects a configured input", {
+  local_figure_test_dpi()
   folder <- tempfile("scorch-config-")
   dir.create(folder)
   previous <- setwd(folder)
@@ -102,6 +106,7 @@ test_that("the demo reads local settings and respects a configured input", {
 })
 
 test_that("changing the bundled demo period uses automatic figure choices", {
+  local_figure_test_dpi()
   folder <- tempfile("scorch-period-")
   dir.create(folder)
   previous <- setwd(folder)
@@ -134,6 +139,7 @@ test_that("changing the bundled demo period uses automatic figure choices", {
 })
 
 test_that("changed event-selection settings use automatic demo figure choices", {
+  local_figure_test_dpi()
   folder <- tempfile("scorch-event-settings-")
   dir.create(folder)
   previous <- setwd(folder)
@@ -172,6 +178,7 @@ test_that("changed event-selection settings use automatic demo figure choices", 
 })
 
 test_that("output and downstream model settings retain the reference figure dates", {
+  local_figure_test_dpi()
   folder <- tempfile("scorch-model-settings-")
   dir.create(folder)
   previous <- setwd(folder)
@@ -188,6 +195,7 @@ test_that("output and downstream model settings retain the reference figure date
 })
 
 test_that("hourly YAML input saves prepared data only at the requested path", {
+  local_figure_test_dpi()
   folder <- tempfile("scorch-prepared-path-")
   dir.create(folder)
   previous <- setwd(folder)
@@ -224,6 +232,7 @@ test_that("hourly YAML input saves prepared data only at the requested path", {
 })
 
 test_that("successful publishing retires former names and preserves user files", {
+  local_figure_test_dpi()
   out <- tempfile("scorch-migration-")
   dir.create(file.path(out, "Heatwave_Catalogs"), recursive = TRUE)
   dir.create(file.path(out, "Modelling"))

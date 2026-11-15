@@ -4,7 +4,8 @@
 \alias{scorch_figure}
 \title{Draw one result visualization}
 \usage{
-scorch_figure(result, name = NULL, file = NULL, dpi = NULL, number = NULL)
+scorch_figure(result, name = NULL, file = NULL, dpi = NULL, number = NULL,
+  event_id = NULL)
 }
 \arguments{
 \item{result}{The list returned by \code{\link[=run_scorch]{run_scorch()}}.}
@@ -16,11 +17,14 @@ scorch_figure(result, name = NULL, file = NULL, dpi = NULL, number = NULL)
 the current device.}
 
 \item{dpi}{Resolution of the PNG file; \code{NULL} uses the figure's own
-default, 600 dots per inch (500 for the two largest figures), the
-resolution of the study's figures.}
+default, 600 dots per inch (500 for ellipse geometry by type and the
+legacy combined spatial overview).}
 
 \item{number}{Legacy paper figure number (3 or 5-12), accepted for
 compatibility. Use \code{name} for new code.}
+\item{event_id}{Global compound event ID from Catalog 5, required for
+\code{name = "event"}. All days of this event appear in one PNG.}
+
 }
 \value{
 \code{TRUE} (invisibly) when the visualization was drawn, \code{FALSE} when the

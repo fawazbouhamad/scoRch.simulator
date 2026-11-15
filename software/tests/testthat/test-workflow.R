@@ -1,6 +1,7 @@
 example_file <- system.file("extdata", "north_america_tmax.nc", package = "scoRch.simulator")
 
 test_that("the complete workflow runs on the example data and writes every output", {
+  local_figure_test_dpi()
   out <- file.path(tempfile("scorch"), "results")
   dir.create(file.path(out, "figures"), recursive = TRUE)
   writeLines("old", file.path(out, "figures", "figure_2.png"))
@@ -32,14 +33,13 @@ test_that("the complete workflow runs on the example data and writes every outpu
   expect_true(all(is.finite(result$lgcp$parameters)))
   expect_equal(nrow(result$lgcp$concentration), 6)
   expect_true(all(result$lgcp$cells$concentration_rank > 0 & result$lgcp$cells$concentration_rank <= 1))
-  figures <- c("ellipse_spatial_patterns", "single_day_events", "consistent_multiday_events", "mixed_multiday_events",
-               "ellipse_geometry_by_type", "event_geometry_distributions", "annual_event_counts_and_duration",
-               "power_law_model", "spatial_risk_model")
+  figure_paths <- scoRch.simulator:::figure_output_plan(result)$path
+  expect_length(figure_paths, 41L)
   expected <- c(file.path("catalogs", c("01_heatwave_events.xlsx", "02_regionally_extensive_heatwaves.xlsx", "03_extreme_heatwave_clusters.xlsx",
                                                  "04_extreme_heatwave_ellipses.xlsx", "05_compound_heatwave_events.xlsx")),
                 file.path("modeling", c("Power_Law_Model.xlsx", "Spatial_Risk_Model.xlsx")),
                 file.path("Heatwave_Statistics.xlsx"),
-                file.path("figures", paste0(figures, ".png")), "Summary.txt")
+                file.path("figures", figure_paths), "Summary.txt")
   expect_true(all(file.exists(file.path(out, expected))))
   expect_true(all(result$plots$status == "generated"))
   expect_setequal(list.files(out, recursive = TRUE), c(expected, "figures/figure_2.png", "figures/user-plot.png"))
@@ -50,7 +50,7 @@ test_that("the complete workflow runs on the example data and writes every outpu
   expect_equal(readme[1], paste("scoRch.simulator", as.character(packageVersion("scoRch.simulator")), "results: COMPLETE"))
   expect_lt(which(readme == "WARNINGS"), which(readme == "INPUT"))
   expect_true(any(readme == "  Stage 5  Compound heatwave events: 30"))
-  expect_true(any(grepl("^  ellipse_spatial_patterns.png: ", readme)))
+  expect_true(any(grepl("^  spatial/Ellipse_overlap.png: ", readme)))
   expect_false(any(grepl("not drawn", readme)))
   expect_equal(readme[which(readme == "WARNINGS") + 1], "  None.")
   expect_true(any(grepl("Heatwave Events (65409 rows)", readme, fixed = TRUE)))
@@ -119,6 +119,7 @@ test_that("the complete workflow runs on the example data and writes every outpu
 })
 
 test_that("a no-cluster rerun replaces old results with clearly partial output", {
+  local_figure_test_dpi()
   out <- tempfile("scorch-partial-")
   dir.create(out)
   for (folder in c("catalogs", "modeling", "figures")) dir.create(file.path(out, folder))
@@ -126,6 +127,9 @@ test_that("a no-cluster rerun replaces old results with clearly partial output",
   writeLines("old", file.path(out, "modeling", "Spatial_Risk_Model.xlsx"))
   writeLines("old", file.path(out, "figures", "spatial_risk_model.png"))
   writeLines("old summary", file.path(out, "Run_Summary.txt"))
+  dir.create(file.path(out, "figures/events/Type_4"), recursive = TRUE)
+  writeLines("old", file.path(out, "figures/events/Type_4/Event_999.png"))
+  writeLines("keep", file.path(out, "figures/events/Type_4/my-note.txt"))
   writeLines("keep", file.path(out, "user-notes.txt"))
   writeLines("keep", file.path(out, "modeling", "user-table.csv"))
   values <- array(30, c(10, 3, 3))
@@ -144,12 +148,16 @@ test_that("a no-cluster rerun replaces old results with clearly partial output",
   expect_match(readme[1], "INCOMPLETE RUN")
   expect_false(file.exists(file.path(out, "Run_Summary.txt")))
   expect_true(any(grepl("The run is incomplete: no selected day formed a cluster", readme, fixed = TRUE)))
-  expect_equal(sum(grepl("[.]txt$", list.files(out, recursive = TRUE))), 2)   # Summary.txt and the user notes
+  expect_equal(sum(grepl("[.]txt$", list.files(out, recursive = TRUE))), 3)   # Summary.txt and the user notes
+  expect_false(file.exists(file.path(out, "figures/events/Type_4/Event_999.png")))
+  expect_equal(readLines(file.path(out, "figures/events/Type_4/my-note.txt")), "keep")
+  expect_true(all(dir.exists(file.path(out, paste0("figures/events/Type_", 1:4)))))
   expect_equal(readLines(file.path(out, "user-notes.txt")), "keep")
   expect_equal(readLines(file.path(out, "modeling", "user-table.csv")), "keep")
 })
 
 test_that("an unavailable LGCP and absent event types are reported explicitly", {
+  local_figure_test_dpi()
   out <- tempfile("scorch-lgcp-")
   tmax <- tmax_from_array(array(30, c(3, 3, 3)),
                           as.Date("2000-06-01") + 0:2, 1:3, 1:3)
@@ -160,19 +168,23 @@ test_that("an unavailable LGCP and absent event types are reported explicitly", 
   expect_null(result$lgcp)
   expect_match(result$lgcp_error, "needs more centroids than the 3 available")
   expect_equal(result$plots$status[result$plots$name == "spatial_risk_model"], "skipped")
-  expect_equal(result$plots$status[result$plots$name == "annual_event_counts_and_duration"], "generated")
+  expect_equal(result$plots$status[result$plots$name == "annual_duration"], "generated")
   readme <- readLines(file.path(out, "Summary.txt"))
   expect_match(readme[1], "COMPLETE WITH WARNINGS")
   expect_true(any(grepl("Log-Gaussian Cox process: not fitted. Reason: The LGCP needs more centroids", readme, fixed = TRUE)))
-  expect_true(any(grepl("^  spatial_risk_model.png: .*[[]not drawn: .+[]]$", readme)))
+  expect_true(any(grepl("^  modeling/Spatial_model.png: .*[[]not drawn: .+[]]$", readme)))
   expect_true(any(grepl("^  The LGCP was not fitted: ", readme)))
-  expect_true(any(grepl("^  Figure spatial_risk_model.png was not drawn: ", readme)))
+  expect_true(any(grepl("^  Figure modeling/Spatial_model.png was not drawn: ", readme)))
+  expect_true(all(dir.exists(file.path(out, paste0("figures/events/Type_", 1:4)))))
+  expect_true(any(grepl("events/Type_1/: 0 event PNG(s) (empty: no events of this type)", readme, fixed = TRUE)))
+  expect_equal(length(list.files(file.path(out, "figures/events"), pattern = "[.]png$", recursive = TRUE)), 1)
   expect_false(any(readme == ")"))
   expect_false(file.exists(file.path(out, "modeling", "Spatial_Risk_Model.xlsx")))
   expect_false(file.exists(file.path(out, "figures", "spatial_risk_model.png")))
 })
 
 test_that("the stage functions can be chained by hand", {
+  local_figure_test_dpi()
   tmax <- read_tmax(example_file, start = "2010-01-01")
   clusters <- cluster_heatwaves(select_regional_days(detect_heatwaves(tmax)))
   events <- classify_events(clusters, fit_ellipses(clusters, tmax))

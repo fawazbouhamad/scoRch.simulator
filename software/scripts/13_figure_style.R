@@ -20,16 +20,17 @@ figure_bitmap_type <- function() {
   if (capabilities("cairo")) "cairo" else getOption("bitmapType")
 }
 
-panel_label <- function(letter, adj = 0.5) {
-  graphics::mtext(paste0("(", letter, ")"), side = 3, line = 0.5,
-                   adj = adj, font = 2, cex = 17 / 12, family = figure_sans_font())
+# Meaningful headings replace the paper's panel letters.
+plot_heading <- function(label, adj = 0.5) {
+  graphics::mtext(label, side = 3, line = 0.5, adj = adj, font = 2,
+                   cex = 1, family = figure_sans_font())
 }
 
-row_label <- function(letter) {
+row_heading <- function(label) {
   graphics::par(mai = c(0, 0, 0, 0))
   graphics::plot.new()
-  graphics::text(0.5, 0.5, paste0("(", letter, ")"), font = 2,
-                  cex = 17 / 12 / graphics::par("cex"), family = figure_sans_font())
+  graphics::text(0.5, 0.5, label, srt = 90, font = 2,
+                  cex = 0.95 / graphics::par("cex"), family = figure_sans_font())
 }
 
 # Clip vertical and horizontal mesh lines to the ellipse polygon. The fine

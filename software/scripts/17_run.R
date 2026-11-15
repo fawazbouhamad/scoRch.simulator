@@ -13,8 +13,8 @@
 #' their day and cell tables), `modeling/` (`Power_Law_Model.xlsx` and
 #' `Spatial_Risk_Model.xlsx`: fits, parameters, intensity and centroid concentration),
 #' `Heatwave_Statistics.xlsx` (event type summary, cell
-#' thresholds, daily heatwave extent, duration trends), `figures/` (nine
-#' descriptively named PNG files) and `Summary.txt`, which describes the
+#' thresholds, daily heatwave extent, duration trends), `figures/` (one PNG
+#' per event and grouped geometry, modeling, temporal and spatial figures) and `Summary.txt`, which describes the
 #' input, the main settings, the counts, the models, every file and sheet,
 #' the run time and the warnings in plain language. Every sheet holds all
 #' rows and columns of its table as date and numeric cells with a frozen,
@@ -157,15 +157,15 @@ run_scorch <- function(config = NULL, tmax = NULL, trace_date = NULL) {
   step("Writing the result workbooks to %s", out)
   books <- result_workbooks(result)
   write_workbooks(stage, books)
-  plot_names <- names(figure_specs())
-  plots <- data.frame(name = plot_names, status = rep("skipped", length(plot_names)),
-                      reason = rep("", length(plot_names)))
-  for (i in seq_along(plot_names)) {
-    figure <- plot_names[i]
-    step("Plot %s", figure)
-    file <- file.path(stage, "figures", paste0(figure, ".png"))
+  plots <- figure_output_plan(result)
+  plots$status <- "skipped"
+  plots$reason <- ""
+  for (i in seq_len(nrow(plots))) {
+    figure <- plots$name[i]
+    step("Plot %s", plots$path[i])
+    file <- file.path(stage, "figures", plots$path[i])
     reason <- character()
-    drawn <- withCallingHandlers(scorch_figure(result, figure, file),
+    drawn <- withCallingHandlers(scorch_figure(result, figure, file, event_id = if (!is.na(plots$event_id[i])) plots$event_id[i] else NULL),
                                  message = function(m) reason <<- c(reason, trimws(conditionMessage(m))))
     if (isTRUE(drawn)) {
       plots$status[i] <- "generated"
@@ -231,8 +231,8 @@ prepare_run_output <- function(out) {
   }
   stage <- tempfile(pattern = ".scorch-stage-", tmpdir = parent)
   if (!dir.create(stage, showWarnings = FALSE)) fail("Could not create the temporary output directory: ", stage)
-  for (folder in c("catalogs", "modeling", "figures")) {
-    if (!dir.create(file.path(stage, folder), showWarnings = FALSE)) {
+  for (folder in output_folders()) {
+    if (!dir.create(file.path(stage, folder), recursive = TRUE, showWarnings = FALSE)) {
       unlink(stage, recursive = TRUE)
       fail("Could not prepare the output folder: ", folder)
     }
@@ -246,9 +246,17 @@ publish_run_output <- function(stage, out) {
   }
   backup <- tempfile(pattern = ".scorch-backup-", tmpdir = dirname(out))
   if (!dir.create(backup, showWarnings = FALSE)) fail("Could not prepare a backup of existing output: ", backup)
-  managed <- managed_output_files()
+  managed <- unique(c(managed_output_files(), managed_event_files(out), managed_event_files(stage)))
   old_moved <- new_moved <- character()
   problem <- tryCatch({
+    for (folder in output_folders()) {
+      target <- file.path(out, folder)
+      if (!dir.exists(target) && !dir.create(target, recursive = TRUE, showWarnings = FALSE)) {
+        fail("Could not create the output folder: ", target)
+      }
+    }
+    conflicts <- managed[dir.exists(file.path(out, managed))]
+    if (length(conflicts)) fail("An output file path is occupied by a directory: ", conflicts[1])
     for (item in managed) {
       target <- file.path(out, item)
       if (file.exists(target)) {
@@ -305,7 +313,8 @@ managed_output_files <- function() {
     "modeling/Spatial_Risk_Model.xlsx",
     "Heatwave_Statistics.xlsx",
     "Summary.txt",
-    file.path("figures", paste0(names(figure_specs()), ".png")),
+    file.path("figures", paste0(unname(figure_number_aliases()), ".png")),
+    file.path("figures", summary_figure_plan()$path),
     # Retire earlier generated paths only after a successful run.
     "Run_Summary.txt",
     "Heatwave_Catalogs/Heatwaves.xlsx",
@@ -327,4 +336,16 @@ managed_output_files <- function() {
 # Degrees with the hemisphere letter, for the run summary and print methods.
 format_degrees <- function(value, letters) {
   paste0(abs(value), "\u00b0", ifelse(value < 0, letters[2], letters[1]))
+}
+
+output_folders <- function() c("catalogs", "modeling", "figures", "figures/events",
+  paste0("figures/events/Type_", 1:4), "figures/geometry", "figures/modeling", "figures/temporal", "figures/spatial")
+
+# Only recognized package event PNGs are retired; other user files are preserved.
+managed_event_files <- function(root) {
+  unlist(lapply(1:4, function(type) {
+    folder <- sprintf("figures/events/Type_%d", type)
+    files <- list.files(file.path(root, folder), pattern = "^Event_[0-9]+[.]png$", recursive = FALSE)
+    file.path(folder, files)
+  }), use.names = FALSE)
 }

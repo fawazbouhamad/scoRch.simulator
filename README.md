@@ -2,7 +2,7 @@
 
 [![License: GPL-3.0-or-later](https://img.shields.io/badge/license-GPL--3.0--or--later-orange)](LICENSE.txt)
 [![R: 4.1 or newer](https://img.shields.io/badge/R-%E2%89%A54.1-blue)](software/setup/DESCRIPTION)
-[![Version: 1.0.3](https://img.shields.io/badge/version-1.0.3-blue)](https://github.com/fawazbouhamad/scoRch.simulator/releases/tag/v1.0.3)
+[![Version: 1.1.0](https://img.shields.io/badge/version-1.1.0-blue)](https://github.com/fawazbouhamad/scoRch.simulator/releases/tag/v1.1.0)
 [![Software checks](https://github.com/fawazbouhamad/scoRch.simulator/actions/workflows/checks.yaml/badge.svg?branch=main)](https://github.com/fawazbouhamad/scoRch.simulator/actions/workflows/checks.yaml)
 
 An R package implementing **SCORCH: Spatiotemporal Classification of Regional
@@ -21,7 +21,7 @@ You need **R 4.1 or newer**. In R or RStudio, run:
 ```r
 options(repos = c(CRAN = "https://cloud.r-project.org"))
 install.packages("remotes")
-source("https://raw.githubusercontent.com/fawazbouhamad/scoRch.simulator/v1.0.3/software/setup/install.R")
+source("https://raw.githubusercontent.com/fawazbouhamad/scoRch.simulator/v1.1.0/software/setup/install.R")
 install_scorch()
 ```
 
@@ -77,7 +77,12 @@ Summary.txt first** for the completion status, warnings and main results.
 | [Heatwave statistics](demo/output/Heatwave_Statistics.xlsx) | Event types, thresholds, daily extent and duration trends |
 | [Catalogs 1–5](demo/output/catalogs/) | Local heatwaves, regional days, clusters, ellipses and compound events |
 | [Models](demo/output/modeling/) | Power-law fits and the spatial model of ellipse centroids |
-| [Figures](demo/output/figures/) | Maps and statistical plots |
+| [Figures](demo/output/figures/) | Every event, plus geometry, modeling, temporal and spatial plots |
+
+The example produces **30 event images and 11 summary figures**. In
+`figures/events/`, each type has its own folder and every event has one PNG
+containing all its daily snapshots. Event IDs match Catalog 5 across all types;
+`Event_001.png` means Event 1.
 
 Reruns replace package-generated files in the selected results folder. Choose a
 different output directory to keep separate runs.
