@@ -13,7 +13,7 @@ You need **R 4.1 or newer**. Open R or RStudio and paste:
 ```r
 options(repos = c(CRAN = "https://cloud.r-project.org"))
 install.packages("remotes")
-source("https://raw.githubusercontent.com/fawazbouhamad/scoRch.simulator/v1.0.1/software/setup/install.R")
+source("https://raw.githubusercontent.com/fawazbouhamad/scoRch.simulator/v1.0.2/software/setup/install.R")
 install_scorch()
 ```
 
@@ -45,11 +45,11 @@ The supplied settings run the North America example: April–September 1996–20
 
 ## Open your results
 
-R prints the completion status, any warnings and the full results-folder path. **Open `Run_Summary.txt` first:** its status and warnings appear at the top, followed by the input, settings, results and files. Results go to `output/` inside your working folder unless configured otherwise; `getwd()` in R shows that folder.
+R prints the completion status, any warnings and the full results-folder path. **Open `Summary.txt` first:** its status and warnings appear at the top, followed by the input, settings, results and files. Results go to `output/` inside your working folder unless configured otherwise; `getwd()` in R shows that folder.
 
 | Supplied example result | Contents |
 |---|---|
-| [Run summary](demo/output/Run_Summary.txt) | Counts, settings, files, warnings and a traced event |
+| [Summary](demo/output/Summary.txt) | Counts, settings, files, warnings and a traced event |
 | [Heatwave statistics](demo/output/Heatwave_Statistics.xlsx) | Event-type summary, cell thresholds, daily extent and duration trends |
 | [Catalogs 1–5](demo/output/catalogs/) | Local heatwaves → regional days → clusters → ellipses → compound events |
 | [Models](demo/output/modeling/) | Power-law fits and the spatial model of ellipse centroids |
@@ -139,7 +139,7 @@ The installer maps `scripts/` to R's `R/`, `help/` to `man/`, and setup metadata
 
 To install a downloaded repository, source `software/setup/install.R` and call `install_scorch(path = ".")`. From the repository root, `Rscript demo/run.R` runs the same workflow; `Rscript software/setup/maintenance.R compare` checks it against `demo/output/`. Use `--help` for validation and rebuild commands. To restore the exact published demo input, run `Rscript software/setup/maintenance.R make-demo path/to/SCORCH_NA_processed_1996_2025.nc`; it verifies the published checksum before copying the file. Assemble with `Rscript software/setup/install.R .package`, then check with `devtools::check(".package")`.
 
-The installer defaults to the stable `v1.0.1` tag. Developers can request `install_scorch(ref = "main")` or another Git ref. Reinstallation is enabled by default so a same-version development build can be replaced; dependency upgrades remain disabled unless requested.
+The installer defaults to the stable `v1.0.2` tag. Developers can request `install_scorch(ref = "main")` or another Git ref. Reinstallation is enabled by default so a same-version development build can be replaced; dependency upgrades remain disabled unless requested.
 
 [GitHub Actions](https://github.com/fawazbouhamad/scoRch.simulator/actions) checks Windows, macOS and Linux and compares the demonstration. The reference has 65,409 local heatwaves, 140 selected days, 379 ellipses and 30 compound events (Types 1–4: 1, 5, 20 and 4). All 16 worksheets are compared at portable tolerances of 1e-6, or 1e-3 for LGCP fits. Optional full-study tests require the separate reference input. The bundled input is byte-for-byte identical to the published float64 NetCDF, without additional rounding or integer packing. Full 30-year validation of the accompanying hourly archive and processed input gave identical scientific results and all 16 worksheets.
 
@@ -149,6 +149,6 @@ The authors developed the method and study implementation. Claude Code and Codex
 
 ## Citation and support
 
-Use [CITATION.cff](CITATION.cff) or `citation("scoRch.simulator")` for the software and study. When using the North America example, also cite its [dataset DOI](https://doi.org/10.5281/zenodo.24232552); this is a data citation, separate from the software release. Code is [GPL-3.0-or-later](LICENSE.txt); [data provenance](demo/PROVENANCE.txt) accompanies the example. The stable release is [scoRch.simulator 1.0.1](https://github.com/fawazbouhamad/scoRch.simulator/releases/tag/v1.0.1). The historical `scoRch.generator` release has different commands and folders; follow this page for the current software.
+Use [CITATION.cff](CITATION.cff) or `citation("scoRch.simulator")` for the software and study. When using the North America example, also cite its [dataset DOI](https://doi.org/10.5281/zenodo.24232552); this is a data citation, separate from the software release. Code is [GPL-3.0-or-later](LICENSE.txt); [data provenance](demo/PROVENANCE.txt) accompanies the example. The stable release is [scoRch.simulator 1.0.2](https://github.com/fawazbouhamad/scoRch.simulator/releases/tag/v1.0.2). The historical `scoRch.generator` release has different commands and folders; follow this page for the current software.
 
 If installation fails, read the first dependency error. Input errors identify the affected file or setting. For help, open an [issue](https://github.com/fawazbouhamad/scoRch.simulator/issues) with the error, R/package versions and configuration.

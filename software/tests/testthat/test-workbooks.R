@@ -72,7 +72,7 @@ test_that("every written workbook passes the archive check, and defects are name
   expect_equal(scoRch.simulator:::resolve_part_path("xl/", "/xl/styles.xml"), "xl/styles.xml")
 })
 
-test_that("Run_Summary.txt keeps its degree signs when the session locale fell back to C", {
+test_that("Summary.txt keeps its degree signs when the session locale fell back to C", {
   old <- Sys.getlocale("LC_CTYPE")
   on.exit(Sys.setlocale("LC_CTYPE", old), add = TRUE)
   skip_if_not(identical(suppressWarnings(Sys.setlocale("LC_CTYPE", "C")), "C"), "the C locale is not available")

@@ -39,14 +39,14 @@ compare_output <- function(results_dir = "output") {
     lines <- sub("^(  Source: |    file: ).*north_america_tmax[.]nc.*$", "\\1<installed north_america_tmax.nc>", lines)
     sub("^(  Figure for this event type: ).*/figures/", "\\1<output>/figures/", lines)
   }
-  expected_readme <- normalize_summary(readLines(file.path(expected_dir, "Run_Summary.txt"), encoding = "UTF-8"))
-  readme <- normalize_summary(readLines(file.path(results_dir, "Run_Summary.txt"), encoding = "UTF-8"))
+  expected_readme <- normalize_summary(readLines(file.path(expected_dir, "Summary.txt"), encoding = "UTF-8"))
+  readme <- normalize_summary(readLines(file.path(results_dir, "Summary.txt"), encoding = "UTF-8"))
   if (identical(expected_readme, readme)) {
-    cat("Run_Summary.txt: same apart from run time and local paths\n")
+    cat("Summary.txt: same apart from run time and local paths\n")
   } else {
     n <- min(length(expected_readme), length(readme))
     first <- which(expected_readme[seq_len(n)] != readme[seq_len(n)])[1]
-    note("Run_Summary.txt differs from the expected file (first difference at line %s; %d lines expected, %d found)",
+    note("Summary.txt differs from the expected file (first difference at line %s; %d lines expected, %d found)",
          if (is.na(first)) "none" else first, length(expected_readme), length(readme))
   }
 
@@ -54,7 +54,7 @@ compare_output <- function(results_dir = "output") {
     if (!file.exists(file.path(results_dir, "figures", figure))) note("figures/%s is missing", figure)
   }
   text_files <- list.files(results_dir, pattern = "[.]txt$", recursive = TRUE)
-  if (!identical(text_files, "Run_Summary.txt")) note("text files in output/: %s", paste(text_files, collapse = ", "))
+  if (!identical(text_files, "Summary.txt")) note("text files in output/: %s", paste(text_files, collapse = ", "))
 
   if (length(problems)) {
     stop("The demo output differs from demo/output:\n", paste(problems, collapse = "\n"), call. = FALSE)
