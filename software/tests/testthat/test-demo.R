@@ -82,6 +82,60 @@ test_that("changing the bundled demo period uses automatic figure choices", {
   expect_equal(settings$figures$representative_events$type_3, "1900-01-01")
 })
 
+test_that("changed event-selection settings use automatic demo figure choices", {
+  folder <- tempfile("scorch-event-settings-")
+  dir.create(folder)
+  previous <- setwd(folder)
+  on.exit(setwd(previous), add = TRUE)
+  write_scorch_config()
+  original <- yaml::read_yaml("config.yaml")
+  changes <- list(
+    local_threshold = list("heatwaves", "threshold_percentile", 90),
+    minimum_duration = list("heatwaves", "min_duration_days", 4),
+    minimum_exceeding = list("heatwaves", "min_exceeding_days", 4),
+    regional_threshold = list("regional_days", "percentile", 95),
+    clustering_distances = list("clustering", "eps_values", c(1, 2, 3)),
+    clustering_minimum = list("clustering", "min_samples_values", 5:8))
+  for (name in names(changes)) {
+    change <- changes[[name]]
+    config <- original
+    config[[change[[1]]]][[change[[2]]]] <- change[[3]]
+    config$output$directory <- name
+    config$power_law$bootstrap_repetitions <- 20
+    yaml::write_yaml(config, "config.yaml")
+    settings <- scoRch.simulator:::demo_settings("config.yaml")
+    expect_length(settings$figures$representative_events, 0L)
+    hourly <- scoRch.simulator:::demo_settings("hourly", input = "hourly-input")
+    expect_length(hourly$figures$representative_events, 0L)
+    if (name %in% c("local_threshold", "clustering_distances")) {
+      result <- suppressMessages(run_scorch("config.yaml"))
+      expect_s3_class(result, "scorch_result")
+      expect_true(file.exists(file.path(name, "Run_Summary.txt")))
+      expect_true(any(result$plots$status == "generated"))
+    }
+  }
+  config$figures$representative_events$type_3 <- "1900-01-01"
+  yaml::write_yaml(config, "config.yaml")
+  expect_equal(scoRch.simulator:::demo_settings("config.yaml")$figures$representative_events$type_3,
+               "1900-01-01")
+})
+
+test_that("output and downstream model settings retain the reference figure dates", {
+  folder <- tempfile("scorch-model-settings-")
+  dir.create(folder)
+  previous <- setwd(folder)
+  on.exit(setwd(previous), add = TRUE)
+  write_scorch_config()
+  config <- yaml::read_yaml("config.yaml")
+  config$output$directory <- "my-results"
+  config$power_law$bootstrap_repetitions <- 20
+  config$lgcp$raster_km <- 50
+  config$ellipses$scale_factor <- 1.5
+  yaml::write_yaml(config, "config.yaml")
+  settings <- scoRch.simulator:::demo_settings("config.yaml")
+  expect_equal(settings$figures$representative_events$type_3, c("2012-06-28", "2023-08-04"))
+})
+
 test_that("hourly YAML input saves prepared data only at the requested path", {
   folder <- tempfile("scorch-prepared-path-")
   dir.create(folder)
