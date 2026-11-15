@@ -1,81 +1,73 @@
-# SCORCH configuration: all settings in one file
-# ------------------------------------------------
+# SCORCH configuration: all analysis settings in one file
 # Run scoRch.simulator::run_scorch() from this file's folder.
-# The software reads this file and produces all results automatically.
-# Leave input: file null to run the bundled example. For your own analysis,
-# enter your input path and change the settings below, then run again.
-# Missing settings use the installed study defaults (Bouhamad and Najibi).
-# Lines starting with # are comments. Keep the indentation.
+# Edit the paths and period first. Other settings keep the SCORCH study defaults
+# unless you choose to change them. Keep the indentation; # starts a comment.
 
+# START HERE: data, results folder and analysis period
 input:
   file: null                  # null = bundled example; otherwise a quoted NetCDF path,
                               # or an ERA5 folder/list of files; use forward slashes in paths
-  format: auto                # auto detects the format; daily_tmax uses a prepared file;
-                              # era5 processes downloaded hourly or daily ERA5 temperature
+  format: auto                # auto detects the format; daily_tmax = prepared daily maxima;
+                              # era5 = local hourly or daily ERA5 temperature
+  processed_file: null        # optional saved Tmax path for ERA5 input; null = do not save;
+                              # save outside the ERA5 source folder; leave null for daily_tmax
+
+  # Optional input overrides: usually leave these on auto.
   variable: auto              # temperature variable: tmax (prepared) or t2m (ERA5)
   longitude: auto             # coordinate names are detected unless supplied
   latitude: auto
   time: auto
-  units: auto                 # auto reads the file's units; degC or K can override them
-  era5_cell_size_deg: 1        # ERA5 daily maxima are averaged to complete 1-degree cells;
-                              # null keeps the ERA5 grid; prepared Tmax keeps its existing grid
-  processed_file: null        # optional NetCDF path for saving prepared Tmax from ERA5 input;
-                              # later runs can read that file directly; leave null for prepared input
+  units: auto                 # read the file's units; degC or K can override them
+  era5_cell_size_deg: 1        # average ERA5 daily maxima to complete 1-degree cells;
+                              # null keeps the native grid; prepared Tmax keeps its grid
 
 output:
-  directory: output          # results folder (XLSX workbooks, figures/, Run_Summary.txt); created if needed,
-                              # package-generated files of an earlier run are replaced
+  directory: output           # results folder; reruns replace package-generated files here;
+                              # choose a different folder to keep results from an earlier run
 
 period:
   warm_season_months: [4, 5, 6, 7, 8, 9]   # calendar months analysed every year
-  start_date: null            # first date to analyse, e.g. "1980-01-01"; null = all dates in the file
-  end_date: null              # last date to analyse; null = all dates in the file
+  start_date: null            # first date, e.g. "1980-01-01"; null = first available date
+  end_date: null              # last date; null = last available date
 
+# OPTIONAL SCIENTIFIC SETTINGS: review when changing the application.
 heatwaves:                    # local heatwaves (Catalog 1)
-  threshold_percentile: 95    # a cell's threshold is this percentile of its daily Tmax
-  min_duration_days: 3        # minimum length of a local heatwave, including bridged days
-  min_exceeding_days: 3       # minimum number of days at or above the threshold
+  threshold_percentile: 95    # calculated from each cell's Tmax over the selected dates;
+                              # changing the analysis period also recalculates this threshold
+  min_duration_days: 3        # minimum event length, including bridged days
+  min_exceeding_days: 3       # minimum days at or above the threshold within the event
 
 regional_days:                # regionally extensive heatwave days (Catalog 2)
-  percentile: 97.5            # days whose heatwave-cell count reaches this percentile are selected
+  percentile: 97.5            # percentile of daily heatwave-cell counts over the selected dates
 
-clustering:                   # DBSCAN of the heatwave cells (Catalog 3); distances in grid-cell units
-  eps_values: [1, 1.5, 2, 2.5, 3, 3.5, 4]           # candidate neighbourhood distances
+clustering:                   # DBSCAN of the heatwave cells (Catalog 3)
+  eps_values: [1, 1.5, 2, 2.5, 3, 3.5, 4]           # candidate distances in grid-cell units
   min_samples_values: [4, 5, 6, 7, 8, 9, 10, 11, 12] # candidate minimum neighbourhood sizes
+                              # review distances when changing grid resolution
 
 ellipses:                     # principal-component ellipses (Catalog 4)
   scale_factor: 1.25          # semi-axis = scale_factor x principal standard deviation
 
+# ADVANCED MODEL SETTINGS: the defaults reproduce the study method.
 power_law:                    # power-law fit of the largest ellipse areas
-  bootstrap_repetitions: 5000 # study default 5000; 200 gives a quick first look, not results
-  seed_daily_maxima: 20261020 # random seeds of the two bootstraps
+  bootstrap_repetitions: 5000 # study default; 200 gives a quick first look, not final results
+  seed_daily_maxima: 20261020 # fixed seeds make the two bootstraps reproducible
   seed_event_maxima: 20261120
 
 lgcp:                         # log-Gaussian Cox process of the ellipse centroids
-  covariates: [lon, lat, mean_tmax, std_tmax]   # trend covariates, any subset of these four
+  covariates: [lon, lat, mean_tmax, std_tmax]   # any subset of longitude, latitude,
+                                              # mean Tmax and Tmax standard deviation
   raster_km: 25               # pixel size of the covariate images and study window (km)
-  window_margin_km: 80        # the window reaches this far (plus one pixel) beyond the cell centres (km);
-                              # chosen for 1-degree cells, use about 0.75 x the cell size for other grids
+  window_margin_km: 80        # margin beyond cell centres, plus one raster pixel (km);
+                              # chosen for 1-degree cells; review for other grid resolutions
 
+# OPTIONAL FIGURE CHOICES: null uses automatic selection for your own data.
+# Automatic choices favour longer events, then larger ellipses; absent types are skipped.
 figures:
-  representative_events:      # events shown in example plots; null = the longest event of the type
-    type_1: null              # a date inside the Type 1 event to show, e.g. "2002-07-31"
+  representative_events:
+    type_1: null              # a date inside the Type 1 event to show
     type_2: null              # a date inside the Type 2 event to show
-    type_3: null              # first shown day of one or two Type 3 events, e.g. ["2017-07-17", "1991-06-04"]
-    type_4: null              # first of the six shown days of the Type 4 event; null = the six days with most ellipses
-
-# Example presets: used only for the bundled example or run_demo("hourly").
-# Your own input uses the settings above. Scientific settings are shared.
-demo:
-  prepared:
-    figures:
-      representative_events:
-        type_3: ["2012-06-28", "2023-08-04"]
-  hourly:
-    input:
-      format: era5
-    output:
-      directory: output/hourly
-    period:
-      start_date: '1996-04-01'
-      end_date: '2025-09-30'
+    type_3: null              # first shown day of one or two Type 3 events, with a following day;
+                              # automatic = first two days of up to two events
+    type_4: null              # first of up to six shown days of the chosen Type 4 event;
+                              # automatic = the window with most ellipses in the chosen event

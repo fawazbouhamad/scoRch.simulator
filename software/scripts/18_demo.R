@@ -22,6 +22,16 @@ run_demo <- function(config_file = "prepared", input = NULL, output = NULL) {
   run_scorch(cfg, trace_date = "2012-06-30")
 }
 
+# Example-only figure choices and file coverage. Scientific defaults remain
+# in config.yaml; users do not need these presets in their editable copy.
+demo_presets <- function() {
+  list(
+    prepared = list(figures = list(representative_events = list(
+      type_3 = c("2012-06-28", "2023-08-04")))),
+    hourly = list(input = list(format = "era5"), output = list(directory = "output/hourly"),
+                  period = list(start_date = "1996-04-01", end_date = "2025-09-30")))
+}
+
 demo_settings <- function(config_file = "prepared", input = NULL, output = NULL) {
   if (!is.character(config_file) || length(config_file) != 1L || is.na(config_file)) {
     fail("Choose 'prepared', 'hourly', or a YAML configuration file.")
@@ -38,9 +48,12 @@ demo_settings <- function(config_file = "prepared", input = NULL, output = NULL)
   default_events <- identical(cfg[event_settings], reference[event_settings])
   example <- is.null(cfg$input$file) && is.null(input) && config_file != "hourly"
   if (example || identical(config_file, "hourly")) {
+    # A legacy demo block is authoritative, including intentionally omitted
+    # profiles. New configurations use the internal example defaults.
+    presets <- if ("demo" %in% names(document)) document$demo else demo_presets()
     profiles <- c("prepared", if (identical(config_file, "hourly")) "hourly")
     for (name in profiles) {
-      overrides <- document$demo[[name]]
+      overrides <- presets[[name]]
       if (is.null(overrides)) next
       read_config(overrides, input_required = FALSE)
       for (section in names(overrides)) for (key in names(overrides[[section]])) {

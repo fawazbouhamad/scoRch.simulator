@@ -17,6 +17,57 @@ test_that("the installed demo profiles preserve the scientific and figure choice
   expect_error(run_scorch(trace_date = "invalid-date"), "trace_date must be")
 })
 
+test_that("legacy demo blocks retain their defaults and explicit overrides", {
+  legacy <- yaml::read_yaml(test_path("fixtures", "legacy-config.yaml"))
+  folder <- tempfile("scorch-legacy-config-")
+  dir.create(folder)
+  previous <- setwd(folder)
+  on.exit(setwd(previous), add = TRUE)
+  write_scorch_config()
+  prepared <- scoRch.simulator:::demo_settings()
+  hourly <- scoRch.simulator:::demo_settings("hourly", input = "hourly-input")
+  yaml::write_yaml(legacy, "config.yaml")
+  expect_identical(scoRch.simulator:::demo_settings(), prepared)
+  expect_identical(scoRch.simulator:::demo_settings("hourly", input = "hourly-input"), hourly)
+
+  legacy$demo$prepared$figures$representative_events$type_3 <- "2012-06-28"
+  legacy$demo$hourly$output$directory <- "legacy-hourly"
+  legacy$demo$hourly$period$start_date <- "2012-04-01"
+  legacy$demo$hourly$period$end_date <- "2012-09-30"
+  yaml::write_yaml(legacy, "config.yaml")
+  expect_equal(scoRch.simulator:::demo_settings()$figures$representative_events$type_3, "2012-06-28")
+  hourly <- scoRch.simulator:::demo_settings("hourly", input = "hourly-input")
+  expect_equal(hourly$output$directory, "legacy-hourly")
+  expect_equal(hourly$input$processed_file, "legacy-hourly/prepared_tmax.nc")
+  expect_equal(hourly$period$start_date, "2012-04-01")
+  expect_equal(hourly$period$end_date, "2012-09-30")
+
+  legacy$figures$representative_events$type_3 <- "2023-08-04"
+  yaml::write_yaml(legacy, "config.yaml")
+  expect_equal(scoRch.simulator:::demo_settings()$figures$representative_events$type_3, "2023-08-04")
+  legacy$input$file <- system.file("extdata", "north_america_tmax.nc", package = "scoRch.simulator")
+  legacy$figures$representative_events$type_3 <- NULL
+  yaml::write_yaml(legacy, "config.yaml")
+  own <- scoRch.simulator:::demo_settings("config.yaml")
+  expect_null(own$figures$representative_events$type_3)
+  expect_null(own$period$start_date)
+})
+
+test_that("an intentionally omitted legacy demo profile stays omitted", {
+  folder <- tempfile("scorch-legacy-profiles-")
+  dir.create(folder)
+  previous <- setwd(folder)
+  on.exit(setwd(previous), add = TRUE)
+  config <- list(demo = list(prepared = list()))
+  yaml::write_yaml(config, "config.yaml")
+  expect_length(scoRch.simulator:::demo_settings()$figures$representative_events, 0L)
+  hourly <- scoRch.simulator:::demo_settings("hourly", input = "hourly-input")
+  expect_equal(hourly$output$directory, "output")
+  expect_equal(hourly$input$format, "auto")
+  expect_null(hourly$period$start_date)
+  expect_null(hourly$input$processed_file)
+})
+
 test_that("the demo reads local settings and respects a configured input", {
   folder <- tempfile("scorch-config-")
   dir.create(folder)

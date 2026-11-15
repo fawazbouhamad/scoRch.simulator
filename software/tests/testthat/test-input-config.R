@@ -153,14 +153,17 @@ test_that("an editable copy of the SCORCH configuration overrides only what it c
                    study[-match(c("clustering", "lgcp"), names(study))])
 })
 
-test_that("one installed configuration contains both demos and excludes presets from analysis", {
+test_that("the user configuration keeps study defaults and accepts legacy demo blocks", {
   file <- system.file("config.yaml", package = "scoRch.simulator", mustWork = TRUE)
   installed <- system.file(package = "scoRch.simulator")
   expect_identical(list.files(installed, pattern = "[.]ya?ml$", recursive = TRUE), "config.yaml")
   document <- yaml::read_yaml(file)
-  expect_named(document$demo, c("prepared", "hourly"))
+  expect_false("demo" %in% names(document))
+  legacy <- yaml::read_yaml(test_path("fixtures", "legacy-config.yaml"))
+  expect_named(legacy$demo, c("prepared", "hourly"))
+  expect_equal(scoRch.simulator:::demo_presets(), legacy$demo)
   expect_identical(scoRch.simulator:::read_config(file, input_required = FALSE),
-                   scoRch.simulator:::read_config(document[names(document) != "demo"], input_required = FALSE))
+                   scoRch.simulator:::read_config(legacy, input_required = FALSE))
   bad <- document
   bad$demo <- list(prepraed = list())
   expect_error(scoRch.simulator:::read_config(bad, input_required = FALSE), "demo section")

@@ -75,11 +75,15 @@ scorch_config_file <- function() {
 # shipped SCORCH configuration. Whole numbers take the types R gives them in
 # code: single settings are doubles (95), lists are integers (4:9).
 scorch_defaults <- function() {
-  lapply(analysis_settings(yaml::read_yaml(scorch_config_file())), function(section) lapply(section, yaml_vector))
+  defaults <- lapply(analysis_settings(yaml::read_yaml(scorch_config_file())), function(section) lapply(section, yaml_vector))
+  # Preserve the effective configuration/report order while the editable file
+  # places the optional saved-input path beside the input file and format.
+  defaults$input <- c(defaults$input[names(defaults$input) != "processed_file"], defaults$input["processed_file"])
+  defaults
 }
 
-# Demo presets share this file but are not analysis sections. Older user
-# configurations containing only analysis settings remain valid.
+# Older configurations can include demo presets. Accept them for compatibility,
+# but keep them out of the scientific analysis settings.
 analysis_settings <- function(config) {
   if (is.list(config) && "demo" %in% names(config)) {
     if (sum(names(config) == "demo") != 1L) fail("The configuration repeats the demo section.")
