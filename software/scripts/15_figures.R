@@ -679,7 +679,7 @@ draw_event <- function(result) {
   graphics::plot.new()
   graphics::text(0.5, 0.62, sprintf("Event %d | Type %d", event$compound_event_id, event$event_type),
     font = 2, cex = 1.5 / graphics::par("cex"), col = SNAPSHOT_TYPE_COLOURS[event$event_type])
-  coverage <- if (length(dates) == 1L) format(dates[1]) else paste(format(dates[1]), "to", format(tail(dates, 1)))
+  coverage <- if (length(dates) == 1L) format(dates[1]) else paste(format(dates[1]), "to", format(utils::tail(dates, 1)))
   graphics::text(0.5, 0.2, sprintf("%s | %d %s", coverage, length(dates), if (length(dates) == 1L) "day" else "days"),
     cex = 1 / graphics::par("cex"))
   for (k in seq_along(dates)) draw_snapshot(result, dates[k], time_label = if (length(dates) > 1L) paste("Day", k) else NULL)
