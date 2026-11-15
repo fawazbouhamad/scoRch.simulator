@@ -13,6 +13,11 @@ scorch_server <- function(input, output, session) {
   state <- shiny::reactiveValues(source = NULL, path = NULL, parent = guided_path("output"),
                                  loaded = NULL, error = NULL, finished = NULL, busy = FALSE)
   report <- function(e) state$error <- conditionMessage(e)
+  reset_input_names <- function() {
+    for (name in c("format", "units")) shiny::updateSelectInput(session, paste0("input_", name), selected = "auto")
+    for (name in c("variable", "longitude", "latitude", "time"))
+      shiny::updateTextInput(session, paste0("input_", name), value = "auto")
+  }
   open_source <- function(path = NULL) {
     close_temperature_source(state$source)
     state$source <- NULL
@@ -34,6 +39,14 @@ scorch_server <- function(input, output, session) {
         state$parent <- guided_path(path)
       } else if (kind == "config") {
         cfg <- load_guided_config(path)
+        # Format, units and variable names describe a particular file. Reusing
+        # a processed-data config with an already recognized hourly source
+        # should reuse its scientific settings without misreading temperatures.
+        if (!is.null(state$source) && !identical(cfg$input$file, state$path) &&
+            !inherits(header(), "error")) {
+          keys <- c("format", "variable", "longitude", "latitude", "time", "units")
+          cfg$input[keys] <- input_controls(input, base()$input)[keys]
+        }
         base(cfg)
         state$loaded <- basename(path)
         state$error <- NULL
@@ -41,7 +54,10 @@ scorch_server <- function(input, output, session) {
         state$parent <- if (grepl("^SCORCH_run_[0-9]+$", basename(parent))) dirname(parent) else parent
         # When the user picked data first, importing settings keeps that choice.
         if (is.null(state$source)) open_source(cfg$input$file)
-      } else open_source(guided_path(path))
+      } else {
+        open_source(guided_path(path))
+        reset_input_names()
+      }
     }, error = report)
   }
   picker <- scorch_picker(input, session, choose)
@@ -52,10 +68,7 @@ scorch_server <- function(input, output, session) {
   shiny::observeEvent(input$use_example, {
     tryCatch({
       open_source()
-      # A previously chosen custom variable or coordinate belongs to its file.
-      for (name in c("format", "units")) shiny::updateSelectInput(session, paste0("input_", name), selected = "auto")
-      for (name in c("variable", "longitude", "latitude", "time"))
-        shiny::updateTextInput(session, paste0("input_", name), value = "auto")
+      reset_input_names()
     }, error = report)
   })
   header <- shiny::reactive({

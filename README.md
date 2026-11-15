@@ -48,7 +48,8 @@ scoRch.simulator::run_scorch()
    including when a file contains all twelve months. Heatwave and regional
    percentiles and minimum durations are visible. Input overrides and advanced
    model settings expand on demand. **Load saved settings** fills the form from
-   a YAML file. If you already selected data, those data take precedence.
+   a YAML file. If you already selected a different recognized dataset, SCORCH
+   keeps its file, format, variable names and units while applying the analysis settings.
 3. Review the results path or click **Choose folder**. The default is a new
    `output/SCORCH_run_001` folder under your R working directory. Subsequent
    runs take the next available number. Click **Run analysis**.

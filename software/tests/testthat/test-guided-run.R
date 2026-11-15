@@ -33,6 +33,10 @@ test_that("the launcher waits for Run and retains a selected dataset when loadin
   withr::local_dir(project)
   nc <- system.file("extdata", "north_america_tmax.nc", package = "scoRch.simulator")
   write_scorch_config("settings.yaml")
+  other <- yaml::read_yaml("settings.yaml")
+  other$input <- list(file = "another-region.nc", format = "era5", variable = "t2m")
+  other$regional_days$percentile <- 99
+  yaml::write_yaml(other, "other.yaml")
   shiny::testServer(scorch_server, {
     session$flushReact()
     expect_null(state$source)
@@ -41,6 +45,9 @@ test_that("the launcher waits for Run and retains a selected dataset when loadin
     expect_null(state$path)
     expect_identical(header()$format, "daily_tmax")
     choose("data", nc)
+    choose("config", file.path(project, "other.yaml"))
+    expect_identical(header()$format, "daily_tmax")
+    expect_identical(base()$regional_days$percentile, 99)
     choose("config", file.path(project, "settings.yaml"))
     expect_identical(state$path, nc)
     expect_equal(length(header()$dates), 5490)

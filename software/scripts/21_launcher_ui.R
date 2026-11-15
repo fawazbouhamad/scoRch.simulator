@@ -112,7 +112,7 @@ scorch_picker <- function(input, session, selected) {
     ext <- switch(kind, data = "[.](nc|zip)$", config = "[.]ya?ml$", "(?!)")
     paths <- c(paths[dirs], paths[!dirs & grepl(ext, paths, perl = TRUE, ignore.case = TRUE)])
     listing(paths)
-    choices <- stats::setNames(seq_along(paths),
+    choices <- stats::setNames(paths,
       ifelse(dir.exists(paths), paste0(basename(paths), "/"), basename(paths)))
     is_folder <- kind %in% c("era5", "output")
     title <- switch(kind, data = "Choose a NetCDF or ZIP file", config = "Choose a configuration",
@@ -143,12 +143,15 @@ scorch_picker <- function(input, session, selected) {
   }, ignoreInit = TRUE)
   shiny::observeEvent(input$pick_up, browse(state()$kind, dirname(state()$folder)), ignoreInit = TRUE)
   shiny::observeEvent(input$pick_go, {
-    if (dir.exists(input$pick_path)) browse(state()$kind, input$pick_path)
-    else shiny::showNotification("That folder could not be opened.", type = "error", session = session)
+    if (!dir.exists(input$pick_path)) {
+      shiny::showNotification("That folder could not be opened.", type = "error", session = session)
+    } else if (!identical(normalizePath(input$pick_path, winslash = "/"), state()$folder)) {
+      browse(state()$kind, input$pick_path)
+    }
   }, ignoreInit = TRUE)
   shiny::observeEvent(input$pick_open, {
-    path <- listing()[as.integer(input$pick_entry)]
-    if (length(path) != 1L || is.na(path)) return()
+    path <- input$pick_entry
+    if (length(path) != 1L || !path %in% listing()) return()
     if (dir.exists(path)) browse(state()$kind, path) else choose(path)
   }, ignoreInit = TRUE)
   shiny::observeEvent(input$pick_here, choose(state()$folder), ignoreInit = TRUE)
