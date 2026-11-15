@@ -1,0 +1,68 @@
+test_that("ZIP selections can be inspected, read, and replayed from the original file", {
+  folder <- withr::local_tempdir()
+  nc <- system.file("extdata", "north_america_tmax.nc", package = "scoRch.simulator")
+  tiny <- read_tmax(nc, months = 7, start = "2012-07-01", end = "2012-07-04")
+  input <- file.path(folder, "small.nc")
+  write_tmax(tiny, input, precision = "float64")
+  archive <- file.path(folder, "data.zip")
+  zip::zipr(archive, input)
+  cfg <- read_config(list(input = list(file = archive), period = list(warm_season_months = 7)))
+  source <- open_temperature_source(archive)
+  withr::defer(close_temperature_source(source))
+  expect_identical(inspect_temperature_source(source, cfg$input)$dates, tiny$dates)
+  back <- read_configured_input(cfg)
+  expect_identical(back$tmax, tiny$tmax)
+  expect_match(back$source, "data.zip", fixed = TRUE)
+  write_guided_config(cfg, folder)
+  saved <- load_guided_config(file.path(folder, "config.yaml"))
+  expect_identical(saved$input$file, normalizePath(archive, winslash = "/"))
+  expect_false(grepl(source$scratch, saved$input$file, fixed = TRUE))
+  close_temperature_source(source)
+  expect_false(dir.exists(source$scratch))
+  invalid <- file.path(folder, "no-data.zip")
+  zip::zipr(invalid, file.path(folder, "config.yaml"))
+  expect_error(open_temperature_source(invalid), "no NetCDF")
+})
+
+test_that("the launcher waits for Run and retains a selected dataset when loading settings", {
+  project <- withr::local_tempdir()
+  withr::local_dir(project)
+  nc <- system.file("extdata", "north_america_tmax.nc", package = "scoRch.simulator")
+  write_scorch_config("settings.yaml")
+  shiny::testServer(scorch_server, {
+    session$flushReact()
+    expect_null(state$source)
+    expect_false(dir.exists("output"))
+    choose("data", nc)
+    choose("config", file.path(project, "settings.yaml"))
+    expect_identical(state$path, nc)
+    expect_equal(length(header()$dates), 5490)
+    expect_false(dir.exists("output"))
+    cfg <- base()
+    args <- list(month_from = "6", month_to = "8", limit_dates = TRUE,
+                 dates = as.Date(c("2012-01-01", "2012-12-31")), native_grid = FALSE, cell_size = 1)
+    for (section in c("heatwaves", "regional_days", "clustering", "ellipses", "power_law", "lgcp")) {
+      for (key in names(cfg[[section]])) {
+        value <- cfg[[section]][[key]]
+        args[[paste(section, key, sep = "_")]] <- if (section == "clustering") paste(value, collapse = ",") else value
+      }
+    }
+    do.call(session$setInputs, args)
+    expect_equal(range(plan()$dates), as.Date(c("2012-06-01","2012-08-31")))
+    expect_length(plan()$dates, 92L)
+    expect_identical(plan()$config$input$file, nc)
+    expect_false(dir.exists("output"))
+    session$setInputs(dates = as.Date(c("1980-01-01", "1980-12-31")))
+    expect_match(conditionMessage(plan()), "no observations")
+  })
+})
+
+test_that("a guided run never takes over an older run folder", {
+  root <- withr::local_tempdir()
+  first <- next_run_folder(root, reserve = TRUE)
+  writeLines("previous analysis", file.path(first, "Summary.txt"))
+  second <- next_run_folder(root, reserve = TRUE)
+  expect_identical(basename(second), "SCORCH_run_002")
+  expect_identical(readLines(file.path(first, "Summary.txt")), "previous analysis")
+  expect_identical(season_limits(c(1, 2, 12)), c(12, 2))
+})

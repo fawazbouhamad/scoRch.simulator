@@ -68,6 +68,20 @@ jobs:
         run: Rscript demo/run.R
       - name: Compare the demo output with demo/output
         run: Rscript software/setup/maintenance.R compare
+      - name: Exercise the guided R session in Chromium
+        shell: bash
+        run: |
+          export SCORCH_UI_PROJECT="$(mktemp -d)"
+          export SCORCH_UI_DATA="$PWD/demo/input/north_america_processed_tmax.nc"
+          export CHROME_BIN="$(command -v google-chrome)"
+          npm install --prefix "$RUNNER_TEMP/scorch-browser" --no-audit --no-fund playwright-core@1.55.0
+          export NODE_PATH="$RUNNER_TEMP/scorch-browser/node_modules"
+          echo 'setwd(Sys.getenv("SCORCH_UI_PROJECT")); options(shiny.port=7123L, shinygadgets.showdialog=function(...) NULL); stopifnot(interactive()); scoRch.simulator::run_scorch()' |
+            R --vanilla --interactive > "$RUNNER_TEMP/scorch-window.log" 2>&1 &
+          server=$!
+          trap 'kill "$server" 2>/dev/null || true' EXIT
+          curl -fsS --retry 20 --retry-delay 1 --retry-all-errors http://127.0.0.1:7123/ -o /dev/null
+          node software/tests/browser/guided.cjs || { cat "$RUNNER_TEMP/scorch-window.log"; exit 1; }
       - uses: actions/upload-artifact@v4
         with:
           name: demo-output

@@ -9,8 +9,10 @@ run_scorch(config = NULL, tmax = NULL, trace_date = NULL)
 \arguments{
 \item{config}{Path of a YAML configuration file (an edited copy from
 \code{\link[=write_scorch_config]{write_scorch_config()}} or \code{\link[=scorch_template]{scorch_template()}}), or a list with the same
-structure. With no arguments, reads \code{config.yaml} in the working folder
-and creates it from the installed configuration if absent. A YAML file
+structure. With no arguments, an interactive session opens a local
+setup window. Choose a NetCDF, ZIP, ERA5 folder or the example, review
+settings and the results folder, then click Run analysis. Batch sessions
+read or create \code{config.yaml} in the working folder. A YAML file
 with a null input runs the bundled US example. Explicit \code{NULL} uses the
 study defaults and requires temperature supplied as \code{tmax}.}
 
@@ -26,7 +28,8 @@ included if the date belongs to one of the compound events in this run.}
 A \code{scorch_result} list (invisibly) with the configuration, the
 input description and the tables of every stage: \code{heatwaves}, \code{regional},
 \code{clusters}, \code{ellipses}, \code{events}, \code{power_law} and \code{lgcp}. Use it with
-\code{\link[=scorch_figure]{scorch_figure()}} to redraw a result plot.
+\code{\link[=scorch_figure]{scorch_figure()}} to redraw a result plot. Closing setup before a completed
+analysis returns NULL.
 }
 \description{
 Reads the temperature input named in the configuration (raw ERA5 2-m

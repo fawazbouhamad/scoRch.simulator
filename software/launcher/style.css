@@ -1,0 +1,25 @@
+body { background: #f3f5f3; color: #21332d; font: 15px/1.5 "Source Sans 3", "Segoe UI", sans-serif; }
+.scorch { max-width: 840px; margin: 0 auto; padding: 24px 12px; }
+.scorch header, .section-title, .actions, .picker-tools { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.scorch header { padding: 0 2px 16px; border-bottom: 2px solid #285b4c; margin-bottom: 18px; color: #50635c; }
+.brand { color: #173e33; font-weight: 750; font-size: 20px; letter-spacing: .08em; }
+.scorch section { background: #fff; padding: 20px 24px; margin-bottom: 12px; border: 1px solid #d3ded8; border-radius: 8px; }
+.section-title { justify-content: space-between; }
+.scorch h1, .scorch h2, .scorch h3 { color: #19392e; font-weight: 650; margin: 0 0 10px; }
+.scorch h1 { font-size: 25px; } .scorch h2 { font-size: 20px; } .scorch h3 { font-size: 16px; margin-top: 16px; }
+.scorch p { margin: 0 0 11px; } .scorch p:last-child { margin-bottom: 0; }
+.btn { border-radius: 5px; font-weight: 550; white-space: normal; }
+.btn-primary, .btn-primary:focus, .btn-primary:hover { background: #255a48; border-color: #204e3f; color: white; }
+.btn:focus-visible, summary:focus-visible { outline: 3px solid #b77729; outline-offset: 2px; }
+.btn.link-button { color: #245844; background: transparent; border-color: transparent; text-decoration: underline; }
+.fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 20px; }
+.scorch .form-group { width: 100% !important; margin-bottom: 12px; }
+.scorch details { border-top: 1px solid #dbe4de; padding: 9px 0; }
+.scorch summary { cursor: pointer; color: #245844; font-weight: 600; padding: 3px 0; }
+.scorch details[open] > summary { margin-bottom: 10px; }
+.data-info { margin-top: 16px; padding: 12px 14px; background: #eef5f1; border-radius: 5px; overflow-wrap: anywhere; }
+.path { display: block; font-size: 13px; color: #31433b; background: #f2f5f3; padding: 7px; overflow-wrap: anywhere; }
+.problem { color: #873920; } .scorch footer { text-align: right; }
+.picker-tools { align-items: flex-end; } .picker-tools .form-group { flex: 1; margin-bottom: 7px; }
+.picker-tools .btn { margin-bottom: 7px; } .modal-body select[size] { width: 100%; }
+@media (max-width: 550px) { .scorch { padding: 12px 0; } .scorch section { padding: 14px; } .fields { grid-template-columns: 1fr; } }

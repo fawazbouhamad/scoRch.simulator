@@ -2,7 +2,7 @@
 
 [![License: GPL-3.0-or-later](https://img.shields.io/badge/license-GPL--3.0--or--later-orange)](LICENSE.txt)
 [![R: 4.1 or newer](https://img.shields.io/badge/R-%E2%89%A54.1-blue)](software/setup/DESCRIPTION)
-[![Version: 1.2.0](https://img.shields.io/badge/version-1.2.0-blue)](https://github.com/fawazbouhamad/scoRch.simulator/releases/tag/v1.2.0)
+[![Guided preview](https://img.shields.io/badge/guided_preview-1.2.0.9000-blue)](software/setup/DESCRIPTION)
 [![Software checks](https://github.com/fawazbouhamad/scoRch.simulator/actions/workflows/checks.yaml/badge.svg?branch=main)](https://github.com/fawazbouhamad/scoRch.simulator/actions/workflows/checks.yaml)
 
 An R package implementing **SCORCH: Spatiotemporal Classification of Regional
@@ -16,51 +16,62 @@ figures. A complete North America example is included.
 
 ## Installation
 
-You need **R 4.1 or newer**. In R or RStudio, run:
+To install the guided preview, use **R 4.1 or newer**. If SCORCH is already open,
+choose **Session > Restart R** in RStudio. Run this block once in the Console.
 
 ```r
 options(repos = c(CRAN = "https://cloud.r-project.org"))
-install.packages("remotes")
-source("https://raw.githubusercontent.com/fawazbouhamad/scoRch.simulator/v1.2.0/software/setup/install.R")
-install_scorch()
+if (!requireNamespace("remotes", quietly = TRUE)) install.packages("remotes")
+source("https://raw.githubusercontent.com/fawazbouhamad/scoRch.simulator/guided-rstudio/software/setup/install.R")
+install_scorch(ref = "guided-rstudio")
 ```
 
-To update, restart R and run the same installation block.
+Use the same installation block for later preview updates. Release
+[v1.2.0](https://github.com/fawazbouhamad/scoRch.simulator/tree/v1.2.0) has the earlier command-line workflow.
 
 ## Running the software
 
-Open a new RStudio project and run the included example:
+Open the setup window from the RStudio Console.
 
 ```r
 scoRch.simulator::run_scorch()
 ```
 
-The software creates [config.yaml](config.yaml) in your project folder and runs
-the full analysis. No separate data download is needed.
+1. Click **Choose NetCDF or ZIP**, open **Downloads** and select your file.
+   Use **Choose ERA5 folder** for extracted files or **Use included example**
+   for North America. A ZIP is extracted into temporary local storage with progress.
+   The two Zenodo downloads below are each sufficient on their own. The hourly ZIP
+   needs about 6.4 GB of free temporary space. SCORCH shows the dates, variable,
+   units and grid before analysis.
+2. Choose the first and last **month each year** and, if needed, limit the date
+   range. June through August selects those three months in every chosen year,
+   including when a file contains all twelve months. Heatwave and regional
+   percentiles and minimum durations are visible. Input overrides and advanced
+   model settings expand on demand. **Load saved settings** fills the form from
+   a YAML file. If you already selected data, those data take precedence.
+3. Review the results path or click **Choose folder**. The default is a new
+   `output/SCORCH_run_001` folder under your R working directory. Subsequent
+   runs take the next available number. Click **Run analysis**.
+4. Click **Open summary** or **Open results folder**. Each guided run saves
+   `Summary.txt`, the effective `config.yaml`, and its generated outputs.
+   The configuration refers to the original input, including the original ZIP.
+   **Close** returns to the Console. To retain the result in R, start with
+   `result <- scoRch.simulator::run_scorch()`.
 
-For **your own data**:
+## Scripted runs
 
-1. Open the example's config.yaml, or create one in a new project with
-   `scoRch.simulator::write_scorch_config()`.
-2. Set your input path and format under `input`, results folder under `output`,
-   and months and dates under `period`.
-3. Save the file and run `scoRch.simulator::run_scorch()` again.
-
-Use the configuration and input instructions below, or watch the
-[animated walkthrough](software/figures/how_to_run.gif). To keep the result in R
-for later plotting, use `result <- scoRch.simulator::run_scorch()`.
-
-## Use your own data
-
-In RStudio, choose **File > New Project > New Directory > New Project** and
-create a folder for your analysis. If you have not run the example there, run:
+To run a saved configuration directly, supply its path to
+`scoRch.simulator::run_scorch("path/to/config.yaml")`. The command uses the
+output directory recorded in that file. A noninteractive script calling
+`run_scorch()` reads or creates the working folder's `config.yaml`.
+To write an editable configuration for a new script, run the following once.
 
 ```r
 scoRch.simulator::write_scorch_config()
 ```
 
 Open `config.yaml` from RStudio's Files pane. Edit your input, output and period,
-save the file, and run `scoRch.simulator::run_scorch()`. You do not need to clone
+save the file, and run `scoRch.simulator::run_scorch("config.yaml")`. You do not need to clone
 the repository or run the numbered scripts individually.
 
 For **prepared daily Tmax**, use:
@@ -149,16 +160,15 @@ adjacent waters. Its data are archived separately on Zenodo:
 | Download | Approximate size | Use |
 |---|---|---|
 | [Processed NetCDF](https://zenodo.org/records/24232552/files/SCORCH_NA_processed_1996_2025.nc?download=1) | 34 MB | Ready to analyze; the same data are included with the package. |
-| [Unprocessed ERA5 ZIP](https://zenodo.org/records/24232552/files/SCORCH_NA_unprocessed_1996_2025.zip?download=1) | 6.33 GB | Extract the 30 yearly NetCDF files and use their folder as ERA5 input. |
+| [Unprocessed ERA5 ZIP](https://zenodo.org/records/24232552/files/SCORCH_NA_unprocessed_1996_2025.zip?download=1) | 6.33 GB | Select the ZIP directly. SCORCH opens the 30 yearly ERA5 files. |
 
 Processing details, checksums and attribution are recorded in the
 [data provenance](demo/PROVENANCE.txt). The two Zenodo files can be downloaded
-independently. Use the processed file as `daily_tmax`, or extract the ZIP once
-and point ERA5 input at its folder containing the 30 yearly NetCDF files.
+independently. Use the processed file as `daily_tmax`, or the ZIP as `era5`.
 
 ## Results
 
-Results go to `output/` in your project unless configured otherwise. **Open
+The setup window displays the full path of each new run folder. **Open
 Summary.txt first** for the completion status, warnings and main results.
 
 | Example output | Contents |
@@ -255,8 +265,8 @@ ellipse, so the type follows its daily cluster counts:
 
 <img src="software/figures/compound_event_types.png" width="720" alt="The four SCORCH compound-event types">
 
-Reruns replace package-generated files in the selected results folder. Choose a
-different output directory to keep separate runs.
+Scripted reruns using the same configured output directory replace package-generated
+files there. The guided window creates a separate folder on every run.
 
 ## Study and verification
 

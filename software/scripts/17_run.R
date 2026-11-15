@@ -36,8 +36,10 @@
 #'
 #' @param config Path of a YAML configuration file (an edited copy from
 #'   [write_scorch_config()] or [scorch_template()]), or a list with the same
-#'   structure. With no arguments, reads `config.yaml` in the working folder
-#'   and creates it from the installed configuration if absent. A YAML file
+#'   structure. With no arguments, an interactive session opens a local
+#'   setup window. Choose a NetCDF, ZIP, ERA5 folder or the example, review
+#'   settings and the results folder, then click Run analysis. Batch sessions
+#'   read or create `config.yaml` in the working folder. A YAML file
 #'   with a null input runs the bundled US example. Explicit `NULL` uses the
 #'   study defaults and requires temperature supplied as `tmax`.
 #' @param tmax Optional `scorch_tmax` object (from [read_tmax()] or
@@ -49,7 +51,8 @@
 #' @return A `scorch_result` list (invisibly) with the configuration, the
 #'   input description and the tables of every stage: `heatwaves`, `regional`,
 #'   `clusters`, `ellipses`, `events`, `power_law` and `lgcp`. Use it with
-#'   [scorch_figure()] to redraw a result plot.
+#'   [scorch_figure()] to redraw a result plot. Closing setup before a completed
+#'   analysis returns NULL.
 #' @examples
 #' \donttest{
 #' old <- setwd(tempdir())                              # results go to tempdir()/output
@@ -60,15 +63,22 @@
 #' }
 #' @export
 run_scorch <- function(config = NULL, tmax = NULL, trace_date = NULL) {
+  if (interactive() && missing(config) && missing(tmax) && missing(trace_date))
+    return(invisible(scorch_launcher()))
+  # Preserve the no-argument command for batch jobs and reference comparisons.
+  if (missing(config) && is.null(tmax)) {
+    if (!file.exists("config.yaml")) write_scorch_config("config.yaml")
+    config <- "config.yaml"
+  }
+  run_scorch_analysis(config, tmax, trace_date)
+}
+
+run_scorch_analysis <- function(config, tmax = NULL, trace_date = NULL, source = NULL) {
   if (!is.null(trace_date)) {
     trace_date <- tryCatch(as.Date(trace_date), error = function(e) as.Date(NA))
     if (length(trace_date) != 1L || is.na(trace_date)) fail("trace_date must be one calendar date, e.g. '2012-06-30'.")
   }
   started <- Sys.time()
-  if (missing(config) && is.null(tmax)) {
-    if (!file.exists("config.yaml")) write_scorch_config("config.yaml")
-    config <- "config.yaml"
-  }
   if (is.character(config) && length(config) == 1L && is.null(tmax)) {
     config <- demo_settings(config)
     example <- system.file("extdata", "north_america_tmax.nc", package = "scoRch.simulator")
@@ -89,7 +99,7 @@ run_scorch <- function(config = NULL, tmax = NULL, trace_date = NULL) {
 
   if (is.null(tmax)) {
     step("Reading %s", paste(cfg$input$file, collapse = ", "))
-    tmax <- read_configured_input(cfg)
+    tmax <- read_configured_input(cfg, source)
   } else if (!inherits(tmax, "scorch_tmax")) {
     fail("`tmax` must come from read_tmax() or tmax_from_array().")
   } else {

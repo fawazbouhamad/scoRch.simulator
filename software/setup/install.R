@@ -6,6 +6,7 @@ prepare_scorch_package <- function(root = ".", destination = tempfile("scoRch-pa
   inputs <- c(
     R = file.path(software, "scripts"), man = file.path(software, "help"),
     "man/figures" = file.path(software, "figures"),
+    "inst/launcher" = file.path(software, "launcher"),
     tests = file.path(software, "tests"), DESCRIPTION = file.path(software, "setup", "DESCRIPTION"),
     NAMESPACE = file.path(software, "setup", "NAMESPACE"),
     "inst/config.yaml" = file.path(root, "config.yaml"),
