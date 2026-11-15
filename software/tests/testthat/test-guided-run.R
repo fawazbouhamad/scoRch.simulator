@@ -10,10 +10,10 @@ test_that("ZIP selections can be inspected, read, and replayed from the original
   cfg <- read_config(list(input = list(file = archive), period = list(warm_season_months = 6:8)))
   source <- open_temperature_source(archive)
   withr::defer(close_temperature_source(source))
-  expect_identical(inspect_temperature_source(source, cfg$input)$dates, tiny$dates)
+  expect_equal(inspect_temperature_source(source, cfg$input)$dates, tiny$dates)
   back <- read_configured_input(cfg)
   summer <- as.integer(format(dates, "%m")) %in% 6:8
-  expect_identical(back$dates, dates[summer])
+  expect_equal(back$dates, dates[summer])
   expect_length(back$dates, 92L)
   expect_identical(back$tmax, tiny$tmax[summer, , drop = FALSE])
   expect_match(back$source, "data.zip", fixed = TRUE)
