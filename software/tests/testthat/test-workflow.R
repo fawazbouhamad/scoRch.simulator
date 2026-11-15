@@ -7,7 +7,16 @@ test_that("the complete workflow runs on the example data and writes every outpu
   writeLines("keep", file.path(out, "figures", "user-plot.png"))
   config <- list(input = list(file = example_file), output = list(directory = out),
                  power_law = list(bootstrap_repetitions = 20))
-  expect_output(result <- suppressMessages(run_scorch(config, trace_date = "2012-06-30")), "30 compound events")
+  messages <- character()
+  result <- withCallingHandlers(run_scorch(config, trace_date = "2012-06-30"),
+    message = function(condition) {
+      messages <<- c(messages, conditionMessage(condition))
+      invokeRestart("muffleMessage")
+    })
+  expect_true(any(grepl("Input: Bundled North America example", messages, fixed = TRUE)))
+  expect_true(any(grepl("COMPLETE in", messages, fixed = TRUE)))
+  expect_true(any(grepl("Results: 30 compound events", messages, fixed = TRUE)))
+  expect_true(any(grepl("Results folder: ", messages, fixed = TRUE)))
   expect_s3_class(result, "scorch_result")
   expect_equal(result$regional$threshold_cells, 351)
   expect_equal(nrow(result$regional$selected_days), 140)
@@ -35,7 +44,8 @@ test_that("the complete workflow runs on the example data and writes every outpu
   expect_equal(sum(readme == "TRACED EVENT"), 1L)
   expect_true(any(grepl(paste0(out, "/figures/"), readme, fixed = TRUE)))
   expect_false(any(grepl("scorch-stage-", readme, fixed = TRUE)))
-  expect_equal(readme[1], paste("scoRch.simulator", as.character(packageVersion("scoRch.simulator")), "results"))
+  expect_equal(readme[1], paste("scoRch.simulator", as.character(packageVersion("scoRch.simulator")), "results: COMPLETE"))
+  expect_lt(which(readme == "WARNINGS"), which(readme == "INPUT"))
   expect_true(any(readme == "  Stage 5  Compound heatwave events: 30"))
   expect_true(any(grepl("^  ellipse_spatial_patterns.png: ", readme)))
   expect_false(any(grepl("not drawn", readme)))
@@ -96,6 +106,7 @@ test_that("the complete workflow runs on the example data and writes every outpu
   again <- suppressMessages(run_scorch(list(output = list(directory = file.path(out, "again")),
                                             power_law = list(bootstrap_repetitions = 10)), tmax = tmax))
   expect_equal(nrow(again$input$cells), 1800)
+  expect_equal(again$input$mode, "User temperature data")
   expect_true(file.exists(file.path(out, "again", "Run_Summary.txt")))
   july <- suppressMessages(run_scorch(list(output = list(directory = file.path(out, "july")),
                                            period = list(warm_season_months = 7),
@@ -146,6 +157,7 @@ test_that("an unavailable LGCP and absent event types are reported explicitly", 
   expect_equal(result$plots$status[result$plots$name == "spatial_risk_model"], "skipped")
   expect_equal(result$plots$status[result$plots$name == "annual_event_counts_and_duration"], "generated")
   readme <- readLines(file.path(out, "Run_Summary.txt"))
+  expect_match(readme[1], "COMPLETE WITH WARNINGS")
   expect_true(any(grepl("Log-Gaussian Cox process: not fitted. Reason: The LGCP needs more centroids", readme, fixed = TRUE)))
   expect_true(any(grepl("^  spatial_risk_model.png: .*[[]not drawn: .+[]]$", readme)))
   expect_true(any(grepl("^  The LGCP was not fitted: ", readme)))

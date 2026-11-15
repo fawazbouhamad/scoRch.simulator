@@ -81,6 +81,11 @@ run_scorch <- function(config = NULL, tmax = NULL, trace_date = NULL) {
     message("This run did not publish output; files in ", out, " belong to an earlier run.")
   }, add = TRUE)
   step <- function(...) message(format(Sys.time(), "%H:%M:%S "), sprintf(...))
+  bundled <- system.file("extdata", "north_america_tmax.nc", package = "scoRch.simulator")
+  input_mode <- if (is.null(tmax) && identical(cfg$input$file, bundled)) {
+    "Bundled North America example"
+  } else "User temperature data"
+  step("Input: %s", input_mode)
 
   if (is.null(tmax)) {
     step("Reading %s", paste(cfg$input$file, collapse = ", "))
@@ -93,7 +98,7 @@ run_scorch <- function(config = NULL, tmax = NULL, trace_date = NULL) {
   }
   step("%d cells, %d dates from %s to %s", nrow(tmax$cells), length(tmax$dates),
        format(tmax$dates[1]), format(tmax$dates[length(tmax$dates)]))
-  input <- c(list(source = tmax$source, cells = tmax$cells, grid = tmax$grid, dates = tmax$dates),
+  input <- c(list(mode = input_mode, source = tmax$source, cells = tmax$cells, grid = tmax$grid, dates = tmax$dates),
              if (!is.null(tmax$preprocessing)) list(preprocessing = tmax$preprocessing))
   step("Stage 1: local heatwaves")
   heatwaves <- detect_heatwaves(tmax, cfg$heatwaves$threshold_percentile,
@@ -116,6 +121,7 @@ run_scorch <- function(config = NULL, tmax = NULL, trace_date = NULL) {
     write_text_file(run_readme(partial, books), file.path(stage, "Run_Summary.txt"))
     publish_run_output(stage, out)
     published <- TRUE
+    step("INCOMPLETE RUN; partial results: %s", normalizePath(out, winslash = "/"))
     fail(paste("No selected day formed a cluster, so there are no ellipses or compound events.",
                "Partial workbooks were written to", out, "."))
   }
@@ -181,13 +187,14 @@ run_scorch <- function(config = NULL, tmax = NULL, trace_date = NULL) {
   publish_run_output(stage, out)
   published <- TRUE
   result$output_dir <- out
-  if (is.null(lgcp)) {
-    step("Finished with the LGCP unavailable in %.1f minutes; see Run_Summary.txt", result$elapsed_minutes)
-  } else {
-    step("Done in %.1f minutes", result$elapsed_minutes)
-  }
-  print(result)
-  message("Open your results: ", normalizePath(out, winslash = "/"))
+  step("%s in %.1f minutes", run_status(result), result$elapsed_minutes)
+  message(sprintf("Results: %d compound events, %d ellipses, %d/%d figures generated.",
+                  nrow(result$events$events), nrow(result$ellipses),
+                  sum(result$plots$status == "generated"), nrow(result$plots)))
+  warnings <- readme_warnings(result)
+  if (!identical(warnings, "  None.")) message("Warnings:\n", paste(warnings, collapse = "\n"))
+  message("Results folder: ", normalizePath(out, winslash = "/"))
+  message("Open Run_Summary.txt first.")
   invisible(result)
 }
 
