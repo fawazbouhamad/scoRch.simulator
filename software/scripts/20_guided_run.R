@@ -9,6 +9,7 @@ guided_path <- function(path, relative_to = getwd()) {
 
 load_guided_config <- function(file) {
   doc <- yaml::read_yaml(file, eval.expr = FALSE)
+  if (is.null(doc)) doc <- list()
   if (is.list(doc) && is.list(doc$input) && is.character(doc$input$file))
     doc$input$file <- guided_path(doc$input$file, dirname(file))
   if (is.list(doc) && (is.null(doc$output) || is.list(doc$output))) {

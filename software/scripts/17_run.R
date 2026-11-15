@@ -65,6 +65,10 @@
 run_scorch <- function(config = NULL, tmax = NULL, trace_date = NULL) {
   if (interactive() && missing(config) && missing(tmax) && missing(trace_date))
     return(invisible(scorch_launcher()))
+  if (!is.null(trace_date)) {
+    trace_date <- tryCatch(as.Date(trace_date), error = function(e) as.Date(NA))
+    if (length(trace_date) != 1L || is.na(trace_date)) fail("trace_date must be one calendar date, e.g. '2012-06-30'.")
+  }
   # Preserve the no-argument command for batch jobs and reference comparisons.
   if (missing(config) && is.null(tmax)) {
     if (!file.exists("config.yaml")) write_scorch_config("config.yaml")
@@ -74,10 +78,6 @@ run_scorch <- function(config = NULL, tmax = NULL, trace_date = NULL) {
 }
 
 run_scorch_analysis <- function(config, tmax = NULL, trace_date = NULL, source = NULL) {
-  if (!is.null(trace_date)) {
-    trace_date <- tryCatch(as.Date(trace_date), error = function(e) as.Date(NA))
-    if (length(trace_date) != 1L || is.na(trace_date)) fail("trace_date must be one calendar date, e.g. '2012-06-30'.")
-  }
   started <- Sys.time()
   if (is.character(config) && length(config) == 1L && is.null(tmax)) {
     config <- demo_settings(config)

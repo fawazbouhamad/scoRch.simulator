@@ -11,7 +11,7 @@ open_temperature_source <- function(path, progress = NULL) {
                        !grepl("(^|/)(__MACOSX/|[.]_)", entries$filename), , drop = FALSE]
   if (!nrow(entries)) fail("This ZIP contains no NetCDF (.nc) files.")
   members <- entries$filename
-  invalid <- grepl("(^/|(^|/)[.][.]?(/|$)|\\\\|:|[[:cntrl:]])", members) |
+  invalid <- grepl("(^/|(^|/)[.][.](/|$)|\\\\|:|[[:cntrl:]])", members) |
     grepl("^(CON|AUX|NUL|PRN|COM[1-9]|LPT[1-9])([.]|$)", basename(members), ignore.case = TRUE)
   if (any(invalid) || anyDuplicated(members) || any(entries$type != "file"))
     fail("The ZIP contains a repeated, linked or unsupported NetCDF entry. Choose ordinary NetCDF files.")

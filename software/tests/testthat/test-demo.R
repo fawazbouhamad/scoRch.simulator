@@ -1,4 +1,5 @@
 test_that("the installed demo profiles preserve the scientific settings without legacy selections", {
+  withr::local_dir(withr::local_tempdir())
   local_figure_test_dpi()
   prepared <- scoRch.simulator:::demo_settings()
   hourly <- scoRch.simulator:::demo_settings("hourly", input = "hourly-input")
@@ -16,6 +17,7 @@ test_that("the installed demo profiles preserve the scientific settings without 
   expect_error(run_demo("hourly"), "Supply your local hourly")
   expect_error(run_demo("missing-config.yaml"), "does not exist")
   expect_error(run_scorch(trace_date = "invalid-date"), "trace_date must be")
+  expect_false(file.exists("config.yaml"))
 })
 
 test_that("legacy demo blocks retain their defaults and explicit overrides", {

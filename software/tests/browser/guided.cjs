@@ -6,8 +6,9 @@ const path = require("node:path");
 
 async function run() {
   const browser = await chromium.launch({ executablePath: process.env.CHROME_BIN, headless: true });
+  let page;
   try {
-    const page = await browser.newPage({ viewport: { width: 940, height: 780 } });
+    page = await browser.newPage({ viewport: { width: 940, height: 780 } });
     const errors = [];
     page.on("pageerror", error => errors.push(String(error)));
     page.setDefaultTimeout(30000);
@@ -82,6 +83,9 @@ async function run() {
     assert.deepEqual(errors, []);
     await button("Close").click();
     console.log("Guided file selection, seasonal review, completed run, new destination and YAML reload passed.");
+  } catch (error) {
+    if (page && !page.isClosed()) console.error(await page.locator("body").innerText({ timeout: 3000 }));
+    throw error;
   } finally { await browser.close(); }
 }
 run().catch(error => { console.error(error); process.exitCode = 1; });
