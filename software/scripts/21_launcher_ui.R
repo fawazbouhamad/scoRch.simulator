@@ -1,8 +1,9 @@
 scorch_ui <- function() {
   tags <- shiny::tags
+  style <- system.file("launcher", "style.css", package = "scoRch.simulator")
   shiny::fluidPage(
     tags$head(tags$title("SCORCH | Heatwave analysis"),
-              shiny::includeCSS(system.file("launcher", "style.css", package = "scoRch.simulator", mustWork = TRUE))),
+              if (nzchar(style)) shiny::includeCSS(style)),
     tags$main(class = "scorch",
       tags$header(tags$div(class = "brand", "SCORCH"), tags$span("Heatwave analysis")),
       shiny::conditionalPanel("!output.finished",

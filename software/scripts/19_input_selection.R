@@ -76,7 +76,8 @@ inspect_temperature_source <- function(source, input) {
   first <- headers[[1L]]
   if (any(vapply(headers, function(h) h$format != first$format, logical(1))))
     fail("This selection mixes ERA5 and prepared daily Tmax. Choose one dataset.")
-  if (first$format == "daily_tmax" && (length(headers) != 1L || any(dir.exists(input$file))))
+  folder_selected <- length(input$file) > 0L && any(dir.exists(input$file))
+  if (first$format == "daily_tmax" && (length(headers) != 1L || folder_selected))
     fail("For prepared daily Tmax, select one NetCDF file or a ZIP containing one prepared file.")
   for (h in headers[-1L]) {
     if (!isTRUE(all.equal(sort(h$lon %% 360), sort(first$lon %% 360), tolerance = 1e-6)) ||

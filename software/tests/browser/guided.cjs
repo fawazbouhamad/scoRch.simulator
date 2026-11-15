@@ -24,6 +24,9 @@ async function run() {
     await page.goto("http://127.0.0.1:7123");
     await page.waitForFunction(() => window.Shiny?.shinyapp?.isConnected());
     assert.equal(await page.locator("#start:visible").count(), 0);
+    await button("Use included example").click();
+    await page.locator("#start:visible").waitFor();
+    assert.match(await page.locator("#selection").innerText(), /Included North America example/);
     await button("Choose NetCDF or ZIP").click();
     await goTo(path.dirname(nc), path.basename(nc));
     await page.locator("#pick_entry").selectOption({ label: path.basename(nc) });
@@ -34,9 +37,10 @@ async function run() {
     await page.getByLabel("Limit the analysis dates").check();
     const dates = page.locator("#dates input");
     for (const [index, date] of ["2012-01-01", "2012-12-31"].entries()) {
-      await dates.nth(index).evaluate((el, value) => {
-        window.jQuery(el).datepicker("update", value).trigger("changeDate");
-      }, date);
+      const field = dates.nth(index);
+      await field.fill(date.slice(0, -1));
+      await field.press(date.slice(-1));
+      await field.press("Tab");
     }
     await page.locator("#review").filter({ hasText: "92 selected dates" }).waitFor();
     await button("Choose folder").click();
@@ -63,6 +67,18 @@ async function run() {
     await button("Open selected item").click();
     await page.locator("#review").filter({ hasText: "92 selected dates" }).waitFor();
     assert.equal(await page.getByLabel("First month each year").inputValue(), "6");
+    await button("Choose NetCDF or ZIP").click();
+    await goTo(dir, "temperatures.zip");
+    await page.locator("#pick_entry").selectOption({ label: "temperatures.zip" });
+    await button("Open selected item").click();
+    await page.locator("#selection").filter({ hasText: "temperatures.zip" }).waitFor();
+    await button("Run analysis").click();
+    await button("Open results folder").waitFor({ timeout: 240000 });
+    const next = (await page.locator("#completion .path").innerText()).trim();
+    assert.equal(path.resolve(next), path.join(output, "SCORCH_run_002"));
+    assert.match(fs.readFileSync(path.join(next, "config.yaml"), "utf8"), /temperatures[.]zip/);
+    assert.match(fs.readFileSync(path.join(next, "Summary.txt"), "utf8"), /92 dates/);
+    assert.ok(fs.existsSync(path.join(run, "config.yaml")));
     assert.deepEqual(errors, []);
     await button("Close").click();
     console.log("Guided file selection, seasonal review, completed run, new destination and YAML reload passed.");

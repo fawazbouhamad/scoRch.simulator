@@ -18,8 +18,7 @@ scorch_server <- function(input, output, session) {
     state$source <- NULL
     state$path <- path
     state$error <- NULL
-    actual <- if (is.null(path)) system.file("extdata", "north_america_tmax.nc",
-                 package = "scoRch.simulator", mustWork = TRUE) else path
+    actual <- if (is.null(path)) scorch_bundled_file() else path
     if (!all(file.exists(actual))) fail("The configured data could not be found. Choose the data file or folder.")
     if (any(grepl("[.]zip$", actual, ignore.case = TRUE))) {
       state$source <- shiny::withProgress(message = "Opening ZIP", value = 0,

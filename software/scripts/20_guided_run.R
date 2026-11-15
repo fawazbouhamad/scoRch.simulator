@@ -8,11 +8,19 @@ guided_path <- function(path, relative_to = getwd()) {
 }
 
 load_guided_config <- function(file) {
-  cfg <- read_config(file, input_required = FALSE)
-  if (!is.null(cfg$input$file))
-    cfg$input$file <- guided_path(cfg$input$file, dirname(file))
-  cfg$output$directory <- guided_path(cfg$output$directory, dirname(file))
-  cfg
+  doc <- yaml::read_yaml(file, eval.expr = FALSE)
+  if (is.list(doc) && is.list(doc$input) && is.character(doc$input$file))
+    doc$input$file <- guided_path(doc$input$file, dirname(file))
+  if (is.list(doc) && (is.null(doc$output) || is.list(doc$output))) {
+    dest <- doc$output$directory
+    if (is.null(dest)) dest <- scorch_defaults()$output$directory
+    if (is.character(dest)) doc$output$directory <- guided_path(dest, dirname(file))
+  }
+  read_config(doc, input_required = FALSE)
+}
+
+scorch_bundled_file <- function() {
+  system.file("extdata", "north_america_tmax.nc", package = "scoRch.simulator", mustWork = TRUE)
 }
 
 next_run_folder <- function(parent, reserve = FALSE) {

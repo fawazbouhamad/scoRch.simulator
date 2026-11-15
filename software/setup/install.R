@@ -37,6 +37,7 @@ prepare_scorch_package <- function(root = ".", destination = tempfile("scoRch-pa
 }
 
 install_scorch <- function(path = NULL, ref = "v1.2.0", lib = NULL, upgrade = "never", force = TRUE, ...) {
+  previously_loaded <- "scoRch.simulator" %in% loadedNamespaces()
   if (!requireNamespace("remotes", quietly = TRUE)) {
     stop('First run install.packages("remotes").', call. = FALSE)
   }
@@ -59,8 +60,9 @@ install_scorch <- function(path = NULL, ref = "v1.2.0", lib = NULL, upgrade = "n
   }
   package <- prepare_scorch_package(path, file.path(temporary, "scoRch.simulator"))
   remotes::install_local(package, lib = lib, upgrade = upgrade, build = FALSE, force = force, ...)
-  message("Installed scoRch.simulator ", utils::packageDescription("scoRch.simulator", lib.loc = lib)$Version,
-          ". If the package was already loaded, restart R before running it.")
+  message("Installed scoRch.simulator ", utils::packageDescription("scoRch.simulator", lib.loc = lib)$Version, ".",
+          if (previously_loaded) "\nIn RStudio, choose Session > Restart R.",
+          "\nRun scoRch.simulator::run_scorch() in the Console.")
   invisible(NULL)
 }
 

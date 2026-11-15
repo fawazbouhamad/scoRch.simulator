@@ -1,0 +1,63 @@
+# SCORCH configuration: all analysis settings in one file
+# Run scoRch.simulator::run_scorch("config.yaml") from this file's folder,
+# or choose Load saved settings in the RStudio setup window.
+# Edit the paths and period first. Other settings keep the SCORCH study defaults
+# unless you choose to change them. Keep the indentation; # starts a comment.
+
+# START HERE: data, results folder and analysis period
+input:
+  file: null                  # null = bundled example; otherwise a quoted NetCDF path,
+                              # a ZIP of NetCDFs, or an ERA5 folder/list; use forward slashes
+  format: auto                # auto detects the format; daily_tmax = prepared daily maxima;
+                              # era5 = local hourly or daily ERA5 temperature
+  processed_file: null        # optional saved Tmax path for ERA5 input; null = do not save;
+                              # save outside the ERA5 source folder; leave null for daily_tmax
+
+  # Optional input overrides: usually leave these on auto.
+  variable: auto              # temperature variable: tmax (prepared) or t2m (ERA5)
+  longitude: auto             # coordinate names are detected unless supplied
+  latitude: auto
+  time: auto
+  units: auto                 # read the file's units; degC or K can override them
+  era5_cell_size_deg: 1        # average ERA5 daily maxima to complete 1-degree cells;
+                              # null keeps the native grid; prepared Tmax keeps its grid
+
+output:
+  directory: output           # results folder; reruns replace package-generated files here;
+                              # choose a different folder to keep results from an earlier run
+
+period:
+  warm_season_months: [4, 5, 6, 7, 8, 9]   # calendar months analysed every year
+  start_date: null            # first date, e.g. "1980-01-01"; null = first available date
+  end_date: null              # last date; null = last available date
+
+# OPTIONAL SCIENTIFIC SETTINGS: review when changing the application.
+heatwaves:                    # local heatwaves (Catalog 1)
+  threshold_percentile: 95    # calculated from each cell's Tmax over the selected dates;
+                              # changing the analysis period also recalculates this threshold
+  min_duration_days: 3        # minimum event length, including bridged days
+  min_exceeding_days: 3       # minimum days at or above the threshold within the event
+
+regional_days:                # regionally extensive heatwave days (Catalog 2)
+  percentile: 97.5            # percentile of daily heatwave-cell counts over the selected dates
+
+clustering:                   # DBSCAN of the heatwave cells (Catalog 3)
+  eps_values: [1, 1.5, 2, 2.5, 3, 3.5, 4]           # candidate distances in grid-cell units
+  min_samples_values: [4, 5, 6, 7, 8, 9, 10, 11, 12] # candidate minimum neighbourhood sizes
+                              # review distances when changing grid resolution
+
+ellipses:                     # principal-component ellipses (Catalog 4)
+  scale_factor: 1.25          # semi-axis = scale_factor x principal standard deviation
+
+# ADVANCED MODEL SETTINGS: the defaults reproduce the study method.
+power_law:                    # power-law fit of the largest ellipse areas
+  bootstrap_repetitions: 5000 # study default; 200 gives a quick first look, not final results
+  seed_daily_maxima: 20261020 # fixed seeds make the two bootstraps reproducible
+  seed_event_maxima: 20261120
+
+lgcp:                         # log-Gaussian Cox process of the ellipse centroids
+  covariates: [lon, lat, mean_tmax, std_tmax]   # any subset of longitude, latitude,
+                                              # mean Tmax and Tmax standard deviation
+  raster_km: 25               # pixel size of the covariate images and study window (km)
+  window_margin_km: 80        # margin beyond cell centres, plus one raster pixel (km);
+                              # chosen for 1-degree cells; review for other grid resolutions
