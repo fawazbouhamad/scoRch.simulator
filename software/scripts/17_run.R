@@ -7,14 +7,14 @@
 #' daily maximum temperature, see [read_tmax()]), runs the five
 #' catalog stages, fits the power-law and LGCP models, and writes the
 #' results to the output folder as XLSX workbooks, PNG figures and one
-#' `Run_Summary.txt`: `catalogs/` (`01_heatwave_events.xlsx`,
+#' `Summary.txt`: `catalogs/` (`01_heatwave_events.xlsx`,
 #' `02_regionally_extensive_heatwaves.xlsx`, `03_extreme_heatwave_clusters.xlsx`,
 #' `04_extreme_heatwave_ellipses.xlsx` and `05_compound_heatwave_events.xlsx`: Catalogs 1-5 with
 #' their day and cell tables), `modeling/` (`Power_Law_Model.xlsx` and
 #' `Spatial_Risk_Model.xlsx`: fits, parameters, intensity and centroid concentration),
 #' `Heatwave_Statistics.xlsx` (event type summary, cell
 #' thresholds, daily heatwave extent, duration trends), `figures/` (nine
-#' descriptively named PNG files) and `Run_Summary.txt`, which describes the
+#' descriptively named PNG files) and `Summary.txt`, which describes the
 #' input, the main settings, the counts, the models, every file and sheet,
 #' the run time and the warnings in plain language. Every sheet holds all
 #' rows and columns of its table as date and numeric cells with a frozen,
@@ -23,10 +23,10 @@
 #' error. Package-generated files are replaced after the new run is written;
 #' other files in those folders are preserved.
 #' A valid run can have an unavailable LGCP fit or a plot whose event type is
-#' absent. Their status and reasons are written to `Run_Summary.txt`; an
+#' absent. Their status and reasons are written to `Summary.txt`; an
 #' unexpected plot error stops the run without publishing its partial output.
 #' When no selected day forms a cluster, only Catalogs 1-3, the cell
-#' thresholds and the daily extent are published, and `Run_Summary.txt` marks the
+#' thresholds and the daily extent are published, and `Summary.txt` marks the
 #' run incomplete.
 #'
 #' The package ships with the configuration of the SCORCH study, and its
@@ -118,7 +118,7 @@ run_scorch <- function(config = NULL, tmax = NULL, trace_date = NULL) {
     partial <- list(config = cfg, input = input, heatwaves = heatwaves, regional = regional, clusters = clusters,
                     started = started, package_version = as.character(utils::packageVersion("scoRch.simulator")),
                     incomplete = "no selected day formed a cluster.")
-    write_text_file(run_readme(partial, books), file.path(stage, "Run_Summary.txt"))
+    write_text_file(run_readme(partial, books), file.path(stage, "Summary.txt"))
     publish_run_output(stage, out)
     published <- TRUE
     step("INCOMPLETE RUN; partial results: %s", normalizePath(out, winslash = "/"))
@@ -183,7 +183,7 @@ run_scorch <- function(config = NULL, tmax = NULL, trace_date = NULL) {
     }
   }
   result$elapsed_minutes <- as.numeric(difftime(Sys.time(), started, units = "mins"))
-  write_text_file(run_readme(result, books), file.path(stage, "Run_Summary.txt"))
+  write_text_file(run_readme(result, books), file.path(stage, "Summary.txt"))
   publish_run_output(stage, out)
   published <- TRUE
   result$output_dir <- out
@@ -194,7 +194,7 @@ run_scorch <- function(config = NULL, tmax = NULL, trace_date = NULL) {
   warnings <- readme_warnings(result)
   if (!identical(warnings, "  None.")) message("Warnings:\n", paste(warnings, collapse = "\n"))
   message("Results folder: ", normalizePath(out, winslash = "/"))
-  message("Open Run_Summary.txt first.")
+  message("Open Summary.txt first.")
   invisible(result)
 }
 
@@ -304,9 +304,10 @@ managed_output_files <- function() {
     "modeling/Power_Law_Model.xlsx",
     "modeling/Spatial_Risk_Model.xlsx",
     "Heatwave_Statistics.xlsx",
-    "Run_Summary.txt",
+    "Summary.txt",
     file.path("figures", paste0(names(figure_specs()), ".png")),
     # Retire earlier generated paths only after a successful run.
+    "Run_Summary.txt",
     "Heatwave_Catalogs/Heatwaves.xlsx",
     "Heatwave_Catalogs/Regional_Heatwaves.xlsx",
     "Heatwave_Catalogs/Heatwave_Clusters.xlsx",

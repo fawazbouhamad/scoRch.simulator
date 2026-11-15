@@ -61,7 +61,7 @@ partial_workbooks <- function(heatwaves, regional, clusters) {
       "Daily Heatwave Extent" = regional$daily))
 }
 
-# One line per sheet for Run_Summary.txt.
+# One line per sheet for Summary.txt.
 sheet_descriptions <- function() c(
   "Heatwave Events" = "every local heatwave of every cell (Catalog 1): dates, duration, exceeding and bridged days, peak",
   "Regional Days" = "the selected regionally extensive days (Catalog 2) with their heatwave-cell counts",

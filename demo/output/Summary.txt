@@ -1,4 +1,4 @@
-scoRch.simulator 1.0.1 results: COMPLETE
+scoRch.simulator 1.0.2 results: COMPLETE
 Run started 2026-11-15 00:44:41, finished in 28 seconds.
 
 WARNINGS
@@ -83,7 +83,7 @@ FILES
     Daily Heatwave Extent (5490 rows): heatwave and exceeding cells on every day, the regional threshold and the selection flag
     Duration Trends (2 rows): trend tests of the annual mean duration of Type 3 and Type 4 events
   figures/: the figures listed above (PNG, 600 dpi; 500 dpi for the two largest)
-  Run_Summary.txt: this file
+  Summary.txt: this file
   Numbers are stored with the 15 significant digits of the XLSX format; the display formats are rounding for reading only. Empty cells are missing values, not zeros.
 
 TRACED EVENT

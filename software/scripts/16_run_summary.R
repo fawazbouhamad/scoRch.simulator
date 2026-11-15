@@ -154,7 +154,7 @@ readme_files <- function(books) {
   }
   c(lines,
     "  figures/: the figures listed above (PNG, 600 dpi; 500 dpi for the two largest)",
-    "  Run_Summary.txt: this file",
+    "  Summary.txt: this file",
     "  Numbers are stored with the 15 significant digits of the XLSX format; the display formats are rounding for reading only. Empty cells are missing values, not zeros.")
 }
 

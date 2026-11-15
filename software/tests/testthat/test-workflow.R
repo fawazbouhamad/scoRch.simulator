@@ -4,6 +4,7 @@ test_that("the complete workflow runs on the example data and writes every outpu
   out <- file.path(tempfile("scorch"), "results")
   dir.create(file.path(out, "figures"), recursive = TRUE)
   writeLines("old", file.path(out, "figures", "figure_2.png"))
+  writeLines("old summary", file.path(out, "Run_Summary.txt"))
   writeLines("keep", file.path(out, "figures", "user-plot.png"))
   config <- list(input = list(file = example_file), output = list(directory = out),
                  power_law = list(bootstrap_repetitions = 20))
@@ -17,6 +18,8 @@ test_that("the complete workflow runs on the example data and writes every outpu
   expect_true(any(grepl("COMPLETE in", messages, fixed = TRUE)))
   expect_true(any(grepl("Results: 30 compound events", messages, fixed = TRUE)))
   expect_true(any(grepl("Results folder: ", messages, fixed = TRUE)))
+  expect_true(any(grepl("Open Summary.txt first.", messages, fixed = TRUE)))
+  expect_false(file.exists(file.path(out, "Run_Summary.txt")))
   expect_s3_class(result, "scorch_result")
   expect_equal(result$regional$threshold_cells, 351)
   expect_equal(nrow(result$regional$selected_days), 140)
@@ -36,11 +39,11 @@ test_that("the complete workflow runs on the example data and writes every outpu
                                                  "04_extreme_heatwave_ellipses.xlsx", "05_compound_heatwave_events.xlsx")),
                 file.path("modeling", c("Power_Law_Model.xlsx", "Spatial_Risk_Model.xlsx")),
                 file.path("Heatwave_Statistics.xlsx"),
-                file.path("figures", paste0(figures, ".png")), "Run_Summary.txt")
+                file.path("figures", paste0(figures, ".png")), "Summary.txt")
   expect_true(all(file.exists(file.path(out, expected))))
   expect_true(all(result$plots$status == "generated"))
   expect_setequal(list.files(out, recursive = TRUE), c(expected, "figures/figure_2.png", "figures/user-plot.png"))
-  readme <- readLines(file.path(out, "Run_Summary.txt"))
+  readme <- readLines(file.path(out, "Summary.txt"))
   expect_equal(sum(readme == "TRACED EVENT"), 1L)
   expect_true(any(grepl(paste0(out, "/figures/"), readme, fixed = TRUE)))
   expect_false(any(grepl("scorch-stage-", readme, fixed = TRUE)))
@@ -107,7 +110,7 @@ test_that("the complete workflow runs on the example data and writes every outpu
                                             power_law = list(bootstrap_repetitions = 10)), tmax = tmax))
   expect_equal(nrow(again$input$cells), 1800)
   expect_equal(again$input$mode, "User temperature data")
-  expect_true(file.exists(file.path(out, "again", "Run_Summary.txt")))
+  expect_true(file.exists(file.path(out, "again", "Summary.txt")))
   july <- suppressMessages(run_scorch(list(output = list(directory = file.path(out, "july")),
                                            period = list(warm_season_months = 7),
                                            power_law = list(bootstrap_repetitions = 10)), tmax = tmax))
@@ -122,6 +125,7 @@ test_that("a no-cluster rerun replaces old results with clearly partial output",
   writeLines("old", file.path(out, "catalogs", "04_extreme_heatwave_ellipses.xlsx"))
   writeLines("old", file.path(out, "modeling", "Spatial_Risk_Model.xlsx"))
   writeLines("old", file.path(out, "figures", "spatial_risk_model.png"))
+  writeLines("old summary", file.path(out, "Run_Summary.txt"))
   writeLines("keep", file.path(out, "user-notes.txt"))
   writeLines("keep", file.path(out, "modeling", "user-table.csv"))
   values <- array(30, c(10, 3, 3))
@@ -136,10 +140,11 @@ test_that("a no-cluster rerun replaces old results with clearly partial output",
   expect_false(file.exists(file.path(out, "figures", "spatial_risk_model.png")))
   expect_equal(sheet_names(file.path(out, "Heatwave_Statistics.xlsx")),
                c("Cell Thresholds", "Daily Heatwave Extent"))
-  readme <- readLines(file.path(out, "Run_Summary.txt"))
+  readme <- readLines(file.path(out, "Summary.txt"))
   expect_match(readme[1], "INCOMPLETE RUN")
+  expect_false(file.exists(file.path(out, "Run_Summary.txt")))
   expect_true(any(grepl("The run is incomplete: no selected day formed a cluster", readme, fixed = TRUE)))
-  expect_equal(sum(grepl("[.]txt$", list.files(out, recursive = TRUE))), 2)   # Run_Summary.txt and the user notes
+  expect_equal(sum(grepl("[.]txt$", list.files(out, recursive = TRUE))), 2)   # Summary.txt and the user notes
   expect_equal(readLines(file.path(out, "user-notes.txt")), "keep")
   expect_equal(readLines(file.path(out, "modeling", "user-table.csv")), "keep")
 })
@@ -156,7 +161,7 @@ test_that("an unavailable LGCP and absent event types are reported explicitly", 
   expect_match(result$lgcp_error, "needs more centroids than the 3 available")
   expect_equal(result$plots$status[result$plots$name == "spatial_risk_model"], "skipped")
   expect_equal(result$plots$status[result$plots$name == "annual_event_counts_and_duration"], "generated")
-  readme <- readLines(file.path(out, "Run_Summary.txt"))
+  readme <- readLines(file.path(out, "Summary.txt"))
   expect_match(readme[1], "COMPLETE WITH WARNINGS")
   expect_true(any(grepl("Log-Gaussian Cox process: not fitted. Reason: The LGCP needs more centroids", readme, fixed = TRUE)))
   expect_true(any(grepl("^  spatial_risk_model.png: .*[[]not drawn: .+[]]$", readme)))

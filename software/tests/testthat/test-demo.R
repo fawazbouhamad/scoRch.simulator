@@ -122,7 +122,7 @@ test_that("changing the bundled demo period uses automatic figure choices", {
     result <- suppressMessages(run_scorch("config.yaml"))
     expect_s3_class(result, "scorch_result")
     expect_equal(length(result$input$dates), if (name == "one_year") 183L else 930L)
-    expect_true(file.exists(file.path(name, "Run_Summary.txt")))
+    expect_true(file.exists(file.path(name, "Summary.txt")))
     expect_true(any(result$plots$status == "generated"))
   }
   # Explicit figure choices still belong to the user, including invalid dates
@@ -161,7 +161,7 @@ test_that("changed event-selection settings use automatic demo figure choices", 
     if (name %in% c("local_threshold", "clustering_distances")) {
       result <- suppressMessages(run_scorch("config.yaml"))
       expect_s3_class(result, "scorch_result")
-      expect_true(file.exists(file.path(name, "Run_Summary.txt")))
+      expect_true(file.exists(file.path(name, "Summary.txt")))
       expect_true(any(result$plots$status == "generated"))
     }
   }
@@ -229,12 +229,16 @@ test_that("successful publishing retires former names and preserves user files",
   dir.create(file.path(out, "Modelling"))
   writeLines("old", file.path(out, "Heatwave_Catalogs", "Heatwaves.xlsx"))
   writeLines("old", file.path(out, "Modelling", "Power_Law_Model.xlsx"))
+  writeLines("old summary", file.path(out, "Run_Summary.txt"))
   writeLines("keep", file.path(out, "Heatwave_Catalogs", "user.csv"))
   stage <- scoRch.simulator:::prepare_run_output(out)
   writeLines("new", file.path(stage, "catalogs", "01_heatwave_events.xlsx"))
+  writeLines("new summary", file.path(stage, "Summary.txt"))
   scoRch.simulator:::publish_run_output(stage, out)
   expect_false(file.exists(file.path(out, "Heatwave_Catalogs", "Heatwaves.xlsx")))
   expect_false(dir.exists(file.path(out, "Modelling")))
+  expect_false(file.exists(file.path(out, "Run_Summary.txt")))
+  expect_equal(readLines(file.path(out, "Summary.txt")), "new summary")
   expect_equal(readLines(file.path(out, "Heatwave_Catalogs", "user.csv")), "keep")
   expect_equal(readLines(file.path(out, "catalogs", "01_heatwave_events.xlsx")), "new")
 })
