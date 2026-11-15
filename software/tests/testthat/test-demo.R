@@ -1,4 +1,4 @@
-test_that("the installed demo profiles preserve the scientific and figure choices", {
+test_that("the installed demo profiles preserve the scientific settings without legacy selections", {
   local_figure_test_dpi()
   prepared <- scoRch.simulator:::demo_settings()
   hourly <- scoRch.simulator:::demo_settings("hourly", input = "hourly-input")
@@ -8,7 +8,7 @@ test_that("the installed demo profiles preserve the scientific and figure choice
     expect_identical(a[[section]], b[[section]])
   }
   expect_equal(a$power_law$bootstrap_repetitions, 5000)
-  expect_equal(a$figures$representative_events$type_3, c("2012-06-28", "2023-08-04"))
+  expect_length(a$figures$representative_events, 0L)
   expect_true(file.exists(prepared$input$file))
   expect_equal(hourly$period$start_date, "1996-04-01")
   expect_equal(hourly$period$end_date, "2025-09-30")
@@ -29,8 +29,11 @@ test_that("legacy demo blocks retain their defaults and explicit overrides", {
   prepared <- scoRch.simulator:::demo_settings()
   hourly <- scoRch.simulator:::demo_settings("hourly", input = "hourly-input")
   yaml::write_yaml(legacy, "config.yaml")
-  expect_identical(scoRch.simulator:::demo_settings(), prepared)
-  expect_identical(scoRch.simulator:::demo_settings("hourly", input = "hourly-input"), hourly)
+  old_prepared <- scoRch.simulator:::demo_settings()
+  old_hourly <- scoRch.simulator:::demo_settings("hourly", input = "hourly-input")
+  expect_identical(old_prepared[names(old_prepared) != "figures"], prepared[names(prepared) != "figures"])
+  expect_identical(old_hourly[names(old_hourly) != "figures"], hourly[names(hourly) != "figures"])
+  expect_equal(old_prepared$figures$representative_events$type_3, c("2012-06-28", "2023-08-04"))
 
   legacy$demo$prepared$figures$representative_events$type_3 <- "2012-06-28"
   legacy$demo$hourly$output$directory <- "legacy-hourly"
@@ -177,7 +180,7 @@ test_that("changed event-selection settings use automatic demo figure choices", 
                "1900-01-01")
 })
 
-test_that("output and downstream model settings retain the reference figure dates", {
+test_that("output and downstream model settings do not introduce legacy figure dates", {
   local_figure_test_dpi()
   folder <- tempfile("scorch-model-settings-")
   dir.create(folder)
@@ -191,7 +194,7 @@ test_that("output and downstream model settings retain the reference figure date
   config$ellipses$scale_factor <- 1.5
   yaml::write_yaml(config, "config.yaml")
   settings <- scoRch.simulator:::demo_settings("config.yaml")
-  expect_equal(settings$figures$representative_events$type_3, c("2012-06-28", "2023-08-04"))
+  expect_length(settings$figures$representative_events, 0L)
 })
 
 test_that("hourly YAML input saves prepared data only at the requested path", {

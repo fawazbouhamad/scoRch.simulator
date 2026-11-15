@@ -100,9 +100,10 @@ test_that("the workbooks of a run cover every table, with the LGCP workbook opti
   result <- list(heatwaves = list(events = df, thresholds = df),
                  regional = list(selected_days = df, selected_cells = df, daily = df),
                  clusters = list(clusters = df, cluster_cells = df), ellipses = df,
-                 events = list(events = df, event_days = df, table_1 = df, trends = df),
-                 power_law = list(summary = df),
-                 lgcp = list(parameter_table = df, cells = df, concentration = df))
+                 events = list(events = df, event_days = df, table_1 = df, trends = df, annual_duration = df),
+                 power_law = list(summary = scoRch.simulator:::power_law_summary("daily_maxima",
+                   list(fit = scoRch.simulator:::pl_fit(c(1, 2, 4)), bootstrap = NULL, seed = 1))),
+                 lgcp = list(parameter_table = data.frame(parameter = "lon", value = 0.1), cells = df, concentration = df))
   books <- scoRch.simulator:::result_workbooks(result)
   expect_equal(names(books), c("catalogs/01_heatwave_events.xlsx", "catalogs/02_regionally_extensive_heatwaves.xlsx",
                                "catalogs/03_extreme_heatwave_clusters.xlsx", "catalogs/04_extreme_heatwave_ellipses.xlsx",
@@ -110,9 +111,9 @@ test_that("the workbooks of a run cover every table, with the LGCP workbook opti
                                "modeling/Spatial_Risk_Model.xlsx", "Heatwave_Statistics.xlsx"))
   expect_equal(unname(lapply(books, names)),
                list("Heatwave Events", c("Regional Days", "Regional Day Cells"), c("Clusters", "Cluster Cells"),
-                    "Ellipses", c("Compound Events", "Event Days"), "Power Law Fits",
+                    "Ellipses", c("Compound Events", "Event Days"), c("Power Law Fits", "Bootstrap Results"),
                     c("Parameters", "Intensity", "Centroid Concentration"),
-                    c("Event Type Summary", "Cell Thresholds", "Daily Heatwave Extent", "Duration Trends")))
+                    c("Event Type Summary", "Cell Thresholds", "Daily Heatwave Extent", "Duration Trends", "Annual Mean Duration")))
   sheets <- unlist(lapply(books, names), use.names = FALSE)
   expect_true(all(sheets %in% names(scoRch.simulator:::sheet_descriptions())))
   expect_false(any(grepl("Table 1", c(names(books), sheets))))

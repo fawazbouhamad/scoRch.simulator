@@ -28,20 +28,55 @@ result_workbooks <- function(result) {
     "catalogs/05_compound_heatwave_events.xlsx" = list(
       "Compound Events" = result$events$events,
       "Event Days" = result$events$event_days),
-    "modeling/Power_Law_Model.xlsx" = list(
-      "Power Law Fits" = result$power_law$summary))
+    "modeling/Power_Law_Model.xlsx" = power_law_export(result$power_law$summary))
   if (!is.null(result$lgcp)) {
     books[["modeling/Spatial_Risk_Model.xlsx"]] <- list(
-      "Parameters" = result$lgcp$parameter_table,
-      "Intensity" = result$lgcp$cells,
+      "Parameters" = lgcp_parameter_export(result$lgcp$parameter_table),
+      "Intensity" = lgcp_intensity_export(result$lgcp$cells),
       "Centroid Concentration" = result$lgcp$concentration)
   }
   books[["Heatwave_Statistics.xlsx"]] <- list(
     "Event Type Summary" = result$events$table_1,
     "Cell Thresholds" = result$heatwaves$thresholds,
     "Daily Heatwave Extent" = result$regional$daily,
-    "Duration Trends" = result$events$trends)
+    "Duration Trends" = duration_trend_export(result$events$trends),
+    "Annual Mean Duration" = result$events$annual_duration)
   books
+}
+
+# Reporting transformations only: fitted objects keep their original schema.
+power_law_export <- function(summary) {
+  fits <- summary[c("dataset", "n", "n_tail", "xmin_km2", "alpha", "ks_distance", "p_value")]
+  names(fits) <- c("dataset", "n_observations", "n_tail_observations", "tail_cutoff_km2",
+                  "exponent_alpha", "ks_distance", "goodness_of_fit_p_value")
+  bootstrap <- summary[c("dataset", "reps", "n_undefined", "n_exceed", "p_lower", "p_upper",
+                         "mc_se", "seed", "alpha_boot_median", "alpha_boot_q2.5",
+                         "alpha_boot_q25", "alpha_boot_q75", "alpha_boot_q97.5")]
+  names(bootstrap)[2:8] <- c("bootstrap_repetitions", "undefined_bootstrap_fits",
+                            "n_bootstrap_ks_ge_observed", "p_value_lower_bound", "p_value_upper_bound",
+                            "p_monte_carlo_se", "bootstrap_seed")
+  list("Power Law Fits" = fits, "Bootstrap Results" = bootstrap)
+}
+
+lgcp_parameter_export <- function(parameters) {
+  temperature <- parameters$parameter %in% c("mean_tmax", "std_tmax")
+  geographic <- parameters$parameter %in% c("lon", "lat")
+  parameters$intensity_change_pct_per_1C <- rep(NA_real_, nrow(parameters))
+  parameters$intensity_change_pct_per_1_degree <- rep(NA_real_, nrow(parameters))
+  parameters$intensity_change_pct_per_1C[temperature] <- 100 * expm1(parameters$value[temperature])
+  parameters$intensity_change_pct_per_1_degree[geographic] <- 100 * expm1(parameters$value[geographic])
+  parameters
+}
+
+lgcp_intensity_export <- function(cells) {
+  names(cells)[names(cells) == "concentration_rank"] <- "relative_intensity_rank_0_1"
+  cells
+}
+
+duration_trend_export <- function(trends) {
+  trends$mann_kendall_result <- NULL
+  names(trends)[names(trends) == "n_years"] <- "years_with_events"
+  trends
 }
 
 # The workbooks of a run that stopped because no selected day formed a
@@ -71,14 +106,16 @@ sheet_descriptions <- function() c(
   "Ellipses" = "the ellipse of every cluster (Catalog 4): centroids, axes, area, orientation, temperature weights",
   "Compound Events" = "every compound heatwave event (Catalog 5): type, days, cluster counts, mean geometry, largest ellipse",
   "Event Days" = "every day of every compound event with its clusters and largest ellipse",
-  "Power Law Fits" = "cutoff, exponent, KS distance, bootstrap p-value and bootstrap quantiles for daily and event maxima",
-  "Parameters" = "the fitted LGCP coefficients, field variance and scale",
-  "Intensity" = "mean LGCP intensity and concentration rank of every cell",
+  "Power Law Fits" = "sample sizes, upper-tail cutoff, exponent, KS distance and goodness-of-fit p-value for daily and event maxima",
+  "Bootstrap Results" = "bootstrap counts, p-value bounds, Monte Carlo error, seeds and exponent quantiles",
+  "Parameters" = "original LGCP parameters and derived intensity percentage changes for a +1 C or +1 degree increase",
+  "Intensity" = "mean centroid intensity per km2 and relative intensity rank (0-1) of every cell",
   "Centroid Concentration" = "share of the centroids inside the top-20% and top-50% intensity zones",
   "Event Type Summary" = "Table 1 of the study: statistics by compound heatwave type, days, events, durations, ellipses per event",
   "Cell Thresholds" = "the local threshold and heatwave counts of every cell",
   "Daily Heatwave Extent" = "heatwave and exceeding cells on every day, the regional threshold and the selection flag",
-  "Duration Trends" = "trend tests of the annual mean duration of Type 3 and Type 4 events")
+  "Duration Trends" = "OLS and Sen slopes (days per decade) and tests on annual mean duration; years_with_events counts years containing that type",
+  "Annual Mean Duration" = "the annual mean durations used for Type 3 and Type 4 trends, by event start-season year; years without events are omitted")
 
 # Stop before anything is written when a sheet would not fit.
 check_workbook_rows <- function(books, limit = XLSX_MAX_ROWS) {

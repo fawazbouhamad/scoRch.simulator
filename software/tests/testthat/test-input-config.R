@@ -159,9 +159,11 @@ test_that("the user configuration keeps study defaults and accepts legacy demo b
   expect_identical(list.files(installed, pattern = "[.]ya?ml$", recursive = TRUE), "config.yaml")
   document <- yaml::read_yaml(file)
   expect_false("demo" %in% names(document))
+  expect_false("figures" %in% names(document))
   legacy <- yaml::read_yaml(test_path("fixtures", "legacy-config.yaml"))
   expect_named(legacy$demo, c("prepared", "hourly"))
-  expect_equal(scoRch.simulator:::demo_presets(), legacy$demo)
+  expect_identical(scoRch.simulator:::demo_presets()$prepared, list())
+  expect_equal(scoRch.simulator:::demo_presets()$hourly, legacy$demo$hourly)
   expect_identical(scoRch.simulator:::read_config(file, input_required = FALSE),
                    scoRch.simulator:::read_config(legacy, input_required = FALSE))
   bad <- document
@@ -264,8 +266,14 @@ test_that("configuration values are checked before analysis starts", {
                c(11, 12, 1, 2))
 })
 
-test_that("representative-event overrides have valid dates and counts", {
-  read <- scoRch.simulator:::read_config
+test_that("legacy dates are validated only when a manual comparison requests them", {
+  read <- function(config) {
+    cfg <- scoRch.simulator:::read_config(config)
+    for (type in names(cfg$figures$representative_events)) {
+      scoRch.simulator:::check_representative_dates(cfg$figures$representative_events[[type]], type)
+    }
+    cfg
+  }
   setting <- function(value, type = "type_3") {
     list(input = list(file = example_file),
          figures = list(representative_events = setNames(list(value), type)))
@@ -276,6 +284,7 @@ test_that("representative-event overrides have valid dates and counts", {
                as.Date("2000-01-01"))
   expect_silent(read(list(input = list(file = example_file),
                           figures = list(representative_events = list()))))
+  expect_silent(scoRch.simulator:::read_config(setting("2000-13-01")))
   expect_error(read(setting("2000-13-01")), "YYYY-MM-DD")
   expect_error(read(setting("2000-02-30")), "YYYY-MM-DD")
   expect_error(read(setting(c("2000-01-01", "2000-01-02", "2000-01-03"))), "one or two dates")

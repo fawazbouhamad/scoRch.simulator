@@ -14,11 +14,12 @@ run_readme <- function(result, books) {
     "", "RESULTS", readme_results(result),
     "", "MAIN SETTINGS", readme_settings(result, cfg),
     if (complete) c("", "MODELS", readme_models(result)),
+    if (complete) c("", "DURATION TRENDS", readme_duration_trends(result)),
     if (complete) c("", "FIGURES (figures/)", readme_figures(result)),
     "", "FILES", readme_files(books),
     if (!is.null(result$trace)) c("", "TRACED EVENT", ifelse(nzchar(result$trace), paste0("  ", result$trace), "")),
     "", "SETTINGS OF THIS RUN (YAML)",
-    paste0("  ", strsplit(yaml::as.yaml(cfg[setdiff(names(cfg), "output")]), "\n")[[1]]))
+    paste0("  ", strsplit(yaml::as.yaml(cfg[setdiff(names(cfg), c("output", "figures"))]), "\n")[[1]]))
 }
 
 readme_heading <- function(result, complete) {
@@ -54,8 +55,6 @@ readme_input <- function(result, cfg) {
 }
 
 readme_settings <- function(result, cfg) {
-  overrides <- cfg$figures$representative_events
-  overrides <- overrides[!vapply(overrides, is.null, logical(1))]
   c(sprintf("  Local heatwave: at least %g consecutive days with at least %g of them at or above the cell's %gth percentile of daily maximum temperature (days below it inside the run are bridged).",
             cfg$heatwaves$min_duration_days, cfg$heatwaves$min_exceeding_days, cfg$heatwaves$threshold_percentile),
     sprintf("  Regionally extensive day: a day whose number of heatwave cells reaches the %gth percentile of all days%s.",
@@ -69,11 +68,7 @@ readme_settings <- function(result, cfg) {
             format(cfg$power_law$seed_event_maxima, scientific = FALSE)),
     sprintf("  LGCP: covariates %s; %g km raster; %g km window margin.", paste(cfg$lgcp$covariates, collapse = ", "),
             cfg$lgcp$raster_km, cfg$lgcp$window_margin_km),
-    if (length(overrides)) {
-      sprintf("  Figures: representative events chosen in the configuration: %s.",
-              paste(sprintf("%s %s", sub("type_", "Type ", names(overrides)),
-                            vapply(overrides, function(x) paste(x, collapse = ", "), "")), collapse = "; "))
-    })
+    if (!is.null(result$events)) "  Figures: every compound event, with every dated daily snapshot and a shared legend.")
 }
 
 readme_results <- function(result) {
@@ -101,10 +96,27 @@ fmt <- function(x, digits) vapply(x, function(v) format(v, digits = digits), "")
 readme_models <- function(result) {
   pl <- result$power_law$summary
   lines <- c("  Power law of the largest ellipse areas (modeling/Power_Law_Model.xlsx):",
-             sprintf("    %s: n = %d, tail n = %s, A_min = %s km2, alpha = %s, bootstrap p = %s (%s repetitions)%s",
-                     pl$dataset, pl$n, fmt(pl$n_tail, 7), fmt(pl$xmin_km2, 7), fmt(pl$alpha, 4),
-                     fmt(pl$p_value, 3), fmt(pl$reps, 7),
-                     ifelse(pl$status == "ok", "", paste0(" [", pl$status, "]"))))
+             unlist(lapply(seq_len(nrow(pl)), function(i) {
+               row <- pl[i, ]
+               if (row$status != "ok") {
+                 reason <- if (row$status == "no_candidates") "fewer than two distinct area values" else "nonfinite fitted values"
+                 return(sprintf("    %s: fit unavailable (%s); goodness-of-fit test unavailable.", row$dataset, reason))
+               }
+               c(sprintf("    %s: fit calculation completed; %d observations, %d in the fitted upper tail.",
+                         row$dataset, row$n, row$n_tail),
+                 sprintf("      Tail cutoff = %s km2; exponent alpha = %s; KS distance = %s.",
+                         fmt(row$xmin_km2, 7), fmt(row$alpha, 4), fmt(row$ks_distance, 4)),
+                 if (is.finite(row$p_value)) {
+                   sprintf("      Bootstrap completed (%d repetitions); p = %s. Power law %s at the 10%% significance level.",
+                           row$reps, fmt(row$p_value, 4), if (row$p_value <= 0.1) "rejected" else "not rejected")
+                 } else {
+                   sprintf("      Goodness-of-fit test unavailable: %s of %s bootstrap fits were undefined; p-value bounds %s to %s.",
+                           fmt(row$n_undefined, 7), fmt(row$reps, 7), fmt(row$p_lower, 4), fmt(row$p_upper, 4))
+                 })
+             }), use.names = FALSE),
+             "    Calculation success is separate from goodness of fit. A smaller KS distance means closer agreement.",
+             "    A large p-value does not prove a perfect fit or that a power law is better than other distributions.",
+             "    Bootstrap Results contains numerical diagnostics and exponent quantiles; p-value bounds are not confidence intervals.")
   if (is.null(result$lgcp)) {
     return(c(lines, sprintf("  Log-Gaussian Cox process: not fitted. Reason: %s", result$lgcp_error)))
   }
@@ -120,8 +132,45 @@ readme_models <- function(result) {
   c(lines,
     sprintf("  Log-Gaussian Cox process of the %d ellipse centroids (modeling/Spatial_Risk_Model.xlsx):", nrow(result$ellipses)),
     sprintf("    %s = %s", names(lgcp$parameters), fmt(lgcp$parameters, 6)),
+    "    Intensity is the fitted expected number of centroids per km2 over this analyzed catalog, not a probability or an annual rate.",
+    "    Each percentage change is 100 * (exp(coefficient) - 1), holding the other predictors constant.",
+    lgcp_effect_lines(lgcp$parameter_table),
+    "    mean_tmax and std_tmax are each cell's mean and temporal standard deviation of daily Tmax (C) over the analyzed dates.",
+    "    These are fitted spatial associations, not causal predictions of future warming.",
+    "    relative_intensity_rank_0_1 ranks grid cells from low to high fitted intensity, with averaged ties; 0.9 is about the 90th percentile, not a 90% probability.",
+    "    Top-20% and top-50% zones cover those fractions of the analyzed grid area, selecting highest-intensity cells first.",
     zone_lines,
     if (length(lgcp$warnings)) sprintf("    Warning: %s", lgcp$warnings) else "    No warnings from the fit.")
+}
+
+lgcp_effect_lines <- function(parameters) {
+  labels <- c(lon = "longitude", lat = "latitude", mean_tmax = "mean daily Tmax",
+              std_tmax = "temporal standard deviation of daily Tmax")
+  rows <- parameters[parameters$parameter %in% names(labels), ]
+  if (!nrow(rows)) return(character())
+  vapply(seq_len(nrow(rows)), function(i) {
+    change <- 100 * expm1(rows$value[i])
+    unit <- if (rows$parameter[i] %in% c("lon", "lat")) "degree" else "C"
+    sprintf("    +1 %s in %s: %+.3f%% fitted centroid intensity.", unit, labels[[rows$parameter[i]]], change)
+  }, "")
+}
+
+readme_duration_trends <- function(result) {
+  trends <- result$events$trends
+  c("  Type 3 and Type 4 annual mean event durations, grouped by event start-season year.",
+    "  Only years with that event type enter the trend; years without events are omitted, not assigned zero duration.",
+    "  OLS is the linear regression slope; Sen is the median pairwise slope. Both are in days per decade.",
+    unlist(lapply(seq_len(nrow(trends)), function(i) {
+      row <- trends[i, ]
+      if (row$n_years < 3) return(sprintf("  Type %d: trend unavailable; %d year%s with events (at least 3 needed).",
+                                         row$event_type, row$n_years, plural(row$n_years)))
+      sprintf("  Type %d: %d years with events; OLS = %s (p = %s, R2 = %s); Sen = %s; Mann-Kendall p = %s: %s at the 5%% significance level.",
+              row$event_type, row$n_years, fmt(row$ols_slope_days_per_decade, 4), fmt(row$ols_p_value, 4),
+              fmt(row$ols_r_squared, 4), fmt(row$sen_slope_days_per_decade, 4), fmt(row$mann_kendall_p_value, 4),
+              row$mann_kendall_result)
+    }), use.names = FALSE),
+    "  No significant trend means insufficient evidence of a monotonic change; it does not establish zero change.",
+    "  Heatwave_Statistics.xlsx includes the Annual Mean Duration data used for these trends.")
 }
 
 figure_descriptions <- function() c(
@@ -181,7 +230,11 @@ readme_warnings <- function(result) {
   if (!is.null(result$power_law)) {
     pl <- result$power_law$summary
     bad <- pl$status != "ok"
-    if (any(bad)) warnings <- c(warnings, sprintf("  Power law (%s): %s", pl$dataset[bad], pl$status[bad]))
+    if (any(bad)) warnings <- c(warnings, sprintf("  Power law (%s): fit unavailable (%s); goodness-of-fit test unavailable.", pl$dataset[bad], pl$status[bad]))
+    incomplete <- !bad & (!is.finite(pl$p_value))
+    if (any(incomplete)) warnings <- c(warnings,
+      sprintf("  Power law (%s): goodness-of-fit test unavailable; %s of %s bootstrap fits undefined. See p-value bounds in Bootstrap Results.",
+              pl$dataset[incomplete], fmt(pl$n_undefined[incomplete], 7), fmt(pl$reps[incomplete], 7)))
   }
   if (!is.null(result$plots)) {
     skipped <- result$plots[result$plots$status != "generated", ]

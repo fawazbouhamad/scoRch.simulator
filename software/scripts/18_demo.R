@@ -22,12 +22,11 @@ run_demo <- function(config_file = "prepared", input = NULL, output = NULL) {
   run_scorch(cfg, trace_date = "2012-06-30")
 }
 
-# Example-only figure choices and file coverage. Scientific defaults remain
+# Example-only file coverage. Scientific defaults remain
 # in config.yaml; users do not need these presets in their editable copy.
 demo_presets <- function() {
   list(
-    prepared = list(figures = list(representative_events = list(
-      type_3 = c("2012-06-28", "2023-08-04")))),
+    prepared = list(),
     hourly = list(input = list(format = "era5"), output = list(directory = "output/hourly"),
                   period = list(start_date = "1996-04-01", end_date = "2025-09-30")))
 }

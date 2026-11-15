@@ -40,7 +40,7 @@ results to the output folder as XLSX workbooks, PNG figures and one
 their day and cell tables), \verb{modeling/} (\code{Power_Law_Model.xlsx} and
 \code{Spatial_Risk_Model.xlsx}: fits, parameters, intensity and centroid concentration),
 \code{Heatwave_Statistics.xlsx} (event type summary, cell
-thresholds, daily heatwave extent, duration trends), \verb{figures/} (one PNG
+thresholds, daily heatwave extent, duration trends and annual mean durations), \verb{figures/} (one PNG
 per event and grouped geometry, modeling, temporal and spatial figures) and \code{Summary.txt}, which describes the
 input, the main settings, the counts, the models, every file and sheet,
 the run time and the warnings in plain language. Every sheet holds all
