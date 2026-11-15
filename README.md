@@ -2,7 +2,7 @@
 
 [![License: GPL-3.0-or-later](https://img.shields.io/badge/license-GPL--3.0--or--later-orange)](LICENSE.txt)
 [![R: 4.1 or newer](https://img.shields.io/badge/R-%E2%89%A54.1-blue)](software/setup/DESCRIPTION)
-[![Version: 1.1.0](https://img.shields.io/badge/version-1.1.0-blue)](https://github.com/fawazbouhamad/scoRch.simulator/releases/tag/v1.1.0)
+[![Version: 1.1.1](https://img.shields.io/badge/version-1.1.1-blue)](https://github.com/fawazbouhamad/scoRch.simulator/releases/tag/v1.1.1)
 [![Software checks](https://github.com/fawazbouhamad/scoRch.simulator/actions/workflows/checks.yaml/badge.svg?branch=main)](https://github.com/fawazbouhamad/scoRch.simulator/actions/workflows/checks.yaml)
 
 An R package implementing **SCORCH: Spatiotemporal Classification of Regional
@@ -21,7 +21,7 @@ You need **R 4.1 or newer**. In R or RStudio, run:
 ```r
 options(repos = c(CRAN = "https://cloud.r-project.org"))
 install.packages("remotes")
-source("https://raw.githubusercontent.com/fawazbouhamad/scoRch.simulator/v1.1.0/software/setup/install.R")
+source("https://raw.githubusercontent.com/fawazbouhamad/scoRch.simulator/v1.1.1/software/setup/install.R")
 install_scorch()
 ```
 

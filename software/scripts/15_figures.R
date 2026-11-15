@@ -140,6 +140,7 @@ mixed_days <- function(result) {
 # Shared map style --------------------------------------------------------
 
 MAP_MAI <- c(0.4, 0.5, 0.35, 0.1)   # map panel margins in inches (bottom, left, top, right)
+EVENT_SNAP_MAI <- c(0.3, 0.45, 0.1, 0.1) # automatic event PNGs: snapshots without headings
 SNAP_MAI <- c(0.3, 0.45, 0.45, 0.1)  # event snapshot panels: room above the map for the time label and the date
 MAP_LEGEND_STRIP <- 0.4              # extra bottom margin of the first map row of the five-map figure, for its legend
 CBAR_WIDTH <- 1.2                    # width of a colour-bar column in inches
@@ -460,13 +461,13 @@ representative_events <- function(result, type) {
 # One day of an event: heatwave cells, cluster ellipses and centroids, in
 # the plain style of the study's event figures. The date and the time label
 # follow the reference snapshot layout.
-draw_snapshot <- function(result, date, time_label = NULL) {
+draw_snapshot <- function(result, date, time_label = NULL, mai = SNAP_MAI) {
   extent <- map_extent(result)
   g <- result$input$grid
   cells <- result$clusters$cluster_cells
   cells <- cells[cells$date == date, ]
   e <- result$ellipses[result$ellipses$date == date, ]
-  usr <- map_frame(extent, cex_axis = 0.65, mai = SNAP_MAI, style = "plain")
+  usr <- map_frame(extent, cex_axis = 0.65, mai = mai, style = "plain")
   draw_cells <- function(c, colour, alpha, lwd) {
     graphics::rect(c$lon - g$lon_step / 2, c$lat - g$lat_step / 2, c$lon + g$lon_step / 2, c$lat + g$lat_step / 2,
                    col = grDevices::adjustcolor(colour, alpha), border = "black", lwd = lwd)
@@ -663,26 +664,20 @@ event_figure_grid <- function(result) {
 
 event_figure_size <- function(result) {
   grid <- event_figure_grid(result)
-  c(grid$cols * (grid$width + SNAP_MAI[2] + SNAP_MAI[4]),
-    grid$rows * (grid$width * extent_ratio(result) + SNAP_MAI[1] + SNAP_MAI[3]) + 1.2)
+  c(grid$cols * (grid$width + EVENT_SNAP_MAI[2] + EVENT_SNAP_MAI[4]),
+    grid$rows * (grid$width * extent_ratio(result) + EVENT_SNAP_MAI[1] + EVENT_SNAP_MAI[3]) + 0.5)
 }
 
 draw_event <- function(result) {
   dates <- event_figure_dates(result)
   grid <- event_figure_grid(result)
-  event <- result$events$events[result$events$events$compound_event_id == result$figure_event_id, ]
-  cells <- c(1 + seq_along(dates), rep(0L, grid$rows * grid$cols - length(dates)))
-  graphics::layout(rbind(rep(1L, grid$cols), matrix(cells, grid$rows, grid$cols, byrow = TRUE),
-                         rep(length(dates) + 2L, grid$cols)),
-    heights = c(0.7, rep(grid$width * extent_ratio(result) + SNAP_MAI[1] + SNAP_MAI[3], grid$rows), 0.5))
-  graphics::par(mai = c(0, 0, 0, 0))
-  graphics::plot.new()
-  graphics::text(0.5, 0.62, sprintf("Event %d | Type %d", event$compound_event_id, event$event_type),
-    font = 2, cex = 1.5 / graphics::par("cex"), col = SNAPSHOT_TYPE_COLOURS[event$event_type])
-  coverage <- if (length(dates) == 1L) format(dates[1]) else paste(format(dates[1]), "to", format(utils::tail(dates, 1)))
-  graphics::text(0.5, 0.2, sprintf("%s | %d %s", coverage, length(dates), if (length(dates) == 1L) "day" else "days"),
-    cex = 1 / graphics::par("cex"))
-  for (k in seq_along(dates)) draw_snapshot(result, dates[k], time_label = if (length(dates) > 1L) paste("Day", k) else NULL)
+  cells <- c(seq_along(dates), rep(0L, grid$rows * grid$cols - length(dates)))
+  graphics::layout(rbind(matrix(cells, grid$rows, grid$cols, byrow = TRUE),
+                         rep(length(dates) + 1L, grid$cols)),
+    heights = c(rep(grid$width * extent_ratio(result) + EVENT_SNAP_MAI[1] + EVENT_SNAP_MAI[3], grid$rows), 0.5))
+  # Keep the text and symbol scale of the previous layout after removing its header row.
+  graphics::par(cex = 0.66)
+  for (k in seq_along(dates)) draw_snapshot(result, dates[k], mai = EVENT_SNAP_MAI)
   snapshot_legend()
   invisible(TRUE)
 }

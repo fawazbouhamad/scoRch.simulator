@@ -1,4 +1,4 @@
-scoRch.simulator 1.1.0 results: COMPLETE
+scoRch.simulator 1.1.1 results: COMPLETE
 Run started 2026-11-15 14:55:20, finished in 50 seconds.
 
 WARNINGS
