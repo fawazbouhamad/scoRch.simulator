@@ -1,4 +1,4 @@
-scoRch.simulator 1.0.2 results: COMPLETE
+scoRch.simulator 1.0.3 results: COMPLETE
 Run started 2026-11-15 00:44:41, finished in 28 seconds.
 
 WARNINGS
@@ -10,15 +10,6 @@ INPUT
   Area: 1800 cells on a 1 x 1 degree grid, 129.5°W to 58.5°W and 25.5°N to 49.5°N
   Period: 5490 dates from 1996-04-01 to 2025-09-30, warm-season months 4 5 6 7 8 9
 
-MAIN SETTINGS
-  Local heatwave: at least 3 consecutive days with at least 3 of them at or above the cell's 95th percentile of daily maximum temperature (days below it inside the run are bridged).
-  Regionally extensive day: a day whose number of heatwave cells reaches the 97.5th percentile of all days (351 cells in this run).
-  Clustering: DBSCAN of the heatwave cells of each selected day; eps candidates 1, 1.5, 2, 2.5, 3, 3.5, 4 grid cells, min_samples candidates 4, 5, 6, 7, 8, 9, 10, 11, 12; one pair is chosen for each run of consecutive days.
-  Ellipses: principal axes of each cluster scaled by 1.25, centroids weighted by temperature.
-  Power law: 5000 bootstrap repetitions (seeds 20261020 for daily maxima, 20261120 for event maxima).
-  LGCP: covariates lon, lat, mean_tmax, std_tmax; 25 km raster; 80 km window margin.
-  Figures: representative events chosen in the configuration: Type 3 2012-06-28, 2023-08-04.
-
 RESULTS
   Stage 1  Local heatwaves: 65409
   Stage 2  Regionally extensive days: 140 of 5490 days (regional threshold 351 heatwave cells)
@@ -29,6 +20,15 @@ RESULTS
            Type 2: Spatially Clustered: 5 events over 5 days, longest 1 day, 3.6 ellipses per event on average
            Type 3: Temporally Clustered: 20 events over 104 days, longest 28 days, 14.35 ellipses per event on average
            Type 4: Compound Clustering (Multi-Type): 4 events over 30 days, longest 16 days, 18.25 ellipses per event on average
+
+MAIN SETTINGS
+  Local heatwave: at least 3 consecutive days with at least 3 of them at or above the cell's 95th percentile of daily maximum temperature (days below it inside the run are bridged).
+  Regionally extensive day: a day whose number of heatwave cells reaches the 97.5th percentile of all days (351 cells in this run).
+  Clustering: DBSCAN of the heatwave cells of each selected day; eps candidates 1, 1.5, 2, 2.5, 3, 3.5, 4 grid cells, min_samples candidates 4, 5, 6, 7, 8, 9, 10, 11, 12; one pair is chosen for each run of consecutive days.
+  Ellipses: principal axes of each cluster scaled by 1.25, centroids weighted by temperature.
+  Power law: 5000 bootstrap repetitions (seeds 20261020 for daily maxima, 20261120 for event maxima).
+  LGCP: covariates lon, lat, mean_tmax, std_tmax; 25 km raster; 80 km window margin.
+  Figures: representative events chosen in the configuration: Type 3 2012-06-28, 2023-08-04.
 
 MODELS
   Power law of the largest ellipse areas (modeling/Power_Law_Model.xlsx):
