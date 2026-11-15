@@ -50,6 +50,74 @@ test_that("the demo reads local settings and respects a configured input", {
   expect_error(scoRch.simulator:::demo_settings(), "Set input: file")
 })
 
+test_that("changing the bundled demo period uses automatic figure choices", {
+  folder <- tempfile("scorch-period-")
+  dir.create(folder)
+  previous <- setwd(folder)
+  on.exit(setwd(previous), add = TRUE)
+  write_scorch_config()
+  original <- yaml::read_yaml("config.yaml")
+  periods <- list(
+    one_year = list(warm_season_months = 4:9, start_date = "2012-01-01", end_date = "2012-12-31"),
+    july = list(warm_season_months = 7L, start_date = NULL, end_date = NULL))
+  for (name in names(periods)) {
+    config <- original
+    config$period <- periods[[name]]
+    config$output$directory <- name
+    config$power_law$bootstrap_repetitions <- 20
+    yaml::write_yaml(config, "config.yaml")
+    settings <- scoRch.simulator:::demo_settings("config.yaml")
+    expect_length(settings$figures$representative_events, 0L)
+    result <- suppressMessages(run_scorch("config.yaml"))
+    expect_s3_class(result, "scorch_result")
+    expect_equal(length(result$input$dates), if (name == "one_year") 183L else 930L)
+    expect_true(file.exists(file.path(name, "Run_Summary.txt")))
+    expect_true(any(result$plots$status == "generated"))
+  }
+  # Explicit figure choices still belong to the user, including invalid dates
+  # that the workflow must report rather than silently replacing.
+  config$figures$representative_events$type_3 <- "1900-01-01"
+  yaml::write_yaml(config, "config.yaml")
+  settings <- scoRch.simulator:::demo_settings("config.yaml")
+  expect_equal(settings$figures$representative_events$type_3, "1900-01-01")
+})
+
+test_that("hourly YAML input saves prepared data only at the requested path", {
+  folder <- tempfile("scorch-prepared-path-")
+  dir.create(folder)
+  previous <- setwd(folder)
+  on.exit(setwd(previous), add = TRUE)
+  dims <- list(ncdf4::ncdim_def("longitude", "degrees_east", seq(20, 22, by = 0.25)),
+               ncdf4::ncdim_def("latitude", "degrees_north", seq(10, 12, by = 0.25)),
+               ncdf4::ncdim_def("valid_time", "hours since 2000-07-01", 0:71))
+  variable <- ncdf4::ncvar_def("t2m", "K", dims, prec = "double")
+  nc <- ncdf4::nc_create("hourly.nc", variable)
+  ncdf4::ncvar_put(nc, variable, array(300 + seq_len(9 * 9 * 72) / 1e5, c(9, 9, 72)))
+  ncdf4::nc_close(nc)
+  write_scorch_config()
+  config <- yaml::read_yaml("config.yaml")
+  config$input$file <- "hourly.nc"
+  config$input$format <- "era5"
+  config$input$processed_file <- "my prepared data/chosen.nc"
+  yaml::write_yaml(config, "config.yaml")
+  settings <- scoRch.simulator:::demo_settings("config.yaml")
+  prepared <- suppressMessages(scoRch.simulator:::read_configured_input(settings))
+  expect_true(file.exists(config$input$processed_file))
+  expect_false(file.exists("output/prepared_tmax.nc"))
+  expect_identical(read_tmax(config$input$processed_file)$tmax, prepared$tmax)
+  # The explicit hourly demonstration keeps its default destination, while
+  # respecting a path supplied in the local configuration.
+  expect_equal(scoRch.simulator:::demo_settings("hourly")$input$processed_file,
+               config$input$processed_file)
+  config$input$processed_file <- NULL
+  config$output$directory <- "without saved input"
+  yaml::write_yaml(config, "config.yaml")
+  settings <- scoRch.simulator:::demo_settings("config.yaml")
+  expect_null(settings$input$processed_file)
+  suppressMessages(scoRch.simulator:::read_configured_input(settings))
+  expect_false(dir.exists("without saved input"))
+})
+
 test_that("successful publishing retires former names and preserves user files", {
   out <- tempfile("scorch-migration-")
   dir.create(file.path(out, "Heatwave_Catalogs"), recursive = TRUE)
