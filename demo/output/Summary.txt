@@ -1,12 +1,12 @@
-scoRch.simulator 1.0.3 results: COMPLETE
-Run started 2026-11-15 00:44:41, finished in 28 seconds.
+scoRch.simulator 1.1.0 results: COMPLETE
+Run started 2026-11-15 14:55:20, finished in 50 seconds.
 
 WARNINGS
   None.
 
 INPUT
   Mode: Bundled North America example
-  Source: <installed north_america_tmax.nc>
+  Source: C:/Users/fawaw/Documents/Codex/2026-11-12/new-chat-2/work/organized-figures-20261115/library/scoRch.simulator/extdata/north_america_tmax.nc
   Area: 1800 cells on a 1 x 1 degree grid, 129.5°W to 58.5°W and 25.5°N to 49.5°N
   Period: 5490 dates from 1996-04-01 to 2025-09-30, warm-season months 4 5 6 7 8 9
 
@@ -47,15 +47,53 @@ MODELS
     No warnings from the fit.
 
 FIGURES (figures/)
-  ellipse_spatial_patterns.png: maps of all ellipses: centroids with their axes, footprint density, axis ratio, area and orientation
-  single_day_events.png: snapshots of representative single-day events (Types 1 and 2)
-  consistent_multiday_events.png: the first two days of representative Type 3 events
-  mixed_multiday_events.png: six consecutive days of a representative Type 4 event
-  ellipse_geometry_by_type.png: ellipse geometry by event type
-  event_geometry_distributions.png: distributions of event geometry by type
-  annual_event_counts_and_duration.png: annual event counts and mean durations by type
-  power_law_model.png: the power-law fit of the largest ellipse areas
-  spatial_risk_model.png: the LGCP intensity with the centroids and the concentration zones
+  Event IDs match Catalog 5 and follow the full chronological catalog, across all types.
+  Filenames use leading zeros for sorting; Event_001.png is Event 1.
+  events/Type_1/: 1 event PNG(s)
+  events/Type_2/: 5 event PNG(s)
+  events/Type_3/: 20 event PNG(s)
+  events/Type_4/: 4 event PNG(s)
+  events/Type_3/Event_001.png: Event 1 (Catalog 5), Type 3: 1999-07-28 to 1999-07-31, all 4 day(s)
+  events/Type_3/Event_002.png: Event 2 (Catalog 5), Type 3: 2001-08-06 to 2001-08-08, all 3 day(s)
+  events/Type_4/Event_003.png: Event 3 (Catalog 5), Type 4: 2005-07-16 to 2005-07-21, all 6 day(s)
+  events/Type_4/Event_004.png: Event 4 (Catalog 5), Type 4: 2006-07-14 to 2006-07-19, all 6 day(s)
+  events/Type_3/Event_005.png: Event 5 (Catalog 5), Type 3: 2006-07-28 to 2006-07-31, all 4 day(s)
+  events/Type_1/Event_006.png: Event 6 (Catalog 5), Type 1: 2011-07-20 to 2011-07-20, all 1 day(s)
+  events/Type_3/Event_007.png: Event 7 (Catalog 5), Type 3: 2012-06-28 to 2012-07-04, all 7 day(s)
+  events/Type_3/Event_008.png: Event 8 (Catalog 5), Type 3: 2015-08-13 to 2015-08-14, all 2 day(s)
+  events/Type_2/Event_009.png: Event 9 (Catalog 5), Type 2: 2015-08-16 to 2015-08-16, all 1 day(s)
+  events/Type_3/Event_010.png: Event 10 (Catalog 5), Type 3: 2016-07-27 to 2016-07-28, all 2 day(s)
+  events/Type_3/Event_011.png: Event 11 (Catalog 5), Type 3: 2018-08-09 to 2018-08-11, all 3 day(s)
+  events/Type_2/Event_012.png: Event 12 (Catalog 5), Type 2: 2019-07-20 to 2019-07-20, all 1 day(s)
+  events/Type_2/Event_013.png: Event 13 (Catalog 5), Type 2: 2019-08-16 to 2019-08-16, all 1 day(s)
+  events/Type_3/Event_014.png: Event 14 (Catalog 5), Type 3: 2019-09-05 to 2019-09-07, all 3 day(s)
+  events/Type_3/Event_015.png: Event 15 (Catalog 5), Type 3: 2020-07-30 to 2020-08-02, all 4 day(s)
+  events/Type_3/Event_016.png: Event 16 (Catalog 5), Type 3: 2020-08-13 to 2020-08-26, all 14 day(s)
+  events/Type_3/Event_017.png: Event 17 (Catalog 5), Type 3: 2020-09-04 to 2020-09-05, all 2 day(s)
+  events/Type_3/Event_018.png: Event 18 (Catalog 5), Type 3: 2021-08-13 to 2021-08-15, all 3 day(s)
+  events/Type_3/Event_019.png: Event 19 (Catalog 5), Type 3: 2021-08-19 to 2021-08-21, all 3 day(s)
+  events/Type_3/Event_020.png: Event 20 (Catalog 5), Type 3: 2021-08-23 to 2021-08-25, all 3 day(s)
+  events/Type_3/Event_021.png: Event 21 (Catalog 5), Type 3: 2022-07-20 to 2022-07-21, all 2 day(s)
+  events/Type_3/Event_022.png: Event 22 (Catalog 5), Type 3: 2022-08-03 to 2022-08-04, all 2 day(s)
+  events/Type_4/Event_023.png: Event 23 (Catalog 5), Type 4: 2022-09-06 to 2022-09-07, all 2 day(s)
+  events/Type_4/Event_024.png: Event 24 (Catalog 5), Type 4: 2023-07-15 to 2023-07-30, all 16 day(s)
+  events/Type_3/Event_025.png: Event 25 (Catalog 5), Type 3: 2023-08-04 to 2023-08-31, all 28 day(s)
+  events/Type_2/Event_026.png: Event 26 (Catalog 5), Type 2: 2024-07-10 to 2024-07-10, all 1 day(s)
+  events/Type_3/Event_027.png: Event 27 (Catalog 5), Type 3: 2024-07-12 to 2024-07-14, all 3 day(s)
+  events/Type_3/Event_028.png: Event 28 (Catalog 5), Type 3: 2024-07-31 to 2024-08-06, all 7 day(s)
+  events/Type_3/Event_029.png: Event 29 (Catalog 5), Type 3: 2025-08-09 to 2025-08-13, all 5 day(s)
+  events/Type_2/Event_030.png: Event 30 (Catalog 5), Type 2: 2025-08-19 to 2025-08-19, all 1 day(s)
+  geometry/Ellipses_by_type.png: ellipse geometry by event type
+  geometry/Event_distributions.png: distributions of event geometry by type
+  modeling/Power_law.png: the power-law fit of the largest ellipse areas
+  modeling/Spatial_model.png: the LGCP intensity with the centroids and concentration zones
+  temporal/Annual_frequency.png: annual event counts by type
+  temporal/Annual_duration.png: annual mean durations of Type 3 and Type 4 events
+  spatial/Centroids_and_axes.png: all ellipse centroids with their major and minor axes
+  spatial/Ellipse_overlap.png: ellipse footprints per fine-grid point
+  spatial/Axis_ratio.png: ellipse axis ratios at their centroids
+  spatial/Area.png: ellipse areas at their centroids
+  spatial/Orientation.png: ellipse orientations at their centroids
 
 FILES
   catalogs/01_heatwave_events.xlsx
@@ -82,7 +120,7 @@ FILES
     Cell Thresholds (1800 rows): the local threshold and heatwave counts of every cell
     Daily Heatwave Extent (5490 rows): heatwave and exceeding cells on every day, the regional threshold and the selection flag
     Duration Trends (2 rows): trend tests of the annual mean duration of Type 3 and Type 4 events
-  figures/: the figures listed above (PNG, 600 dpi; 500 dpi for the two largest)
+  figures/: the figures listed above (PNG, 600 dpi; 500 dpi for Ellipses_by_type.png)
   Summary.txt: this file
   Numbers are stored with the 15 significant digits of the XLSX format; the display formats are rounding for reading only. Empty cells are missing values, not zeros.
 
@@ -134,13 +172,13 @@ TRACED EVENT
      2012-07-06  35.34                no             no           no       no
      2012-07-07  35.81                no             no           no       no
 
-  Figure for this event type: <output>/figures/consistent_multiday_events.png (selected under figures: representative_events).
+  Figure for this event: output/figures/events/Type_3/Event_007.png
   Orange cells are the clustered heatwave cells, grey cells the
   heatwave cells DBSCAN left out, the black outline is the ellipse and the dot its weighted centroid.
 
 SETTINGS OF THIS RUN (YAML)
   input:
-    file: <installed north_america_tmax.nc>
+    file: C:/Users/fawaw/Documents/Codex/2026-11-12/new-chat-2/work/organized-figures-20261115/library/scoRch.simulator/extdata/north_america_tmax.nc
     format: daily_tmax
     variable: auto
     longitude: auto

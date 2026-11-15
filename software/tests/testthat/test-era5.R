@@ -48,6 +48,7 @@ daily_max <- function(values, per_day = 24) {
 }
 
 test_that("hourly ERA5 becomes daily maximum temperature in Celsius on an ascending grid", {
+  local_figure_test_dpi()
   set.seed(1)
   lon <- c(358, 359, 0, 1)                       # 0..360 longitudes crossing the prime meridian
   lat <- c(2, 1, 0)                              # ERA5 latitudes run north to south
@@ -70,6 +71,7 @@ test_that("hourly ERA5 becomes daily maximum temperature in Celsius on an ascend
 })
 
 test_that("daily maxima are averaged to whole cells as in the SCORCH study", {
+  local_figure_test_dpi()
   set.seed(2)
   lon <- seq(20, 22, by = 0.25)                  # edges included, as in a region download
   lat <- seq(12, 10, by = -0.25)
@@ -96,6 +98,7 @@ test_that("daily maxima are averaged to whole cells as in the SCORCH study", {
 })
 
 test_that("several ERA5 files, a folder, older CDS files and expver are read", {
+  local_figure_test_dpi()
   set.seed(3)
   lon <- c(30, 31, 32)
   lat <- c(41, 40)
@@ -138,6 +141,7 @@ test_that("several ERA5 files, a folder, older CDS files and expver are read", {
 })
 
 test_that("raw ERA5 named in the configuration gives the same analysis as its daily maxima", {
+  local_figure_test_dpi()
   # Six-hourly ERA5-like temperature whose daily maxima are the demonstration
   # data of a 12 x 12 cell window (34-46 N, 104-92 W) for 1996-2005; the
   # maximum falls on a different step each day.
@@ -192,6 +196,7 @@ test_that("raw ERA5 named in the configuration gives the same analysis as its da
 })
 
 test_that("daily maximum temperature files are read as before", {
+  local_figure_test_dpi()
   read <- function(input) scoRch.simulator:::read_configured_input(scoRch.simulator:::read_config(list(input = input)))
   before <- read_tmax(example_file)
   expect_identical(read(list(file = example_file)), before)
@@ -205,6 +210,7 @@ test_that("daily maximum temperature files are read as before", {
 })
 
 test_that("the input settings are checked", {
+  local_figure_test_dpi()
   read <- scoRch.simulator:::read_config
   expect_error(read(list(input = list(file = example_file, format = "grib"))), "auto, era5 or daily_tmax")
   expect_error(read(list(input = list(file = example_file, era5_cell_size_deg = -1))), "era5_cell_size_deg")

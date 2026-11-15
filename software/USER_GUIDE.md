@@ -38,7 +38,36 @@ R prints the completion status, any warnings and the full results-folder path. *
 | [Heatwave statistics](../demo/output/Heatwave_Statistics.xlsx) | Event-type summary, cell thresholds, daily extent and duration trends |
 | [Catalogs 1–5](../demo/output/catalogs/) | Local heatwaves → regional days → clusters → ellipses → compound events |
 | [Models](../demo/output/modeling/) | Power-law fits and the spatial model of ellipse centroids |
-| [Figures](../demo/output/figures/) | Nine maps and statistical plots |
+| [Figures](../demo/output/figures/) | 30 event images and 11 summary figures |
+
+The `figures/` folder is organized as follows:
+
+| Folder | PNG files |
+|---|---|
+| `events/Type_1/` through `events/Type_4/` | One `Event_001.png` per event, with all dated daily snapshots |
+| `geometry/` | `Ellipses_by_type.png`, `Event_distributions.png` |
+| `modeling/` | `Power_law.png`, `Spatial_model.png` |
+| `temporal/` | `Annual_frequency.png`, `Annual_duration.png` |
+| `spatial/` | `Centroids_and_axes.png`, `Ellipse_overlap.png`, `Axis_ratio.png`, `Area.png`, `Orientation.png` |
+
+Event IDs follow the full chronological catalog and match `compound_event_id`
+in Catalog 5; numbering does not restart for each type. Leading zeros keep
+filenames in order: `Event_007.png` is Event 7. All four type folders exist;
+a type with no events has an empty folder and a zero count in Summary.txt.
+Every multi-day event has one image whose canvas grows to fit every day.
+Figures use 600 dpi, or 500 dpi for `Ellipses_by_type.png`, with descriptive
+headings and no paper panel letters.
+
+To redraw one event from a saved result in R:
+
+```r
+scoRch.simulator::scorch_figure(result, "event", event_id = 7, file = "Event_007.png")
+```
+
+The combined spatial overview remains available with
+`scorch_figure(result, "ellipse_spatial_patterns", file = "Overview.png")`.
+The existing representative-event configuration applies only to manual legacy
+comparison figures; automatic output always includes every event and every day.
 
 Reruns replace package-generated files in the chosen output folder. Change `output: directory` to keep separate runs. Spreadsheet headers and identifying columns stay visible when scrolling wide catalogs, and long text wraps without changing stored values. Empty cells mean missing values. The summary identifies incomplete runs, unavailable models and skipped figures. The spatial model describes centroid occurrence intensity; exposure and vulnerability are not modeled, and concentration rank is not a heatwave probability.
 
@@ -123,7 +152,7 @@ The installer maps `scripts/` to R's `R/`, `help/` to `man/`, and setup metadata
 
 To install a downloaded repository, source `software/setup/install.R` and call `install_scorch(path = ".")`. From the repository root, `Rscript demo/run.R` runs the same workflow; `Rscript software/setup/maintenance.R compare` checks it against `demo/output/`. Use `--help` for validation and rebuild commands. To restore the exact published demo input, run `Rscript software/setup/maintenance.R make-demo path/to/SCORCH_NA_processed_1996_2025.nc`; it verifies the published checksum before copying the file. Assemble with `Rscript software/setup/install.R .package`, then check with `devtools::check(".package")`.
 
-The installer defaults to the stable `v1.0.3` tag. Developers can request `install_scorch(ref = "main")` or another Git ref. Reinstallation is enabled by default so a same-version development build can be replaced; dependency upgrades remain disabled unless requested.
+The installer defaults to the stable `v1.1.0` tag. Developers can request `install_scorch(ref = "main")` or another Git ref. Reinstallation is enabled by default so a same-version development build can be replaced; dependency upgrades remain disabled unless requested.
 
 [GitHub Actions](https://github.com/fawazbouhamad/scoRch.simulator/actions) checks Windows, macOS and Linux and compares the demonstration. The reference has 65,409 local heatwaves, 140 selected days, 379 ellipses and 30 compound events (Types 1–4: 1, 5, 20 and 4). All 16 worksheets are compared at portable tolerances of 1e-6, or 1e-3 for LGCP fits. Optional full-study tests require the separate reference input. The bundled input is byte-for-byte identical to the published float64 NetCDF, without additional rounding or integer packing. Full 30-year validation of the accompanying hourly archive and processed input gave identical scientific results and all 16 worksheets.
 

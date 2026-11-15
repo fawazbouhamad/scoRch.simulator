@@ -11,10 +11,12 @@
 #' @param file Optional PNG file to write. When `NULL`, the figure is drawn on
 #'   the current device.
 #' @param dpi Resolution of the PNG file; `NULL` uses the figure's own
-#'   default, 600 dots per inch (500 for the two largest figures), the
-#'   resolution of the study's figures.
+#'   default, 600 dots per inch (500 for ellipse geometry by type and the
+#'   legacy combined spatial overview).
 #' @param number Legacy paper figure number (3 or 5-12), accepted for
 #'   compatibility. Use `name` for new code.
+#' @param event_id Global compound event ID from Catalog 5, required for
+#'   `name = "event"`. All days of this event appear in one PNG.
 #' @return `TRUE` (invisibly) when the visualization was drawn, `FALSE` when the
 #'   results do not contain what it needs (a message says why).
 #' @examples
@@ -25,7 +27,7 @@
 #' setwd(old)
 #' }
 #' @export
-scorch_figure <- function(result, name = NULL, file = NULL, dpi = NULL, number = NULL) {
+scorch_figure <- function(result, name = NULL, file = NULL, dpi = NULL, number = NULL, event_id = NULL) {
   if (!is.null(number)) {
     if (!is.null(name)) fail("Use either `name` or the legacy `number`, not both.")
     name <- number
@@ -39,6 +41,7 @@ scorch_figure <- function(result, name = NULL, file = NULL, dpi = NULL, number =
   spec <- figure_specs()[[id]]
   if (is.null(spec)) fail("There is no visualization named '", id,
                           "'; choose one of: ", paste(names(figure_specs()), collapse = ", "), ".")
+  if (identical(id, "event")) result$figure_event_id <- event_id
   size <- spec$size(result)
   if (is.null(dpi)) dpi <- spec$dpi
   if (!is.null(file)) {
@@ -100,7 +103,7 @@ figure_specs <- function() {
     c(cols * (width + SNAP_MAI[2] + SNAP_MAI[4]),
       rows * (width * extent_ratio(result) + SNAP_MAI[1] + SNAP_MAI[3]) + heading + legend)
   }
-  list(
+  c(organized_figure_specs(), list(
     "ellipse_spatial_patterns" = list(draw = draw_ellipse_spatial_patterns, dpi = 500,
       size = function(result) c(2 * (5.2 + MAP_MAI[2] + MAP_MAI[4]) + 2 * CBAR_WIDTH,
                                 3 * (5.2 * extent_ratio(result) + MAP_MAI[1] + MAP_MAI[3]) + MAP_LEGEND_STRIP)),
@@ -118,7 +121,7 @@ figure_specs <- function() {
     "annual_event_counts_and_duration" = list(draw = draw_annual_event_counts_and_duration, dpi = 600, size = function(result) c(9.4, 6.45)),
     "power_law_model" = list(draw = draw_ellipse_area_power_law, dpi = 600, size = function(result) c(10, 8.4)),
     "spatial_risk_model" = list(draw = draw_centroid_concentration, dpi = 600,
-      size = function(result) c(6.4 + MAP_MAI[2] + MAP_MAI[4] + CBAR_WIDTH, 6.4 * extent_ratio(result) + MAP_MAI[1] + MAP_MAI[3] + 0.5)))
+      size = function(result) c(6.4 + MAP_MAI[2] + MAP_MAI[4] + CBAR_WIDTH, 6.4 * extent_ratio(result) + MAP_MAI[1] + MAP_MAI[3] + 0.5))))
 }
 
 # The panels the representative-event figures draw.
@@ -139,7 +142,7 @@ mixed_days <- function(result) {
 MAP_MAI <- c(0.4, 0.5, 0.35, 0.1)   # map panel margins in inches (bottom, left, top, right)
 SNAP_MAI <- c(0.3, 0.45, 0.45, 0.1)  # event snapshot panels: room above the map for the time label and the date
 MAP_LEGEND_STRIP <- 0.4              # extra bottom margin of the first map row of the five-map figure, for its legend
-CBAR_WIDTH <- 0.9                    # width of a colour-bar column in inches
+CBAR_WIDTH <- 1.2                    # width of a colour-bar column in inches
 HEAT_PALETTE <- grDevices::colorRampPalette(c("#2ca25f", "#f7fcb9", "#f03b20"))
 
 # Map extent: the grid cells plus half a step on every side.
@@ -292,55 +295,69 @@ km_to_lonlat <- function(lon0, lat0, x_km, y_km) {
 # Maps of all ellipses ------------------------------------------------------
 
 draw_ellipse_spatial_patterns <- function(result) {
+  five_map_layout(5.2 + MAP_MAI[2] + MAP_MAI[4],
+                  5.2 * extent_ratio(result) + MAP_MAI[1] + MAP_MAI[3], MAP_LEGEND_STRIP)
+  for (name in c("centroids_and_axes", "ellipse_overlap", "axis_ratio", "area", "orientation")) {
+    draw_spatial_panel(result, name, combined = TRUE)
+  }
+  invisible(TRUE)
+}
+
+# Separate and combined maps use identical values, colour ranges and legends.
+draw_spatial_panel <- function(result, name, combined = FALSE) {
   e <- result$ellipses
   extent <- map_extent(result)
-  five_map_layout(5.2 + MAP_MAI[2] + MAP_MAI[4], 5.2 * extent_ratio(result) + MAP_MAI[1] + MAP_MAI[3], MAP_LEGEND_STRIP)
-  first_row <- MAP_MAI + c(MAP_LEGEND_STRIP, 0, 0, 0)   # room under the first row for the legend
-  # the centroids with their L1 and L2 axes, the legend below the map
-  usr <- map_frame(extent, mai = first_row)
-  axes <- lapply(seq_len(nrow(e)), function(i) ellipse_axes(e[i, ]))
-  for (ax in axes) {
-    graphics::lines(ax$major, col = grDevices::adjustcolor("red", 0.18), lwd = 0.75)
-    graphics::lines(ax$minor, col = grDevices::adjustcolor("darkorange", 0.18), lwd = 0.75)
+  first <- name %in% c("centroids_and_axes", "ellipse_overlap")
+  mai <- MAP_MAI + c(if (first && (combined || name == "centroids_and_axes")) MAP_LEGEND_STRIP else 0, 0, 0, 0)
+  if (!combined && name == "centroids_and_axes") {
+    mai[4] <- mai[4] + 0.2
+    graphics::layout(matrix(1L))
   }
-  graphics::points(e$centroid_lon_weighted, e$centroid_lat_weighted, pch = 16, cex = 0.5,
-                   col = grDevices::adjustcolor("black", 0.55))
-  legend_below_map(usr, legend = c(expression(L[1]), expression(L[2]), "Centroid"),
-                   col = c("red", "darkorange", "black"), lty = c(1, 1, NA), pch = c(NA, NA, 16),
-                   lwd = 2, cex = 0.75, box.lwd = 0.6)
-  panel_label("a")
-  graphics::plot.new()
-  # ellipse footprints per point of a fine grid, in quantile classes
-  g <- result$input$grid
-  step <- min(g$lon_step, g$lat_step) / 4
-  fine_lon <- seq(extent[1], extent[2], by = step)
-  fine_lat <- seq(extent[3], extent[4], by = step)
-  counts <- ellipse_footprints(e, fine_lon, fine_lat)
-  levels <- unique(c(0, stats::quantile(counts, c(0.2, 0.4, 0.6, 0.8, 0.9, 0.95, 0.98, 1), names = FALSE)))
-  colours <- HEAT_PALETTE(length(levels) - 1)
-  usr <- map_frame(extent, mai = first_row)
-  class_image(fine_lon, fine_lat, counts, levels, grDevices::adjustcolor(colours, 0.78))
-  map_outlines(usr)
-  graphics::box()
-  panel_label("b")
-  colour_bar(levels, colours, "Ellipse footprints per grid point", tick_labels = formatC(levels, format = "fg", digits = 3),
-             mai = first_row)
-  # axis ratio, area and orientation of the major axis, with their colour bars
-  next_letter <- 2L
-  scatter_map <- function(values, breaks, colours, label) {
-    map_frame(extent)
+  if (!combined && name != "centroids_and_axes") graphics::layout(matrix(1:2, 1, 2),
+    widths = c(6.4 + MAP_MAI[2] + MAP_MAI[4], CBAR_WIDTH))
+  usr <- map_frame(extent, mai = mai)
+  if (name == "centroids_and_axes") {
+    axes <- lapply(seq_len(nrow(e)), function(i) ellipse_axes(e[i, ]))
+    for (ax in axes) {
+      graphics::lines(ax$major, col = grDevices::adjustcolor("red", 0.18), lwd = 0.75)
+      graphics::lines(ax$minor, col = grDevices::adjustcolor("darkorange", 0.18), lwd = 0.75)
+    }
+    graphics::points(e$centroid_lon_weighted, e$centroid_lat_weighted, pch = 16, cex = 0.5,
+                     col = grDevices::adjustcolor("black", 0.55))
+    legend_below_map(usr, legend = c(expression(L[1]), expression(L[2]), "Centroid"),
+      col = c("red", "darkorange", "black"), lty = c(1, 1, NA), pch = c(NA, NA, 16),
+      lwd = 2, cex = 0.75, box.lwd = 0.6)
+    plot_heading("Centroids and axes")
+    if (combined) graphics::plot.new()
+    return(invisible(TRUE))
+  }
+  if (name == "ellipse_overlap") {
+    g <- result$input$grid
+    step <- min(g$lon_step, g$lat_step) / 4
+    fine_lon <- seq(extent[1], extent[2], by = step)
+    fine_lat <- seq(extent[3], extent[4], by = step)
+    counts <- ellipse_footprints(e, fine_lon, fine_lat)
+    breaks <- unique(c(0, stats::quantile(counts, c(0.2, 0.4, 0.6, 0.8, 0.9, 0.95, 0.98, 1), names = FALSE)))
+    colours <- HEAT_PALETTE(length(breaks) - 1)
+    class_image(fine_lon, fine_lat, counts, breaks, grDevices::adjustcolor(colours, 0.78))
+    map_outlines(usr)
+    graphics::box()
+    plot_heading("Ellipse overlap")
+    colour_bar(breaks, colours, "Ellipse footprints per grid point",
+      tick_labels = formatC(breaks, format = "fg", digits = 3), mai = mai)
+  } else {
+    values <- switch(name, axis_ratio = e$axis_ratio, area = e$area_km2 / 1e6,
+                     orientation = e$azimuth_north_cw_deg)
+    breaks <- continuous_breaks(if (name == "orientation") c(-90, 90) else robust_limits(values))
+    colours <- switch(name, axis_ratio = grDevices::hcl.colors(64, "viridis", rev = TRUE),
+      area = grDevices::hcl.colors(64, "Plasma"), orientation = grDevices::hcl.colors(64, "RdYlBu", rev = TRUE))
+    label <- switch(name, axis_ratio = expression(L[2] / L[1]),
+      area = expression(Area ~ (km^2 %*% 10^6)), orientation = expression(L[1] ~ orientation ~ (degree)))
     graphics::points(e$centroid_lon_weighted, e$centroid_lat_weighted, pch = 16, cex = 0.9,
-                     col = grDevices::adjustcolor(colour_of(values, breaks, colours), 0.72))
-    next_letter <<- next_letter + 1L
-    panel_label(letters[next_letter])
+      col = grDevices::adjustcolor(colour_of(values, breaks, colours), 0.72))
+    plot_heading(switch(name, axis_ratio = "Axis ratio", area = "Ellipse area", orientation = "Orientation"))
     colour_bar(breaks, colours, label, ticks = round_ticks(breaks))
   }
-  scatter_map(e$axis_ratio, continuous_breaks(robust_limits(e$axis_ratio)),
-              grDevices::hcl.colors(64, "viridis", rev = TRUE), expression(L[2] / L[1]))
-  scatter_map(e$area_km2 / 1e6, continuous_breaks(robust_limits(e$area_km2 / 1e6)),
-              grDevices::hcl.colors(64, "Plasma"), expression(Area ~ (km^2 %*% 10^6)))
-  scatter_map(e$azimuth_north_cw_deg, continuous_breaks(c(-90, 90)),
-              grDevices::hcl.colors(64, "RdYlBu", rev = TRUE), expression(L[1] ~ orientation ~ (degree)))
   invisible(TRUE)
 }
 
@@ -520,12 +537,11 @@ draw_consistent_multiday_events <- function(result) {
   n <- length(shown)
   panel_height <- 4.6 * extent_ratio(result) + SNAP_MAI[1] + SNAP_MAI[3]
   widths <- rep(4.6 + SNAP_MAI[2] + SNAP_MAI[4], 2)
-  maps <- matrix(seq_len(3 * n) + 1L, n, 3, byrow = TRUE)
-  graphics::layout(rbind(c(1, 1, 1), maps, rep(3 * n + 2L, 3)),
-                   widths = c(0.4, widths), heights = c(0.9, rep(panel_height, n), 0.5))
+  maps <- matrix(seq_len(2 * n) + 1L, n, 2, byrow = TRUE)
+  graphics::layout(rbind(c(1, 1), maps, rep(2 * n + 2L, 2)),
+                   widths = widths, heights = c(0.9, rep(panel_height, n), 0.5))
   type_heading(3)
   for (k in seq_len(n)) {
-    row_label(letters[k])
     for (j in 1:2) {
       draw_snapshot(result, shown[[k]][j], time_label = if (k == 1) c("t", "t + 1")[j] else NULL)
     }
@@ -591,5 +607,82 @@ draw_centroid_concentration <- function(result) {
   graphics::legend("center", legend = c("Centroid", "Daily-largest structure centroid", "Event-largest structure centroid"),
                    pch = c(16, 1, 4), col = c("black", "black", "#b2182b"), pt.cex = c(0.8, 1.4, 1.2),
                    pt.lwd = c(1, 1, 1.6), horiz = TRUE, box.lwd = 0.8, cex = 0.85)
+  invisible(TRUE)
+}
+
+# Automatic output: every event, followed by the eleven summary figures.
+organized_figure_specs <- function() {
+  spatial_spec <- function(name) list(draw = function(result) draw_spatial_panel(result, name), dpi = 600,
+    size = function(result) c(6.4 + MAP_MAI[2] + MAP_MAI[4] + if (name == "centroids_and_axes") 0.2 else CBAR_WIDTH,
+      6.4 * extent_ratio(result) + MAP_MAI[1] + MAP_MAI[3] + if (name == "centroids_and_axes") MAP_LEGEND_STRIP else 0))
+  c(list(event = list(draw = draw_event, dpi = 600, size = event_figure_size),
+         annual_frequency = list(draw = draw_annual_frequency, dpi = 600, size = function(result) c(9.4, 3.8)),
+         annual_duration = list(draw = draw_annual_duration, dpi = 600, size = function(result) c(9.4, 3.8))),
+    stats::setNames(lapply(c("centroids_and_axes", "ellipse_overlap", "axis_ratio", "area", "orientation"), spatial_spec),
+      c("centroids_and_axes", "ellipse_overlap", "axis_ratio", "area", "orientation")))
+}
+
+event_figure_path <- function(id, type) sprintf("events/Type_%d/Event_%03d.png", type, id)
+
+figure_output_plan <- function(result) {
+  events <- result$events$events
+  events <- events[order(events$compound_event_id), ]
+  event_plots <- data.frame(name = rep("event", nrow(events)),
+    path = event_figure_path(events$compound_event_id, events$event_type),
+    event_id = events$compound_event_id, event_type = events$event_type)
+  rbind(event_plots, summary_figure_plan())
+}
+
+summary_figure_plan <- function() {
+  data.frame(
+    name = c("ellipse_geometry_by_type", "event_geometry_distributions", "power_law_model", "spatial_risk_model",
+             "annual_frequency", "annual_duration", "centroids_and_axes", "ellipse_overlap", "axis_ratio", "area", "orientation"),
+    path = c("geometry/Ellipses_by_type.png", "geometry/Event_distributions.png", "modeling/Power_law.png",
+             "modeling/Spatial_model.png", "temporal/Annual_frequency.png", "temporal/Annual_duration.png",
+             "spatial/Centroids_and_axes.png", "spatial/Ellipse_overlap.png", "spatial/Axis_ratio.png",
+             "spatial/Area.png", "spatial/Orientation.png"), event_id = NA_integer_, event_type = NA_integer_)
+}
+
+event_figure_dates <- function(result) {
+  id <- result$figure_event_id
+  if (!is.numeric(id) || length(id) != 1L || is.na(id) || !is.finite(id) || id != as.integer(id) ||
+      !id %in% result$events$events$compound_event_id) {
+    fail("Choose one event_id from the compound_event_id column in Catalog 5.")
+  }
+  days <- result$events$event_days
+  dates <- sort(days$date[days$compound_event_id == id])
+  if (!length(dates) || anyDuplicated(dates)) fail("The event must have one snapshot date per event day.")
+  dates
+}
+
+event_figure_grid <- function(result) {
+  n <- length(event_figure_dates(result))
+  cols <- min(n, max(1L, ceiling(sqrt(n * extent_ratio(result)))))
+  list(n = n, cols = cols, rows = ceiling(n / cols), width = if (n == 1L) 5.3 else 4.4)
+}
+
+event_figure_size <- function(result) {
+  grid <- event_figure_grid(result)
+  c(grid$cols * (grid$width + SNAP_MAI[2] + SNAP_MAI[4]),
+    grid$rows * (grid$width * extent_ratio(result) + SNAP_MAI[1] + SNAP_MAI[3]) + 1.2)
+}
+
+draw_event <- function(result) {
+  dates <- event_figure_dates(result)
+  grid <- event_figure_grid(result)
+  event <- result$events$events[result$events$events$compound_event_id == result$figure_event_id, ]
+  cells <- c(1 + seq_along(dates), rep(0L, grid$rows * grid$cols - length(dates)))
+  graphics::layout(rbind(rep(1L, grid$cols), matrix(cells, grid$rows, grid$cols, byrow = TRUE),
+                         rep(length(dates) + 2L, grid$cols)),
+    heights = c(0.7, rep(grid$width * extent_ratio(result) + SNAP_MAI[1] + SNAP_MAI[3], grid$rows), 0.5))
+  graphics::par(mai = c(0, 0, 0, 0))
+  graphics::plot.new()
+  graphics::text(0.5, 0.62, sprintf("Event %d | Type %d", event$compound_event_id, event$event_type),
+    font = 2, cex = 1.5 / graphics::par("cex"), col = SNAPSHOT_TYPE_COLOURS[event$event_type])
+  coverage <- if (length(dates) == 1L) format(dates[1]) else paste(format(dates[1]), "to", format(tail(dates, 1)))
+  graphics::text(0.5, 0.2, sprintf("%s | %d %s", coverage, length(dates), if (length(dates) == 1L) "day" else "days"),
+    cex = 1 / graphics::par("cex"))
+  for (k in seq_along(dates)) draw_snapshot(result, dates[k], time_label = if (length(dates) > 1L) paste("Day", k) else NULL)
+  snapshot_legend()
   invisible(TRUE)
 }
