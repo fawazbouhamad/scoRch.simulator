@@ -85,17 +85,6 @@ The [North America dataset on Zenodo](https://doi.org/10.5281/zenodo.24232552) o
 
 Both cover April–September 1996–2025. Processing takes the maximum of each native point's 24 hourly temperatures per UTC day, converts Kelvin to Celsius, then takes the equal-weight arithmetic mean of each complete 4×4 block of 0.25° points. Each point has weight 1/16; this temperature aggregation does not use latitude, area or temperature weights. Output is float64. Temperature weighting is used separately for ellipse centroids. See [provenance](demo/PROVENANCE.txt) for checksums and attribution.
 
-## Download the demonstration data
-
-The [North America dataset on Zenodo](https://doi.org/10.5281/zenodo.24232552) offers two independent downloads:
-
-| File | Use |
-|---|---|
-| [SCORCH_NA_processed_1996_2025.nc](https://zenodo.org/records/24232552/files/SCORCH_NA_processed_1996_2025.nc?download=1) (33,841,054 bytes) | Ready to analyze; the same data are bundled with the software. For a downloaded copy, set `input: file` to its path and `input: format` to `daily_tmax`. |
-| [SCORCH_NA_unprocessed_1996_2025.zip](https://zenodo.org/records/24232552/files/SCORCH_NA_unprocessed_1996_2025.zip?download=1) (6,333,591,973 bytes) | Extract once. Set `input: file` to the extracted `SCORCH_NA_unprocessed_1996_2025/` folder containing the 30 yearly NetCDF files, and `input: format` to `era5`. |
-
-Both cover April–September 1996–2025. Processing takes the maximum of each native point's 24 hourly temperatures per UTC day, converts Kelvin to Celsius, then takes the equal-weight arithmetic mean of each complete 4×4 block of 0.25° points. Each point has weight 1/16; this temperature aggregation does not use latitude, area or temperature weights. Output is float64. Temperature weighting is used separately for ellipse centroids. See [provenance](demo/PROVENANCE.txt) for checksums and attribution.
-
 ## Understand the workflow
 
 Temperature → local heatwaves → regionally extensive days → spatial clusters → ellipses → compound events → models, tables and figures.
@@ -132,7 +121,7 @@ The original study covers the Eastern Mediterranean and Middle East, 1940–2025
 
 The installer maps `scripts/` to R's `R/`, `help/` to `man/`, and setup metadata to the package root. `DESCRIPTION` lists package information and dependencies; `NAMESPACE` lists exported functions. Fixture-local `.gitattributes` preserves CSV line endings.
 
-To install a downloaded repository, source `software/setup/install.R` and call `install_scorch(path = ".")`. From the repository root, `Rscript demo/run.R` runs the same workflow; `Rscript software/setup/maintenance.R compare` checks it against `demo/output/`. Use `--help` for validation and rebuild commands. To restore the exact published demo input, run `Rscript software/setup/maintenance.R make-demo path/to/SCORCH_NA_processed_1996_2025.nc`; it verifies the published checksum before copying the file. To restore the exact published demo input, run `Rscript software/setup/maintenance.R make-demo path/to/SCORCH_NA_processed_1996_2025.nc`; it verifies the published checksum before copying the file. Assemble with `Rscript software/setup/install.R .package`, then check with `devtools::check(".package")`.
+To install a downloaded repository, source `software/setup/install.R` and call `install_scorch(path = ".")`. From the repository root, `Rscript demo/run.R` runs the same workflow; `Rscript software/setup/maintenance.R compare` checks it against `demo/output/`. Use `--help` for validation and rebuild commands. To restore the exact published demo input, run `Rscript software/setup/maintenance.R make-demo path/to/SCORCH_NA_processed_1996_2025.nc`; it verifies the published checksum before copying the file. Assemble with `Rscript software/setup/install.R .package`, then check with `devtools::check(".package")`.
 
 [GitHub Actions](https://github.com/fawazbouhamad/scoRch.simulator/actions) checks Windows, macOS and Linux and compares the demonstration. The reference has 65,409 local heatwaves, 140 selected days, 379 ellipses and 30 compound events (Types 1–4: 1, 5, 20 and 4). All 16 worksheets are compared at portable tolerances of 1e-6, or 1e-3 for LGCP fits. Optional full-study tests require the separate reference input. The bundled input is byte-for-byte identical to the published float64 NetCDF, without additional rounding or integer packing. Full 30-year validation of the accompanying hourly archive and processed input gave identical scientific results and all 16 worksheets.
 
