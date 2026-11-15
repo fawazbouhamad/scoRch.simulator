@@ -60,15 +60,3 @@ lgcp:                         # log-Gaussian Cox process of the ellipse centroid
   raster_km: 25               # pixel size of the covariate images and study window (km)
   window_margin_km: 80        # margin beyond cell centres, plus one raster pixel (km);
                               # chosen for 1-degree cells; review for other grid resolutions
-
-# OPTIONAL MANUAL COMPARISONS: used only when redrawing legacy comparison figures.
-# Automatic run output includes every event and every day, regardless of these choices.
-# For manual comparisons, null favours longer events, then larger ellipses.
-figures:
-  representative_events:
-    type_1: null              # a date inside the Type 1 event to show
-    type_2: null              # a date inside the Type 2 event to show
-    type_3: null              # first shown day of one or two Type 3 events, with a following day;
-                              # automatic = first two days of up to two events
-    type_4: null              # first of up to six shown days of the chosen Type 4 event;
-                              # automatic = the window with most ellipses in the chosen event

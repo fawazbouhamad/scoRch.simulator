@@ -79,6 +79,10 @@ scorch_defaults <- function() {
   # Preserve the effective configuration/report order while the editable file
   # places the optional saved-input path beside the input file and format.
   defaults$input <- c(defaults$input[names(defaults$input) != "processed_file"], defaults$input["processed_file"])
+  # Accept older manual-comparison settings without exposing unused controls
+  # in the beginner configuration. Automatic output always includes all events.
+  defaults$figures <- list(representative_events = list(type_1 = NULL, type_2 = NULL,
+                                                        type_3 = NULL, type_4 = NULL))
   defaults
 }
 
@@ -216,21 +220,24 @@ read_config <- function(config = NULL, input_required = TRUE) {
   if (anyDuplicated(names(chosen))) fail("The setting 'figures: representative_events' repeats an event type.")
   unknown <- setdiff(names(chosen), c("type_1", "type_2", "type_3", "type_4"))
   if (length(unknown)) fail("Unknown settings under figures: representative_events: ", paste(unknown, collapse = ", "))
-  for (type in c("type_1", "type_2", "type_3", "type_4")) {
-    dates <- chosen[[type]]
-    if (is.null(dates)) next
-    maximum <- if (type == "type_3") 2L else 1L
-    if (!(is.character(dates) || inherits(dates, "Date")) ||
-        !length(dates) || length(dates) > maximum) {
-      fail("The setting 'figures: representative_events: ", type,
-           "' needs ", if (maximum == 1L) "one date" else "one or two dates", " written as YYYY-MM-DD.")
-    }
-    for (i in seq_along(dates)) check_date(dates[i], paste0("figures: representative_events: ", type))
-    if (anyDuplicated(as.character(dates))) {
-      fail("The setting 'figures: representative_events: ", type, "' contains a repeated date.")
-    }
-  }
   cfg
+}
+
+# Dates affect only explicitly requested legacy comparison figures. Stale
+# selections in an older configuration must not prevent an automatic run.
+check_representative_dates <- function(dates, type) {
+  if (is.null(dates)) return(invisible(NULL))
+  maximum <- if (type == "type_3") 2L else 1L
+  if (!(is.character(dates) || inherits(dates, "Date")) ||
+      !length(dates) || length(dates) > maximum) {
+    fail("The setting 'figures: representative_events: ", type,
+         "' needs ", if (maximum == 1L) "one date" else "one or two dates", " written as YYYY-MM-DD.")
+  }
+  for (i in seq_along(dates)) check_date(dates[i], paste0("figures: representative_events: ", type))
+  if (anyDuplicated(as.character(dates))) {
+    fail("The setting 'figures: representative_events: ", type, "' contains a repeated date.")
+  }
+  invisible(dates)
 }
 
 check_config_string <- function(value, name, allow_null = FALSE) {

@@ -1,12 +1,12 @@
-scoRch.simulator 1.1.1 results: COMPLETE
-Run started 2026-11-15 14:55:20, finished in 50 seconds.
+scoRch.simulator 1.2.0 results: COMPLETE
+Run started 2026-11-15 16:56:13, finished in 53 seconds.
 
 WARNINGS
   None.
 
 INPUT
   Mode: Bundled North America example
-  Source: C:/Users/fawaw/Documents/Codex/2026-11-12/new-chat-2/work/organized-figures-20261115/library/scoRch.simulator/extdata/north_america_tmax.nc
+  Source: C:/Users/fawaw/Documents/Codex/2026-11-12/new-chat-2/work/reporting-cleanup-20261115/library/scoRch.simulator/extdata/north_america_tmax.nc
   Area: 1800 cells on a 1 x 1 degree grid, 129.5°W to 58.5°W and 25.5°N to 49.5°N
   Period: 5490 dates from 1996-04-01 to 2025-09-30, warm-season months 4 5 6 7 8 9
 
@@ -28,12 +28,19 @@ MAIN SETTINGS
   Ellipses: principal axes of each cluster scaled by 1.25, centroids weighted by temperature.
   Power law: 5000 bootstrap repetitions (seeds 20261020 for daily maxima, 20261120 for event maxima).
   LGCP: covariates lon, lat, mean_tmax, std_tmax; 25 km raster; 80 km window margin.
-  Figures: representative events chosen in the configuration: Type 3 2012-06-28, 2023-08-04.
+  Figures: every compound event, with every dated daily snapshot and a shared legend.
 
 MODELS
   Power law of the largest ellipse areas (modeling/Power_Law_Model.xlsx):
-    daily_maxima: n = 140, tail n = 42, A_min = 2242981 km2, alpha = 5.855, bootstrap p = 0.749 (5000 repetitions)
-    event_maxima: n = 30, tail n = 13, A_min = 2108890 km2, alpha = 4.437, bootstrap p = 0.519 (5000 repetitions)
+    daily_maxima: fit calculation completed; 140 observations, 42 in the fitted upper tail.
+      Tail cutoff = 2242981 km2; exponent alpha = 5.855; KS distance = 0.07585.
+      Bootstrap completed (5000 repetitions); p = 0.7488. Power law not rejected at the 10% significance level.
+    event_maxima: fit calculation completed; 30 observations, 13 in the fitted upper tail.
+      Tail cutoff = 2108890 km2; exponent alpha = 4.437; KS distance = 0.1433.
+      Bootstrap completed (5000 repetitions); p = 0.5188. Power law not rejected at the 10% significance level.
+    Calculation success is separate from goodness of fit. A smaller KS distance means closer agreement.
+    A large p-value does not prove a perfect fit or that a power law is better than other distributions.
+    Bootstrap Results contains numerical diagnostics and exponent quantiles; p-value bounds are not confidence intervals.
   Log-Gaussian Cox process of the 379 ellipse centroids (modeling/Spatial_Risk_Model.xlsx):
     (Intercept) = -9.96525
     lon = 0.000346698
@@ -42,9 +49,28 @@ MODELS
     std_tmax = 0.0281007
     var_sigma2 = 1.65639
     scale_km = 159.611
+    Intensity is the fitted expected number of centroids per km2 over this analyzed catalog, not a probability or an annual rate.
+    Each percentage change is 100 * (exp(coefficient) - 1), holding the other predictors constant.
+    +1 degree in longitude: +0.035% fitted centroid intensity.
+    +1 degree in latitude: -1.849% fitted centroid intensity.
+    +1 C in mean daily Tmax: -0.958% fitted centroid intensity.
+    +1 C in temporal standard deviation of daily Tmax: +2.850% fitted centroid intensity.
+    mean_tmax and std_tmax are each cell's mean and temporal standard deviation of daily Tmax (C) over the analyzed dates.
+    These are fitted spatial associations, not causal predictions of future warming.
+    relative_intensity_rank_0_1 ranks grid cells from low to high fitted intensity, with averaged ties; 0.9 is about the 90th percentile, not a 90% probability.
+    Top-20% and top-50% zones cover those fractions of the analyzed grid area, selecting highest-intensity cells first.
     Centroids inside the top-20% intensity zone: all centroids 68 of 379 (17.9%); daily largest 7 of 140 (5.0%); event largest 3 of 30 (10.0%)
     Centroids inside the top-50% intensity zone: all centroids 208 of 379 (54.9%); daily largest 64 of 140 (45.7%); event largest 10 of 30 (33.3%)
     No warnings from the fit.
+
+DURATION TRENDS
+  Type 3 and Type 4 annual mean event durations, grouped by event start-season year.
+  Only years with that event type enter the trend; years without events are omitted, not assigned zero duration.
+  OLS is the linear regression slope; Sen is the median pairwise slope. Both are in days per decade.
+  Type 3: 14 years with events; OLS = 2.005 (p = 0.3839, R2 = 0.06374); Sen = 0.3846; Mann-Kendall p = 0.5382: no significant trend at the 5% significance level.
+  Type 4: 4 years with events; OLS = 2 (p = 0.6707, R2 = 0.1084); Sen = 2.778; Mann-Kendall p = 1: no significant trend at the 5% significance level.
+  No significant trend means insufficient evidence of a monotonic change; it does not establish zero change.
+  Heatwave_Statistics.xlsx includes the Annual Mean Duration data used for these trends.
 
 FIGURES (figures/)
   Event IDs match Catalog 5 and follow the full chronological catalog, across all types.
@@ -110,16 +136,18 @@ FILES
     Compound Events (30 rows): every compound heatwave event (Catalog 5): type, days, cluster counts, mean geometry, largest ellipse
     Event Days (140 rows): every day of every compound event with its clusters and largest ellipse
   modeling/Power_Law_Model.xlsx
-    Power Law Fits (2 rows): cutoff, exponent, KS distance, bootstrap p-value and bootstrap quantiles for daily and event maxima
+    Power Law Fits (2 rows): sample sizes, upper-tail cutoff, exponent, KS distance and goodness-of-fit p-value for daily and event maxima
+    Bootstrap Results (2 rows): bootstrap counts, p-value bounds, Monte Carlo error, seeds and exponent quantiles
   modeling/Spatial_Risk_Model.xlsx
-    Parameters (7 rows): the fitted LGCP coefficients, field variance and scale
-    Intensity (1800 rows): mean LGCP intensity and concentration rank of every cell
+    Parameters (7 rows): original LGCP parameters and derived intensity percentage changes for a +1 C or +1 degree increase
+    Intensity (1800 rows): mean centroid intensity per km2 and relative intensity rank (0-1) of every cell
     Centroid Concentration (6 rows): share of the centroids inside the top-20% and top-50% intensity zones
   Heatwave_Statistics.xlsx
     Event Type Summary (4 rows): Table 1 of the study: statistics by compound heatwave type, days, events, durations, ellipses per event
     Cell Thresholds (1800 rows): the local threshold and heatwave counts of every cell
     Daily Heatwave Extent (5490 rows): heatwave and exceeding cells on every day, the regional threshold and the selection flag
-    Duration Trends (2 rows): trend tests of the annual mean duration of Type 3 and Type 4 events
+    Duration Trends (2 rows): OLS and Sen slopes (days per decade) and tests on annual mean duration; years_with_events counts years containing that type
+    Annual Mean Duration (18 rows): the annual mean durations used for Type 3 and Type 4 trends, by event start-season year; years without events are omitted
   figures/: the figures listed above (PNG, 600 dpi; 500 dpi for Ellipses_by_type.png)
   Summary.txt: this file
   Numbers are stored with the 15 significant digits of the XLSX format; the display formats are rounding for reading only. Empty cells are missing values, not zeros.
@@ -178,7 +206,7 @@ TRACED EVENT
 
 SETTINGS OF THIS RUN (YAML)
   input:
-    file: C:/Users/fawaw/Documents/Codex/2026-11-12/new-chat-2/work/organized-figures-20261115/library/scoRch.simulator/extdata/north_america_tmax.nc
+    file: C:/Users/fawaw/Documents/Codex/2026-11-12/new-chat-2/work/reporting-cleanup-20261115/library/scoRch.simulator/extdata/north_america_tmax.nc
     format: daily_tmax
     variable: auto
     longitude: auto
@@ -234,8 +262,3 @@ SETTINGS OF THIS RUN (YAML)
     - std_tmax
     raster_km: 25.0
     window_margin_km: 80.0
-  figures:
-    representative_events:
-      type_3:
-      - '2012-06-28'
-      - '2023-08-04'

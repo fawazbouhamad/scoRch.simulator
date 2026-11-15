@@ -424,6 +424,7 @@ representative_events <- function(result, type) {
   event_dates <- function(id) days$date[days$compound_event_id == id]
   override <- result$config$figures$representative_events[[paste0("type_", type)]]
   if (!is.null(override)) {
+    check_representative_dates(override, paste0("type_", type))
     starts <- as.Date(as.character(override))
     event_ids <- vapply(starts, function(start) {
       hit <- events$compound_event_id[events$start_date <= start & events$end_date >= start]

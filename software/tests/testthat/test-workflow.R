@@ -64,7 +64,7 @@ test_that("the complete workflow runs on the example data and writes every outpu
   expect_equal(catalog_5$mean_area_km2, result$events$events$mean_area_km2, tolerance = 1e-14)
   summary_book <- file.path(out, "Heatwave_Statistics.xlsx")
   expect_equal(sheet_names(summary_book),
-               c("Event Type Summary", "Cell Thresholds", "Daily Heatwave Extent", "Duration Trends"))
+               c("Event Type Summary", "Cell Thresholds", "Daily Heatwave Extent", "Duration Trends", "Annual Mean Duration"))
   expect_equal(nrow(openxlsx2::read_xlsx(summary_book, sheet = "Event Type Summary")), 4)
   extent <- openxlsx2::read_xlsx(summary_book, sheet = "Daily Heatwave Extent")
   expect_equal(nrow(extent), length(result$input$dates))
@@ -101,9 +101,14 @@ test_that("the complete workflow runs on the example data and writes every outpu
   expect_true(all(diff(automatic[[1]]) == 1))
   bad_config <- config
   bad_config$figures <- list(representative_events = list(type_4 = "1900-01-01"))
-  previous_catalog <- file.info(compound)$mtime
-  expect_error(suppressMessages(run_scorch(bad_config)), "not inside a Type 4 event")
-  expect_equal(file.info(compound)$mtime, previous_catalog)
+  # Stale legacy dates do not affect all-event automatic output.
+  automatic_result <- suppressMessages(run_scorch(bad_config))
+  expect_identical(automatic_result$events, result$events)
+  expect_identical(automatic_result$power_law, result$power_law)
+  expect_true(all(automatic_result$plots$status == "generated"))
+  expect_error(scorch_figure(automatic_result, "mixed_multiday_events", png_file),
+               "not inside a Type 4 event")
+  expect_false(any(grepl("representative_events|representative events", readLines(file.path(out, "Summary.txt")))))
   # Data already in R can replace the input file.
   tmax <- read_tmax(example_file, start = "2015-01-01")
   again <- suppressMessages(run_scorch(list(output = list(directory = file.path(out, "again")),

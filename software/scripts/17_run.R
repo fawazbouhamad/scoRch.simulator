@@ -13,7 +13,7 @@
 #' their day and cell tables), `modeling/` (`Power_Law_Model.xlsx` and
 #' `Spatial_Risk_Model.xlsx`: fits, parameters, intensity and centroid concentration),
 #' `Heatwave_Statistics.xlsx` (event type summary, cell
-#' thresholds, daily heatwave extent, duration trends), `figures/` (one PNG
+#' thresholds, daily heatwave extent, duration trends and annual mean durations), `figures/` (one PNG
 #' per event and grouped geometry, modeling, temporal and spatial figures) and `Summary.txt`, which describes the
 #' input, the main settings, the counts, the models, every file and sheet,
 #' the run time and the warnings in plain language. Every sheet holds all
@@ -129,7 +129,6 @@ run_scorch <- function(config = NULL, tmax = NULL, trace_date = NULL) {
   ellipses <- fit_ellipses(clusters, tmax, cfg$ellipses$scale_factor)
   step("Stage 5: compound events")
   events <- classify_events(clusters, ellipses)
-  validate_representative_event_overrides(cfg, events)
   step("Power-law fits with %d bootstrap repetitions", cfg$power_law$bootstrap_repetitions)
   power_law <- fit_power_law(events, cfg$power_law$bootstrap_repetitions,
                              cfg$power_law$seed_daily_maxima, cfg$power_law$seed_event_maxima)
@@ -196,18 +195,6 @@ run_scorch <- function(config = NULL, tmax = NULL, trace_date = NULL) {
   message("Results folder: ", normalizePath(out, winslash = "/"))
   message("Open Summary.txt first.")
   invisible(result)
-}
-
-# Check a date against the actual catalog before fitting models or drawing
-# plots. Invalid manual choices should never be hidden as a skipped plot.
-validate_representative_event_overrides <- function(cfg, events) {
-  context <- list(config = cfg, events = events)
-  for (type in 1:4) {
-    if (!is.null(cfg$figures$representative_events[[paste0("type_", type)]])) {
-      representative_events(context, type)
-    }
-  }
-  invisible(TRUE)
 }
 
 #' @export

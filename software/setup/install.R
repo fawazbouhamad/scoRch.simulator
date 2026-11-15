@@ -35,7 +35,7 @@ prepare_scorch_package <- function(root = ".", destination = tempfile("scoRch-pa
   destination
 }
 
-install_scorch <- function(path = NULL, ref = "v1.1.1", lib = NULL, upgrade = "never", force = TRUE, ...) {
+install_scorch <- function(path = NULL, ref = "v1.2.0", lib = NULL, upgrade = "never", force = TRUE, ...) {
   if (!requireNamespace("remotes", quietly = TRUE)) {
     stop('First run install.packages("remotes").', call. = FALSE)
   }
