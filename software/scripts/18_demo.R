@@ -33,7 +33,9 @@ demo_settings <- function(config_file = "prepared", input = NULL, output = NULL)
   if (!file.exists(file)) fail("The configuration file does not exist: ", file)
   document <- yaml::read_yaml(file)
   cfg <- read_config(document, input_required = FALSE)
-  default_period <- identical(cfg$period, read_config(input_required = FALSE)$period)
+  reference <- read_config(input_required = FALSE)
+  event_settings <- c("period", "heatwaves", "regional_days", "clustering")
+  default_events <- identical(cfg[event_settings], reference[event_settings])
   example <- is.null(cfg$input$file) && is.null(input) && config_file != "hourly"
   if (example || identical(config_file, "hourly")) {
     profiles <- c("prepared", if (identical(config_file, "hourly")) "hourly")
@@ -44,10 +46,10 @@ demo_settings <- function(config_file = "prepared", input = NULL, output = NULL)
       for (section in names(overrides)) for (key in names(overrides[[section]])) {
         value <- overrides[[section]][[key]]
         if (section == "figures" && key == "representative_events") {
-          # Changing the period can reclassify events even when a preset date
-          # remains in range. Use automatic choices unless dates were supplied
-          # in the main figures settings.
-          if (!default_period) next
+          # Preset dates describe the reference event catalog. Changing event
+          # selection can invalidate them even when the dates stay in range.
+          # Explicit dates in the main figures settings still take precedence.
+          if (!default_events) next
           for (type in names(value)) {
             if (is.null(cfg$figures$representative_events[[type]])) {
               cfg$figures$representative_events[type] <- value[type]
