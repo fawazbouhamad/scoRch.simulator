@@ -76,7 +76,7 @@ degree_axis <- function(nc, name, limit, mapped, named = FALSE) {
   unit <- tolower(trimws(paste(dim$units, collapse = "")))
   angle <- !nzchar(unit) || unit %in% c("e", "east", "w", "west", "n", "north", "s", "south") ||
     (grepl("deg|\u00b0", unit) && is.na(tryCatch(temperature_unit(unit), error = function(e) NA_character_)))
-  if (named && !grepl("^(m|km|met(er|re)s?|rad(ians?)?)$", unit) &&
+  if (named && !grepl("^(m|km|(kilo)?met(er|re)s?|rad(ians?)?)([ _].*)?$", unit) &&
       is.na(tryCatch(temperature_unit(unit), error = function(e) NA_character_))) angle <- TRUE
   isTRUE(dim$create_dimvar) && is.numeric(dim$vals) && all(is.finite(dim$vals)) && all(abs(dim$vals) <= limit) &&
     angle && !grepl("projection|grid_", tolower(nc_text(nc, name, "standard_name"))) && !name %in% mapped &&
@@ -242,7 +242,7 @@ temperature_evidence <- function(nc, name) {
                          "|surface air temperature ")),
        other = tolower(standard) == "surface_temperature" ||
          says("dew|sst|skt|soil|skin|anom|^(d2m|tdps|ts|tos)$",
-              paste0(" (dew|dewpoint|wet bulb|wetbulb|sea|soil|skin|lake|ice|potential|apparent|brightness) ",
+              paste0(" (dew|dewpoint|wet bulb|wetbulb|sea|soil|skin|lake|ice|potential|apparent|brightness|water|below|depth) ",
                      "|anomal| land surface temperature ")))
 }
 

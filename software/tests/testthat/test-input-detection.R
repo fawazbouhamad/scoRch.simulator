@@ -246,7 +246,10 @@ test_that("sub-daily air temperature counts as 2 m temperature only when the fil
   # dimension leaves no other trace, so that name alone does not say 2 m.
   upper <- list(subdaily("t", "t", "Temperature"), subdaily("ta", "ta", "Air Temperature"), subdaily("ta850", "ta850"),
                 subdaily("sigma", "air", "4xDaily Air temperature at sigma level 995"),
-                subdaily("two-mb", "temp", "Temperature at 2 mb"))
+                subdaily("two-mb", "temp", "Temperature at 2 mb"),
+                # Two metres of water or of ground are not the air at 2 m.
+                subdaily("below", "T", "Temperature 2 m below surface"),
+                subdaily("water", "T", "Water temperature 2 m"))
   for (file in upper) {
     question <- detect_input(file)$questions$variable
     expect_identical(question$title, "Is this the temperature to analyze?", info = basename(file))
@@ -542,7 +545,7 @@ test_that("coordinates that are not longitudes and latitudes in degrees are not 
     expect_identical(detect_input(called(paste0("called-", i), loose[i]))[c("longitude", "latitude")],
                      list(longitude = "lon", latitude = "lat"), info = loose[i])
   }
-  for (unit in c("radians", "m", "km")) {
+  for (unit in c("radians", "m", "km", "kilometers", "metres_east")) {
     expect_error(detect_input(called(paste0("called-", unit), unit)), "projected or rotated", info = unit)
   }
 

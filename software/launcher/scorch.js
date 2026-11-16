@@ -563,7 +563,15 @@
     const row = document.querySelector('.chooser-new');
     if (!row) return;
     row.hidden = !show;
-    if (show) document.getElementById('chooser_name').focus();
+    if (!show) return;
+    // What is highlighted or written in the path field when "Use this folder"
+    // is clicked must have been chosen after the name: both start afresh.
+    const open = document.querySelector('.chooser'), field = document.getElementById('chooser_path');
+    document.querySelectorAll('.chooser-row[aria-selected="true"]').forEach(other => other.setAttribute('aria-selected', 'false'));
+    const rows = document.getElementById('chooser_list');
+    if (rows) rows.removeAttribute('aria-activedescendant');
+    if (open && field) { field.value = open.dataset.folder; showEnd(field); }
+    document.getElementById('chooser_name').focus();
   }
   document.addEventListener('click', event => {
     if (!event.target.closest('.chooser')) return;
@@ -588,7 +596,7 @@
       const name = row && !row.hidden ? document.getElementById('chooser_name').value.trim() : '';
       const field = document.getElementById('chooser_path').value.trim();
       const open = document.querySelector('.chooser');
-      if (name && !picked() && open && field === open.dataset.folder) act('mkdir', name); else act('use', field);
+      if (name && !picked() && open && field === open.dataset.folder.trim()) act('mkdir', name); else act('use', field);
     } else act(what);
   });
   document.addEventListener('dblclick', event => {

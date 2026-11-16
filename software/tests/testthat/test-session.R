@@ -150,3 +150,22 @@ test_that("a page that opened no window long ago does not delay the end of the a
   w$wait(0.4)
   expect_identical(w$tally$quits, 1L)
 })
+
+test_that("a window that opens accounts for its own page, not for one that expired long ago", {
+  project <- withr::local_tempdir()
+  withr::local_dir(project)
+  w <- window_sessions(grace = 0.1, patience = 1)
+  key <- list(QUERY_STRING = "?token=s3cret")
+  only <- w$join()
+  Sys.sleep(0.05)
+  # The page source is looked at: a hand-out that opens no window. It expires.
+  w$page(key)
+  Sys.sleep(1.3)
+  # Reload: the page is asked for, the old window goes, the new one opens, and is closed at once.
+  w$page(key)
+  only$close()
+  again <- w$join()
+  again$close()
+  w$wait(0.4)
+  expect_identical(w$tally$quits, 1L)
+})

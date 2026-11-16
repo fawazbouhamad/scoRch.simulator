@@ -108,8 +108,9 @@ install_scorch <- function(path = NULL, ref = "v1.3.0", lib = NULL, upgrade = "n
       # an object) is not an installed package; the one being loaded is named then.
       reason <- conditionMessage(failed)
       named <- sub("^[^'\u2018]*['\u2018]([A-Za-z][A-Za-z0-9.]*)['\u2019].*$", "\\1", reason)
-      # A library file R could not load lies in the folder of the package it belongs to.
-      inside <- regmatches(reason, regexpr("[A-Za-z][A-Za-z0-9.]*(?=/libs/)", reason, perl = TRUE))
+      # A library file or code file R could not load lies in the folder of the package it belongs to.
+      inside <- regmatches(reason, regexpr(
+        "[A-Za-z][A-Za-z0-9.]*(?=/(libs(/[^/]+)?|R)/[^/]+[.](dll|so|dylib|rdb|rdx)(?![A-Za-z0-9]))", reason, perl = TRUE))
       if (length(inside)) named <- inside
       if (!inherits(failed, "packageNotFoundError") && !nzchar(system.file(package = named))) named <- name
       stop(pkg, " is installed, but the SCORCH window cannot open: ",
@@ -211,7 +212,10 @@ install_scorch <- function(path = NULL, ref = "v1.3.0", lib = NULL, upgrade = "n
            if (length(left)) paste0("An earlier installation into this library was cut off and left a lock behind; ",
                                     "R installs nothing there while it exists:\n  ", paste(left, collapse = "\n  "),
                                     "\nClose every other R session, delete ",
-                                    if (length(left) > 1L) "these folders" else "this folder", ", ", again)
+                                    if (length(left) > 1L) "these folders" else "this folder", ", ", again,
+                                    # Unless R itself named the lock, something else may have failed as well.
+                                    if (!any(grepl("failed to lock directory", c(reported, warned), fixed = TRUE)))
+                                      paste0("\n", why()))
            else if (in_use) paste0(restart, ", ", again, " R cannot replace a package while an R session is using it; ",
                                    "close any other R session too.")
            else why(), call. = FALSE)
