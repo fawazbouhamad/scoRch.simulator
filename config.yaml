@@ -1,6 +1,6 @@
 # SCORCH configuration: all analysis settings in one file
 # Run scoRch.simulator::run_scorch("config.yaml") from this file's folder,
-# or choose Load saved settings in the RStudio setup window.
+# or choose Reuse a saved configuration in the SCORCH window.
 # Edit the paths and period first. Other settings keep the SCORCH study defaults
 # unless you choose to change them. Keep the indentation; # starts a comment.
 

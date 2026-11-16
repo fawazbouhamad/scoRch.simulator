@@ -231,7 +231,7 @@ decode_time <- function(values, units, calendar = "standard") {
 cf_time_seconds <- function(values, units, calendar = "standard") {
   pattern <- paste0("^\\s*([A-Za-z]+)\\s+since\\s+",
                     "(\\d{1,4}-\\d{1,2}-\\d{1,2})",
-                    "(?:[ T](\\d{1,2}):(\\d{2})(?::(\\d{2}(?:\\.\\d+)?))?)?",
+                    "(?:[ T](\\d{1,2}):(\\d{1,2})(?::(\\d{1,2}(?:\\.\\d+)?))?)?",
                     "(?:\\s*(Z|UTC|[+-]\\d{1,2}:?\\d{2}))?\\s*$")
   parts <- regmatches(units, regexec(pattern, units, perl = TRUE))[[1]]
   if (length(parts) == 0) {

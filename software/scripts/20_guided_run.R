@@ -44,19 +44,57 @@ season_limits <- function(months) {
   c(start, 1L + (start + length(months) - 2L) %% 12L)
 }
 
-input_controls <- function(input, base) {
+# Calendar months in words, as runs: "June-August", "January-May, September".
+month_runs <- function(months) {
+  months <- sort(unique(as.integer(months)))
+  if (!length(months)) return("")
+  runs <- unname(split(months, cumsum(c(TRUE, diff(months) > 1L))))
+  # December and January join when both ends of the year are present.
+  if (length(runs) > 1L && months[1] == 1L && months[length(months)] == 12L) {
+    runs <- c(runs[-c(1L, length(runs))], list(c(runs[[length(runs)]], runs[[1L]])))
+  }
+  paste(vapply(runs, function(run) {
+    if (length(run) == 1L) month.name[run] else paste(month.name[run[1L]], month.name[run[length(run)]], sep = "\u2013")
+  }, ""), collapse = ", ")
+}
+
+# The selected dates in words that stay true for a year-round file: which
+# months, in how many years, and what the file holds outside the selection.
+period_summary <- function(dates, months, available) {
+  start <- season_start_month(months)
+  years <- season_year(dates, start)
+  crosses <- length(months) < 12L && any(months < start)
+  name <- function(year) if (crosses) sprintf("%d/%02d", year, (year + 1L) %% 100L) else as.character(year)
+  in_file <- sort(unique(as.integer(format(available, "%m"))))
+  list(months = if (length(months) == 12L) "Every month" else month_runs(months),
+       years = if (min(years) == max(years)) name(min(years)) else paste(name(min(years)), name(max(years)), sep = "\u2013"),
+       n_years = length(unique(years)), n_days = length(dates), first = min(dates), last = max(dates),
+       selected = sort(unique(as.integer(months))), in_file = in_file,
+       unused = month_runs(setdiff(in_file, months)), absent = month_runs(setdiff(months, in_file)))
+}
+
+# How the file is read: the fields of the window, then the answers given to
+# its questions for anything still left to detection.
+input_controls <- function(input, base, answers = list()) {
   for (key in c("format", "variable", "longitude", "latitude", "time", "units")) {
     value <- input[[paste0("input_", key)]]
     if (!is.null(value)) base[[key]] <- if (nzchar(trimws(value))) trimws(value) else "auto"
   }
+  for (key in names(answers)) if (identical(base[[key]], "auto")) base[[key]] <- answers[[key]]
   base
 }
 
-guided_settings <- function(base, form, path, info, dest) {
+guided_settings <- function(base, form, path, info, dest, answers = list()) {
   cfg <- base
-  cfg$input <- input_controls(form, base$input)
+  cfg$input <- input_controls(form, base$input, answers)
   cfg$input["file"] <- list(path)
   cfg$input$format <- info$format
+  # A name that `auto` would not find is written out for scripted replays.
+  expected <- reader_names(info$format)
+  for (key in names(expected)) {
+    if (identical(cfg$input[[key]], "auto") && length(info[[key]]) == 1L && !info[[key]] %in% expected[[key]])
+      cfg$input[[key]] <- info[[key]]
+  }
   if (isTRUE(form$native_grid)) cfg$input["era5_cell_size_deg"] <- list(NULL)
   else cfg$input$era5_cell_size_deg <- form$cell_size
   cfg$input["processed_file"] <- list(if (info$format == "era5" && isTRUE(form$save_tmax))
@@ -86,7 +124,7 @@ guided_settings <- function(base, form, path, info, dest) {
   if (!is.null(checked$period$start_date)) keep <- keep & dates >= checked$period$start_date
   if (!is.null(checked$period$end_date)) keep <- keep & dates <= checked$period$end_date
   if (!any(keep)) fail("Your chosen months and dates contain no observations in this dataset.")
-  list(config = cfg, dates = dates[keep])
+  list(config = cfg, dates = dates[keep], period = period_summary(dates[keep], months, dates))
 }
 
 write_guided_config <- function(cfg, where) {
@@ -104,9 +142,13 @@ execute_guided_run <- function(settings, parent, source) {
   config <- file.path(dest, "config.yaml")
   summary <- file.path(dest, "Summary.txt")
   result <- NULL
+  cell_tmax <- NULL
   problem <- tryCatch({
     write_guided_config(cfg, dest)
-    result <- run_scorch_analysis(config, source = source)
+    # The event map colours cells by temperature; keep those values only.
+    result <- run_scorch_analysis(config, source = source, observe = function(result, tmax) {
+      cell_tmax <<- tryCatch(cluster_cell_tmax(result, tmax), error = function(e) NULL)
+    })
     NULL
   }, error = function(e) conditionMessage(e))
   if (!is.null(problem) && !file.exists(summary)) {
@@ -115,7 +157,7 @@ execute_guided_run <- function(settings, parent, source) {
   }
   cat("\nRUN FILES\n  Results folder: ", dest, "\n  Saved settings: ", config, "\n",
       file = summary, append = TRUE, sep = "")
-  list(result = result, folder = dest, summary = summary, problem = problem)
+  list(result = result, folder = dest, summary = summary, problem = problem, cell_tmax = cell_tmax)
 }
 
 open_run_file <- function(path) {

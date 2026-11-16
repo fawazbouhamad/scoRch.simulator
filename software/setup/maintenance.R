@@ -195,13 +195,56 @@ prepare_test_data <- function(ref = NA_character_) {
   cat("fixtures written:\n"); print(file.info(list.files(out, full.names = TRUE))["size"])
 }
 
+# The demonstration of the setup window: one event of each type from the
+# bundled example with the study defaults. Regenerate it whenever the method,
+# its defaults or the example data change; a package test compares the two.
+make_showcase <- function() {
+  library(scoRch.simulator)
+  target <- file.path("software", "launcher", "showcase.json")
+  json <- jsonlite::toJSON(scoRch.simulator:::build_showcase(), auto_unbox = TRUE, digits = NA, null = "null")
+  writeLines(enc2utf8(as.character(json)), target, useBytes = TRUE)
+  cat(sprintf("Wrote %s (%s bytes) from the installed scoRch.simulator %s.\n", target,
+              format(file.size(target), big.mark = ","), as.character(utils::packageVersion("scoRch.simulator"))))
+}
+
+# A release names one version everywhere a reader or the installer looks:
+# the package, the citation, the installer's default, the README block and
+# the reference summary. Development versions (x.y.z.9000) are not checked.
+check_release <- function() {
+  version <- unname(read.dcf(file.path("software", "setup", "DESCRIPTION"), "Version")[1L, 1L])
+  if (length(strsplit(version, ".", fixed = TRUE)[[1L]]) > 3L) {
+    cat(sprintf("scoRch.simulator %s is a development version; release references were not checked.\n", version))
+    return(invisible(TRUE))
+  }
+  tag <- paste0("v", version)
+  readme <- readLines("README.md", encoding = "UTF-8")
+  has <- function(lines, text) any(grepl(text, lines, fixed = TRUE))
+  checks <- c(
+    "CITATION.cff names this version" = has(readLines("CITATION.cff"), paste0("version: ", version)),
+    "install_scorch() installs this release by default" =
+      has(readLines(file.path("software", "setup", "install.R")), sprintf('ref = "%s"', tag)),
+    "the README block sources this release's installer" =
+      has(readme, sprintf("scoRch.simulator/%s/software/setup/install.R", tag)),
+    "the README block installs and opens with one call" = has(readme, "install_scorch()"),
+    "the README links this release" = has(readme, sprintf("releases/tag/%s", tag)),
+    "demo/output/Summary.txt was written by this version" =
+      identical(readLines(file.path("demo", "output", "Summary.txt"), n = 1L),
+                sprintf("scoRch.simulator %s results: COMPLETE", version)))
+  cat(sprintf("%-55s %s\n", names(checks), ifelse(checks, "yes", "NO")), sep = "")
+  if (!all(checks)) stop("Release references do not all name ", tag, ".", call. = FALSE)
+  cat(sprintf("Release references agree on %s.\n", tag))
+  invisible(TRUE)
+}
+
 maintenance_help <- function() {
   cat(paste0(
     "Run from the repository root:\n",
     "  Rscript software/setup/maintenance.R compare [output_folder]\n",
     "  Rscript software/setup/maintenance.R check-input [local_sample.nc]\n",
     "  Rscript software/setup/maintenance.R make-demo <SCORCH_NA_processed_1996_2025.nc>\n",
-    "  Rscript software/setup/maintenance.R prepare-fixtures <study_repository>\n"
+    "  Rscript software/setup/maintenance.R prepare-fixtures <study_repository>\n",
+    "  Rscript software/setup/maintenance.R make-showcase\n",
+    "  Rscript software/setup/maintenance.R check-release\n"
   ))
 }
 
@@ -211,7 +254,8 @@ if (sys.nframe() == 0L) {
     maintenance_help()
   } else {
     commands <- list(compare = compare_output, "check-input" = check_input,
-                     "make-demo" = make_demo_data, "prepare-fixtures" = prepare_test_data)
+                     "make-demo" = make_demo_data, "prepare-fixtures" = prepare_test_data,
+                     "make-showcase" = make_showcase, "check-release" = check_release)
     if (!args[1] %in% names(commands)) {
       stop("Unknown maintenance command. Use --help to list commands.", call. = FALSE)
     }

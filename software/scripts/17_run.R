@@ -36,12 +36,14 @@
 #'
 #' @param config Path of a YAML configuration file (an edited copy from
 #'   [write_scorch_config()] or [scorch_template()]), or a list with the same
-#'   structure. With no arguments, an interactive session opens a local
-#'   setup window. Choose a NetCDF, ZIP, ERA5 folder or the example, review
-#'   settings and the results folder, then click Run analysis. Batch sessions
-#'   read or create `config.yaml` in the working folder. A YAML file
-#'   with a null input runs the bundled US example. Explicit `NULL` uses the
-#'   study defaults and requires temperature supplied as `tmax`.
+#'   structure. With no arguments, an interactive session opens the SCORCH
+#'   setup window. Choose your own data (a prepared NetCDF, a raw ERA5 NetCDF,
+#'   a ZIP or a folder of ERA5 files) or the included example, review the
+#'   months and the results folder, then click Run analysis; nothing is
+#'   analysed before that click, and every run gets its own numbered folder.
+#'   Batch sessions read or create `config.yaml` in the working folder. A YAML
+#'   file with a null input runs the bundled North America example. Explicit
+#'   `NULL` uses the study defaults and requires temperature supplied as `tmax`.
 #' @param tmax Optional `scorch_tmax` object (from [read_tmax()] or
 #'   [tmax_from_array()]) to analyse instead of reading the file named in the
 #'   configuration. The configured warm-season months and date limits also
@@ -51,8 +53,9 @@
 #' @return A `scorch_result` list (invisibly) with the configuration, the
 #'   input description and the tables of every stage: `heatwaves`, `regional`,
 #'   `clusters`, `ellipses`, `events`, `power_law` and `lgcp`. Use it with
-#'   [scorch_figure()] to redraw a result plot. Closing setup before a completed
-#'   analysis returns NULL.
+#'   [scorch_figure()] to redraw a result plot. The setup window returns the
+#'   result of its last completed analysis, or `NULL` when it is closed before
+#'   one; `scoRch.simulator::run_scorch()` opens it again at any time.
 #' @examples
 #' \donttest{
 #' old <- setwd(tempdir())                              # results go to tempdir()/output
@@ -77,7 +80,9 @@ run_scorch <- function(config = NULL, tmax = NULL, trace_date = NULL) {
   run_scorch_analysis(config, tmax, trace_date)
 }
 
-run_scorch_analysis <- function(config, tmax = NULL, trace_date = NULL, source = NULL) {
+# `observe`, used by the setup window, sees the finished result beside the
+# temperature it came from. It cannot change what a run computes or writes.
+run_scorch_analysis <- function(config, tmax = NULL, trace_date = NULL, source = NULL, observe = NULL) {
   started <- Sys.time()
   if (is.character(config) && length(config) == 1L && is.null(tmax)) {
     config <- demo_settings(config)
@@ -204,6 +209,7 @@ run_scorch_analysis <- function(config, tmax = NULL, trace_date = NULL, source =
   if (!identical(warnings, "  None.")) message("Warnings:\n", paste(warnings, collapse = "\n"))
   message("Results folder: ", normalizePath(out, winslash = "/"))
   message("Open Summary.txt first.")
+  if (is.function(observe)) observe(result, tmax)
   invisible(result)
 }
 
