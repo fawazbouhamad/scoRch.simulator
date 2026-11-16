@@ -276,13 +276,19 @@ long_paths_switch <- function() {
 }
 
 # Whether this R session can make a folder whose path has more than 260
-# characters. What it made on the way is removed again.
+# characters. What it made on the way is removed again. The answer cannot
+# change while R runs, so the folder is tried once per session. It is made in
+# R's own temporary folder under a name of its own: it is no file of a run.
+long_path_probe <- new.env(parent = emptyenv())
 long_path_works <- function() {
-  top <- scratch_name(".scorch-long-", tempdir())
-  on.exit(unlink(top, recursive = TRUE), add = TRUE)
-  deep <- file.path(top, strrep("a", 120L), strrep("b", 120L))
-  isTRUE(tryCatch(dir.create(deep, recursive = TRUE, showWarnings = FALSE), error = function(e) FALSE)) &&
-    dir.exists(deep)
+  if (is.null(long_path_probe$works)) {
+    top <- tempfile(".scorch-long-")
+    on.exit(unlink(top, recursive = TRUE), add = TRUE)
+    deep <- file.path(top, strrep("a", 120L), strrep("b", 120L))
+    long_path_probe$works <- isTRUE(tryCatch(dir.create(deep, recursive = TRUE, showWarnings = FALSE),
+                                             error = function(e) FALSE)) && dir.exists(deep)
+  }
+  long_path_probe$works
 }
 
 # Whether paths of 260 characters and more can be used: the switch of Windows

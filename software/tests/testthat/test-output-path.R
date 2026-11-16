@@ -382,3 +382,84 @@ test_that("on Windows a results folder with a long name of its own is filled up 
                "The results folder has a path of 212 characters, .* at most 211 characters; ")
   expect_false(dir.exists(dirname(beyond)))
 })
+
+test_that("with the long-path switch of Windows on, the probe is no file of the run and is tried once", {
+  local_figure_test_dpi()
+  probe <- scoRch.simulator:::long_path_probe
+  kept <- probe$works
+  withr::defer(probe$works <- kept)
+  probe$works <- NULL
+  parent <- normalizePath(tempfile("scorch-names-"), winslash = "/", mustWork = FALSE)
+  out <- file.path(parent, "results")
+  seen <- character()
+  works <- scoRch.simulator:::long_path_works
+  testthat::local_mocked_bindings(
+    long_paths_switch = function() 1L,
+    scratch_name = function(...) {
+      path <- scratch_name(...)
+      seen <<- c(seen, path)
+      path
+    }, .package = "scoRch.simulator")
+  before <- list.files(tempdir(), pattern = "^[.]scorch-long-", all.files = TRUE)
+  suppressMessages(suppressWarnings(run_scorch(small_config(out), tmax = small_tmax())))
+  # The runner of GitHub has the switch on: the folder that tries a long path
+  # used to be named like the files of a run, in R's temporary folder.
+  expect_true(length(seen) > 0L)
+  expect_true(all(startsWith(seen, paste0(parent, "/.scorch-"))))
+  expect_identical(list.files(tempdir(), pattern = "^[.]scorch-long-", all.files = TRUE), before)
+  expect_false(is.null(probe$works))
+  # A second check gives the stored answer and tries nothing.
+  probe$works <- "stored"
+  expect_identical(works(), "stored")
+})
+
+test_that("where Windows takes long paths, a run fills a results folder far beyond 260 characters", {
+  skip_if_not(.Platform$OS.type == "windows", "Only Windows limits the length of a path in this way.")
+  skip_if_not(scoRch.simulator:::long_paths_enabled(), "The long-path switch of Windows is off on this computer.")
+  local_figure_test_dpi()
+  base <- file.path(normalizePath(tempdir(), winslash = "/"), basename(tempfile("scorch-far-")))
+  place <- path_of(nchar(base) + 240L, base)
+  out <- file.path(place, "SCORCH_run_001")
+  expect_null(output_path_problem(out))
+  result <- suppressMessages(suppressWarnings(run_scorch(small_config(out), tmax = small_tmax())))
+  expect_s3_class(result, "scorch_result")
+  written <- list.files(out, recursive = TRUE, full.names = TRUE)
+  expect_gt(max(nchar(written)), 260L)
+  expect_match(readLines(file.path(out, "Summary.txt"))[1], "results: COMPLETE")
+  expect_false(any(grepl("[.]scorch-", list.files(place, all.files = TRUE, recursive = TRUE))))
+})
+
+test_that("run number 1000 after 999 does not change whether a results folder is accepted", {
+  testthat::local_mocked_bindings(long_paths_enabled = function() FALSE, .package = "scoRch.simulator")
+  problem <- function(out) output_path_problem(out, windows = TRUE)
+  # The staging folder beside a run (22 characters) is longer than either name.
+  expect_lt(nchar("SCORCH_run_1000"), 22L)
+  expect_null(problem(file.path(path_of(188L), "SCORCH_run_999")))
+  expect_null(problem(file.path(path_of(188L), "SCORCH_run_1000")))
+  expect_identical(sub("SCORCH_run_999$", "", problem(file.path(path_of(189L), "SCORCH_run_999"))),
+                   sub("SCORCH_run_1000$", "", problem(file.path(path_of(189L), "SCORCH_run_1000"))))
+  root <- withr::local_tempdir()
+  dir.create(file.path(root, "SCORCH_run_999"))
+  expect_identical(basename(scoRch.simulator:::next_run_folder(root)), "SCORCH_run_1000")
+})
+
+test_that("a guided run that stops at its start keeps its settings and says why in Summary.txt", {
+  parent <- normalizePath(withr::local_tempdir(), winslash = "/")
+  dir.create(file.path(parent, "SCORCH_run_999"))
+  sentence <- "The results folder has a path that Windows cannot use"
+  testthat::local_mocked_bindings(output_path_problem = function(out, ...) sentence, .package = "scoRch.simulator")
+  source <- scoRch.simulator:::open_temperature_source(example_file)
+  withr::defer(scoRch.simulator:::close_temperature_source(source))
+  cfg <- scoRch.simulator:::read_config(list(input = list(file = NULL)), input_required = FALSE)
+  done <- suppressMessages(scoRch.simulator:::execute_guided_run(list(config = cfg), parent, source))
+  expect_identical(basename(done$folder), "SCORCH_run_1000")
+  expect_identical(done$problem, sentence)
+  expect_null(done$result)
+  expect_setequal(list.files(done$folder, all.files = TRUE, no.. = TRUE), c("config.yaml", "Summary.txt"))
+  summary <- readLines(done$summary)
+  expect_identical(summary[1], "SCORCH analysis stopped")
+  expect_true(sentence %in% summary)
+  expect_true(any(grepl("Results folder: .*SCORCH_run_1000$", summary)))
+  expect_identical(yaml::read_yaml(file.path(done$folder, "config.yaml"))$output$directory, done$folder)
+  expect_false(any(grepl("^[.]scorch-", list.files(parent, all.files = TRUE))))
+})
