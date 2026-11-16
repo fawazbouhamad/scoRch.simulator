@@ -71,20 +71,80 @@ scorch_ui <- function() {
         tags$span("Reopen this window at any time with ", tags$code("scoRch.simulator::run_scorch()"),
                   ". The package stays installed."),
         shiny::conditionalPanel("output.screen != 'welcome'",
-                                shiny::actionButton("done", "Close", class = "link-button")))))
+                                shiny::actionButton("done", "Close", class = "link-button")))),
+    lang = "en")
+}
+
+# The fields of the Advanced section: the name read_config() gives each
+# setting in a message, and the label the window shows beside its field. A
+# problem with a setting is reported under that label.
+SETTING_LABELS <- c(
+  "threshold_percentile" = "Local temperature percentile",
+  "regional_days: percentile" = "Regional extent percentile",
+  "min_duration_days" = "Minimum heatwave duration (days)",
+  "min_exceeding_days" = "Minimum days at or above threshold",
+  "eps_values" = "Candidate distances (grid cells)",
+  "min_samples_values" = "Candidate neighborhood sizes",
+  "scale_factor" = "Ellipse scale factor",
+  "bootstrap_repetitions" = "Bootstrap repetitions",
+  "seed_daily_maxima" = "Random seed for daily maxima",
+  "seed_event_maxima" = "Random seed for event maxima",
+  "lgcp: covariates" = "Predictors",
+  "raster_km" = "Raster cell size (km)",
+  "window_margin_km" = "Window margin (km)",
+  "era5_cell_size_deg" = "Output grid size (degrees)",
+  "input: processed_file" = "Save prepared daily Tmax in this run folder",
+  "input: format" = "Data format",
+  "input: units" = "Temperature units",
+  "input: variable" = "Temperature variable",
+  "input: time" = "Time coordinate",
+  "input: longitude" = "Longitude coordinate",
+  "input: latitude" = "Latitude coordinate")
+
+# Stop on a field of the Advanced section. The window repeats such a message
+# where that section begins, because the Review card can be far below it.
+fail_advanced <- function(...) {
+  stop(structure(class = c("advanced_setting", "error", "condition"), list(message = paste0(...), call = NULL)))
+}
+
+# What read_config() says about a refused setting, in the words of the
+# window: the label beside the field for the name in the YAML file, and
+# "empty" for a field without a value.
+form_problem <- function(message) {
+  if (startsWith(message, "The setting 'start_date' must be on or before")) {
+    fail("The first of the 'Analysis dates' must be on or before the last.")
+  }
+  if (startsWith(message, "The setting 'lgcp: covariates' must list")) {
+    fail_advanced(sprintf("Tick at least one of the '%s'.", SETTING_LABELS[["lgcp: covariates"]]))
+  }
+  if (startsWith(message, "The input longitude, latitude and time dimension names must be distinct")) {
+    fail_advanced(sprintf("'%s', '%s' and '%s' must name three different dimensions.", SETTING_LABELS[["input: longitude"]],
+                          SETTING_LABELS[["input: latitude"]], SETTING_LABELS[["input: time"]]))
+  }
+  inside <- FALSE
+  for (key in names(SETTING_LABELS)) {
+    quoted <- paste0("'", key, "'")
+    if (!grepl(quoted, message, fixed = TRUE)) next
+    message <- gsub(quoted, paste0("'", SETTING_LABELS[[key]], "'"), message, fixed = TRUE)
+    inside <- TRUE
+  }
+  # An emptied field reaches R as a missing value.
+  for (blank in c("(it is 'NA')", "(it is '')")) message <- sub(blank, "(it is empty)", message, fixed = TRUE)
+  if (inside) fail_advanced(message) else fail(message)
 }
 
 settings_ui <- function(cfg) {
   tags <- shiny::tags
-  num <- function(section, key, label, min = NA, step = NA)
-    shiny::numericInput(paste(section, key, sep = "_"), label, cfg[[section]][[key]], min = min, step = step)
+  label <- function(name) SETTING_LABELS[[name]]
+  num <- function(section, key, min = NA, step = NA, name = key)
+    shiny::numericInput(paste(section, key, sep = "_"), label(name), cfg[[section]][[key]], min = min, step = step)
   choices <- stats::setNames(1:12, month.name)
   months <- season_limits(cfg$period$warm_season_months)
   dates <- cfg$period
   cell_size <- cfg$input$era5_cell_size_deg
-  override <- function(key, label) shiny::textInput(paste0("input_", key), label, cfg$input[[key]])
-  comma <- function(key, label) shiny::textInput(paste0("clustering_", key), label,
-                                                  paste(cfg$clustering[[key]], collapse = ", "))
+  override <- function(key) shiny::textInput(paste0("input_", key), label(paste("input:", key)), cfg$input[[key]])
+  comma <- function(key) shiny::textInput(paste0("clustering_", key), label(key),
+                                           paste(cfg$clustering[[key]], collapse = ", "))
   shiny::tagList(
     tags$div(class = "fields",
       shiny::selectInput("month_from", "First month each year", choices, months[1], selectize = FALSE),
@@ -93,52 +153,55 @@ settings_ui <- function(cfg) {
     shiny::checkboxInput("limit_dates", "Limit the analysis dates",
                          !is.null(dates$start_date) || !is.null(dates$end_date)),
     shiny::conditionalPanel("input.limit_dates", shiny::uiOutput("date_fields")),
+    # A refused advanced setting, repeated here for the eye. The Review card
+    # announces it, so this copy stays out of the spoken updates.
+    shiny::uiOutput("advanced_problem", `aria-live` = "off"),
     tags$details(class = "advanced", tags$summary("Advanced settings"),
       tags$p(class = "fine", paste("The defaults reproduce the SCORCH study method.",
                                    "Review them when you change the region, season or grid resolution.")),
       tags$h3("Heatwave definition"),
       tags$div(class = "fields",
-        num("heatwaves", "threshold_percentile", "Local temperature percentile", 0, 0.5),
-        num("regional_days", "percentile", "Regional extent percentile", 0, 0.5),
-        num("heatwaves", "min_duration_days", "Minimum heatwave duration (days)", 1, 1),
-        num("heatwaves", "min_exceeding_days", "Minimum days at or above threshold", 1, 1)),
+        num("heatwaves", "threshold_percentile", 0, 0.5),
+        num("regional_days", "percentile", 0, 0.5, name = "regional_days: percentile"),
+        num("heatwaves", "min_duration_days", 1, 1),
+        num("heatwaves", "min_exceeding_days", 1, 1)),
       tags$h3("Clustering and ellipses"),
       tags$div(class = "fields",
-        comma("eps_values", "Candidate distances (grid cells)"),
-        comma("min_samples_values", "Candidate neighborhood sizes"),
-        num("ellipses", "scale_factor", "Ellipse scale factor", 0, 0.05)),
+        comma("eps_values"),
+        comma("min_samples_values"),
+        num("ellipses", "scale_factor", 0, 0.05)),
       tags$h3("Power-law model"),
       tags$div(class = "fields",
-        num("power_law", "bootstrap_repetitions", "Bootstrap repetitions", 1, 1),
-        num("power_law", "seed_daily_maxima", "Random seed for daily maxima", step = 1),
-        num("power_law", "seed_event_maxima", "Random seed for event maxima", step = 1)),
+        num("power_law", "bootstrap_repetitions", 1, 1),
+        num("power_law", "seed_daily_maxima", step = 1),
+        num("power_law", "seed_event_maxima", step = 1)),
       tags$h3("Spatial model"),
-      shiny::checkboxGroupInput("lgcp_covariates", "Predictors",
+      shiny::checkboxGroupInput("lgcp_covariates", label("lgcp: covariates"),
         c("Longitude" = "lon", "Latitude" = "lat", "Mean Tmax" = "mean_tmax", "Tmax standard deviation" = "std_tmax"),
         selected = cfg$lgcp$covariates, inline = TRUE),
       tags$div(class = "fields",
-        num("lgcp", "raster_km", "Raster cell size (km)", 0.000001, 1),
-        num("lgcp", "window_margin_km", "Window margin (km)", 0, 1)),
+        num("lgcp", "raster_km", 0.000001, 1),
+        num("lgcp", "window_margin_km", 0, 1)),
       shiny::conditionalPanel("output.rawInput",
         tags$h3("ERA5 preprocessing"),
         shiny::checkboxInput("native_grid", "Keep the input grid resolution", is.null(cell_size)),
         shiny::conditionalPanel("!input.native_grid",
-          shiny::numericInput("cell_size", "Output grid size (degrees)", if (is.null(cell_size)) 1 else cell_size,
+          # A configuration that keeps the input grid has no size; the field then starts at the study's.
+          shiny::numericInput("cell_size", label("era5_cell_size_deg"),
+                              if (is.null(cell_size)) scorch_defaults()$input$era5_cell_size_deg else cell_size,
                               min = 0.000001, step = 0.25)),
-        shiny::checkboxInput("save_tmax", "Save prepared daily Tmax in this run folder",
-                             !is.null(cfg$input$processed_file))),
+        shiny::checkboxInput("save_tmax", label("input: processed_file"), !is.null(cfg$input$processed_file))),
       tags$h3("How the file is read"),
       tags$p(class = "fine", "SCORCH detects these from the file. Change one only if the summary above is wrong."),
       tags$div(class = "fields",
-        shiny::selectInput("input_format", "Data format",
+        shiny::selectInput("input_format", label("input: format"),
           c("Detect automatically" = "auto", "Prepared daily Tmax" = "daily_tmax", "ERA5 temperature" = "era5"),
           cfg$input$format, selectize = FALSE),
-        shiny::selectInput("input_units", "Temperature units",
+        shiny::selectInput("input_units", label("input: units"),
           c("Read from file" = "auto", "Degrees Celsius" = "degC", "Kelvin" = "K",
             if (!cfg$input$units %in% c("auto", "degC", "K")) cfg$input$units),
           cfg$input$units, selectize = FALSE),
-        override("variable", "Temperature variable"), override("time", "Time coordinate"),
-        override("longitude", "Longitude coordinate"), override("latitude", "Latitude coordinate"))))
+        override("variable"), override("time"), override("longitude"), override("latitude"))))
 }
 
 # Thousands separators for counts shown to people.
@@ -150,18 +213,41 @@ period_text <- function(period) {
   else sprintf("%s in every selected year (%s)", period$months, period$years)
 }
 
+# How the points of raw input become the cells of a run, for the dataset
+# card. The rule is the reader's, in average_to_cells().
+cell_note <- function(lon, lat, size) {
+  if (is.null(size)) return(" and keeps this grid.")
+  if (!is.numeric(size) || length(size) != 1L || !is.finite(size) || size <= 0) return(".")
+  spacing <- function(values) abs(diff(sort(values))[1L])
+  per_cell <- size / c(spacing(lon), spacing(lat))
+  fits <- all(is.finite(per_cell)) && all(per_cell >= 1 - 1e-6 & abs(per_cell - round(per_cell)) <= 1e-6)
+  if (!fits) return(sprintf(". This grid cannot be averaged to %g\u00b0 cells.", size))
+  if (any(round(per_cell) > 1)) return(sprintf(" and averages complete blocks to %g\u00b0 cells.", size))
+  # Nothing is averaged: each point is labelled with the centre of the cell that holds it.
+  centre <- function(values) range((floor(values / size + 1e-6) + 0.5) * size)
+  sprintf(". Each point becomes one %g\u00b0 cell, labelled by its centre: %s to %s and %s to %s.", size,
+          format_degrees(centre(lon)[1L], c("E", "W")), format_degrees(centre(lon)[2L], c("E", "W")),
+          format_degrees(centre(lat)[1L], c("N", "S")), format_degrees(centre(lat)[2L], c("N", "S")))
+}
+
 # What SCORCH found in the selected data, as label and value pairs.
 dataset_facts <- function(info, cell_size) {
   degrees <- function(values) abs(diff(sort(values))[1L])
   raw <- info$format == "era5"
   hourly <- raw && any(info$per_day > 1L)
+  # A variable accepted without evidence that it is the daily maximum is not called one.
+  unsure <- any(info$identified %in% FALSE)
   months <- sort(unique(as.integer(format(info$dates, "%m"))))
-  lon <- wrap_longitudes(as.numeric(info$lon))$lon
+  # The reader moves 0-360 longitudes of raw input to -180..180; a prepared file keeps its own.
+  lon <- if (raw) wrap_longitudes(as.numeric(info$lon))$lon else as.numeric(info$lon)
   files <- if (is.null(info$files)) 1L else info$files
   c("Contains" = paste0(
-      if (hourly) sprintf("Raw 2 m temperature, %s values per day", paste(info$per_day, collapse = " or "))
+      if (hourly) sprintf("%s, %s values per day", if (unsure) "Sub-daily temperature" else "Raw 2 m temperature",
+                          paste(info$per_day, collapse = " or "))
+      else if (unsure) "Daily temperature"
       else if (raw) "Daily ERA5 2 m temperature" else "Prepared daily maximum temperature",
-      sprintf(" (variable %s)", paste(info$variable, collapse = ", ")),
+      sprintf(" (variable %s%s)", paste(info$variable, collapse = ", "),
+              if (unsure) ", not identified as daily maximum temperature" else ""),
       if (files > 1L) sprintf(", in %d NetCDF files", files)),
     "Date coverage" = sprintf("%s to %s: %s days, %s", min(info$dates), max(info$dates), count_label(length(info$dates)),
                               if (length(months) == 12L) "every month of the year" else month_runs(months)),
@@ -176,7 +262,7 @@ dataset_facts <- function(info, cell_size) {
                                           info$sample_c[1L], info$sample_c[2L])),
     if (raw) c("Preparation" = paste0(
       if (hourly) "SCORCH takes the maximum of each UTC day" else "Daily values are used as they are",
-      if (is.null(cell_size)) " and keeps this grid." else sprintf(" and averages complete blocks to %g\u00b0 cells.", cell_size))))
+      cell_note(lon, as.numeric(info$lat), cell_size))))
 }
 
 dataset_card <- function(title, path, info, bundled, note = NULL, answers = NULL, cell_size = 1) {
@@ -251,7 +337,9 @@ completion_ui <- function(finished) {
   shiny::tagList(
     tags$section(class = paste("card outcome", status),
       tags$span(class = "eyebrow", finished$dataset),
-      tags$h1(c(stopped = "Analysis stopped", complete = "Analysis complete",
+      # The heading can take the keyboard focus when the results replace the form.
+      tags$h1(id = "results-title", tabindex = "-1",
+              c(stopped = "Analysis stopped", complete = "Analysis complete",
                 warnings = "Analysis complete with warnings")[[status]]),
       if (stopped) tags$p(class = "problem", role = "alert", finished$problem)
       else tags$p(class = "lead", sprintf("%s compound events from %s ellipses on %s regionally extensive days.",

@@ -40,7 +40,8 @@ prepare_scorch_package <- function(root = ".", destination = tempfile("scoRch-pa
 # can be the last line of a pasted block. Running it again with this release
 # already installed downloads nothing and only opens the window.
 #   path   a downloaded repository instead of a GitHub download
-#   ref    release tag or branch to download
+#   ref    release tag, commit or branch to download
+#   lib    library folder to install into instead of R's first one
 #   force  reinstall a release that is already installed
 #   open   open the window afterwards (interactive sessions only)
 install_scorch <- function(path = NULL, ref = "v1.3.0", lib = NULL, upgrade = "never", force = FALSE,
@@ -48,6 +49,7 @@ install_scorch <- function(path = NULL, ref = "v1.3.0", lib = NULL, upgrade = "n
   pkg <- "scoRch.simulator"
   reopen <- "scoRch.simulator::run_scorch()"
   restart <- "Restart R (in RStudio: Session > Restart R)"
+  again <- "then run the installation block again."
   # Nothing below may stop to ask: a question would take the next pasted line as its answer.
   repos <- getOption("repos")
   if (is.null(repos) || !"CRAN" %in% names(repos) || is.na(repos[["CRAN"]]) || identical(repos[["CRAN"]], "@CRAN@")) {
@@ -70,31 +72,138 @@ install_scorch <- function(path = NULL, ref = "v1.3.0", lib = NULL, upgrade = "n
   }
   target <- normalizePath(if (is.null(lib)) .libPaths()[1L] else lib, winslash = "/", mustWork = TRUE)
   if (!writable(target)) stop("R cannot write to its package library: ", target, call. = FALSE)
+  # A library that R does not search by itself comes first while this call
+  # runs, so that what is installed there is found. The last message says how
+  # later sessions reach it.
+  fold <- if (.Platform$OS.type == "windows") tolower else identity
+  searched <- .libPaths()
+  aside <- ""
+  if (!fold(target) %in% fold(searched)) {
+    .libPaths(c(target, searched))
+    on.exit(.libPaths(searched), add = TRUE)
+    aside <- paste0("\nR does not search this library by itself. In this and in every new R session, run this line first:\n  ",
+                    ".libPaths(c(\"", target, "\", .libPaths()))")
+  }
   asked <- options(install.packages.compile.from.source = "never")
   on.exit(options(asked), add = TRUE)
+  # Where an installed copy came from: a release tag or commit that was
+  # downloaded, or "local" for a folder. It is written into its DESCRIPTION.
+  origin <- "Config/scoRch/source"
   on_disk <- function() {
-    found <- suppressWarnings(utils::packageDescription(pkg, lib.loc = target, fields = c("Version", "Built")))
-    if (is.list(found)) c(Version = found$Version, Built = found$Built) else c(Version = NA_character_, Built = NA_character_)
+    found <- suppressWarnings(utils::packageDescription(pkg, lib.loc = target, fields = c("Version", "Built", origin)))
+    text <- function(value) if (is.character(value) && length(value) == 1L) value else NA_character_
+    if (is.list(found)) c(Version = text(found$Version), Built = text(found$Built), Source = text(found[[origin]]))
+    else c(Version = NA_character_, Built = NA_character_, Source = NA_character_)
   }
   loaded <- function() if (pkg %in% loadedNamespaces()) unname(getNamespaceVersion(pkg)) else NA_character_
   finish <- function(done) {
-    message(done, "\nYou do not need to run the installation block again. From now on, open SCORCH with:\n  ", reopen)
+    message(done, "\nYou do not need to run the installation block again. From now on, open SCORCH with:\n  ", reopen, aside)
     if (isTRUE(open) && interactive()) {
       return(invisible(getExportedValue(loadNamespace(pkg, lib.loc = target), "run_scorch")()))
     }
     invisible(NULL)
   }
 
+  # What a DESCRIPTION field asks for, with the lowest version it accepts.
+  asks <- function(field) {
+    field <- as.character(field)
+    entries <- trimws(unlist(strsplit(field[!is.na(field)], ",", fixed = TRUE)))
+    entries <- entries[nzchar(entries) & !grepl("^R([[:space:]]*[(]|$)", entries)]
+    data.frame(name = sub("[[:space:]]*[(].*$", "", entries),
+               least = ifelse(grepl(">=", entries, fixed = TRUE),
+                              sub("^.*>=[[:space:]]*([^)[:space:]]+).*$", "\\1", entries), NA_character_),
+               stringsAsFactors = FALSE)
+  }
+  # The needed packages that are missing or older than asked for, with those
+  # they need in turn. The DESCRIPTION files on disk are read and nothing is
+  # loaded, so a package can still be replaced afterwards.
+  short <- function(needs) {
+    described <- function(name, fields) {
+      suppressWarnings(utils::packageDescription(name, lib.loc = unique(c(target, .libPaths())), fields = fields))
+    }
+    queue <- needs$name
+    while (length(queue)) {
+      found <- described(queue[1L], c("Depends", "Imports"))
+      further <- if (is.list(found)) setdiff(asks(c(found$Depends, found$Imports))$name, needs$name) else character()
+      if (length(further)) needs <- rbind(needs, data.frame(name = further, least = NA_character_, stringsAsFactors = FALSE))
+      queue <- c(queue[-1L], further)
+    }
+    needs$have <- vapply(needs$name, function(name) {
+      version <- described(name, "Version")
+      if (is.character(version) && !is.na(version)) version else NA_character_
+    }, "", USE.NAMES = FALSE)
+    needs$old <- vapply(seq_len(nrow(needs)), function(i) {
+      !is.na(needs$have[i]) && !is.na(needs$least[i]) && utils::compareVersion(needs$have[i], needs$least[i]) < 0
+    }, NA)
+    needs[is.na(needs$have) | needs$old, , drop = FALSE]
+  }
+  outdated <- function() if (getRversion() < "4.4.0") {
+    paste0("\nThis is R ", getRversion(), ", older than the versions SCORCH is checked on (R 4.4 and newer), and CRAN may ",
+           "no longer provide these packages for it. Update R, ", again)
+  }
+  # What a reader can do when R could not install a package.
+  why <- function() paste0(
+    "R's messages above, and any warnings below, give the reason.", outdated(),
+    if (identical(unname(Sys.info()["sysname"]), "Linux")) paste0(
+      "\nOn Linux the usual cause is a missing system library. ncdf4 needs netCDF: install libnetcdf-dev ",
+      "(Debian, Ubuntu) or netcdf-devel (Fedora), ", again),
+    "\nIf they report a failed download, check the internet connection, ", again)
+  # Install what is missing or too old, and stop with the reason when something
+  # still lacks. `tried`: R has just attempted the missing ones in its usual way.
+  provide <- function(needs, tried = FALSE, reported = NULL) {
+    added <- character()
+    fetch <- function(names, ...) {
+      added <<- union(added, names)
+      tryCatch(utils::install.packages(names, lib = target, ...),
+               error = function(e) reported <<- c(reported, conditionMessage(e)))
+    }
+    lacking <- short(needs)
+    usual <- if (tried) lacking$name[lacking$old] else lacking$name
+    if (length(usual)) {
+      if (!tried) message(pkg, " needs packages that are missing or too old: ", paste(usual, collapse = ", "), ". Installing them.")
+      fetch(usual)
+      lacking <- short(needs)
+    }
+    if (nrow(lacking) && !identical(.Platform$pkgType, "source")) {
+      # CRAN builds the packages for one version of R together. Where its
+      # newest sources no longer suit an older R, those builds still fit each other.
+      message("Trying the packages that CRAN built for this version of R: ", paste(lacking$name, collapse = ", "))
+      fetch(lacking$name, type = "binary")
+      lacking <- short(needs)
+    }
+    said <- if (length(reported)) paste0("\nR reported: ", paste(unique(reported), collapse = "; "))
+    if (anyNA(lacking$have)) {
+      stop(pkg, " was not changed. These packages it needs could not be installed: ",
+           paste(lacking$name[is.na(lacking$have)], collapse = ", "), ".", said, "\n", why(), call. = FALSE)
+    }
+    if (nrow(lacking)) {
+      stop(pkg, " was not changed. It needs newer versions of: ",
+           paste(sprintf("%s (at least %s, installed %s)", lacking$name, lacking$least, lacking$have), collapse = ", "),
+           ".", said, outdated(), "\n", restart, ", update them with install.packages(), ", again, call. = FALSE)
+    }
+    added
+  }
+
   before <- on_disk()
-  if (is.null(path) && !isTRUE(force) && identical(ref, paste0("v", before[["Version"]])) &&
-      loaded() %in% c(NA_character_, before[["Version"]])) {
-    return(finish(sprintf("%s %s is already installed. Nothing was downloaded or changed.", pkg, before[["Version"]])))
+  # A release tag and a commit always name the same code, so a copy made from
+  # one is not fetched again. A branch moves on, and a copy installed from a
+  # folder is not the published one.
+  same_code <- function() identical(before[["Source"]], ref) &&
+    (identical(ref, paste0("v", before[["Version"]])) || grepl("^[0-9a-f]{40}$", ref))
+  if (is.null(path) && !isTRUE(force) && same_code() && loaded() %in% c(NA_character_, before[["Version"]])) {
+    # A package it needs may have been removed or damaged since.
+    added <- provide(asks(utils::packageDescription(pkg, lib.loc = target, fields = "Imports")))
+    return(finish(sprintf("%s %s is already installed. %s", pkg, before[["Version"]],
+                          if (length(added)) paste0("It was not downloaded again; packages it needs were installed: ",
+                                                    paste(added, collapse = ", "), ".")
+                          else "Nothing was downloaded or changed.")))
   }
 
   # 1. Fetch and assemble first: a failed download leaves everything as it was.
   temporary <- tempfile("scoRch-install-")
   dir.create(temporary)
   on.exit(unlink(temporary, recursive = TRUE), add = TRUE)
+  came_from <- if (is.null(path)) ref else "local"
   if (is.null(path)) {
     archive <- file.path(temporary, "repository.zip")
     url <- paste0("https://github.com/fawazbouhamad/scoRch.simulator/archive/",
@@ -103,7 +212,12 @@ install_scorch <- function(path = NULL, ref = "v1.3.0", lib = NULL, upgrade = "n
     # The default limit of 60 seconds is too short for this file on many connections.
     limit <- options(timeout = max(3600, getOption("timeout")))
     on.exit(options(limit), add = TRUE)
-    utils::download.file(url, archive, mode = "wb")
+    fetched <- tryCatch(utils::download.file(url, archive, mode = "wb"), error = function(e) conditionMessage(e))
+    if (is.character(fetched) || !isTRUE(fetched == 0)) {
+      stop(pkg, " ", ref, " could not be downloaded, so nothing was changed",
+           if (is.character(fetched)) paste0(": ", fetched), ".\nCheck the internet connection and that ", ref,
+           " exists at https://github.com/fawazbouhamad/scoRch.simulator, ", again, call. = FALSE)
+    }
     entries <- utils::unzip(archive, list = TRUE)$Name
     if (any(grepl("(^/|^[A-Za-z]:|(^|/)\\.\\.(/|$)|\\\\)", entries))) {
       stop("The source archive contains an invalid path.", call. = FALSE)
@@ -114,42 +228,33 @@ install_scorch <- function(path = NULL, ref = "v1.3.0", lib = NULL, upgrade = "n
     path <- file.path(temporary, roots)
   }
   package <- prepare_scorch_package(path, file.path(temporary, pkg))
-  wanted <- unname(read.dcf(file.path(package, "DESCRIPTION"), "Version")[1L, 1L])
+  # Only a copy made from the same release may later count as already installed.
+  description <- file.path(package, "DESCRIPTION")
+  fields <- readLines(description, warn = FALSE)
+  stamped <- file(description, "wb")
+  writeLines(c(fields[nzchar(trimws(fields))], paste0(origin, ": ", came_from)), stamped)
+  close(stamped)
+  wanted <- unname(read.dcf(description, "Version")[1L, 1L])
 
   # 2. Packages this one needs, before anything of an earlier installation is
   # touched. Installed ones are left alone unless `upgrade` says otherwise.
-  if (!requireNamespace("remotes", quietly = TRUE)) utils::install.packages("remotes", lib = target)
+  if (!requireNamespace("remotes", quietly = TRUE)) try(utils::install.packages("remotes", lib = target))
   if (!requireNamespace("remotes", quietly = TRUE)) {
-    stop("The helper package 'remotes' could not be installed. Check the internet connection, then run the ",
-         "installation block again.", call. = FALSE)
+    stop("The helper package 'remotes' could not be installed, so ", pkg, " was not changed.\nR's messages above, and ",
+         "any warnings below, give the reason. If they report a failed download, check the internet connection, ",
+         again, call. = FALSE)
   }
   message("Installing ", pkg, " ", wanted, " and any packages it still needs.")
-  remotes::install_deps(package, dependencies = NA, upgrade = upgrade, lib = lib, ...)
-  imports <- trimws(strsplit(read.dcf(file.path(package, "DESCRIPTION"), "Imports")[1L, 1L], ",")[[1L]])
-  needs <- data.frame(name = sub("[[:space:]]*[(].*$", "", imports),
-                      least = ifelse(grepl(">=", imports, fixed = TRUE),
-                                     sub("^.*>=[[:space:]]*([^)[:space:]]+).*$", "\\1", imports), NA_character_),
-                      stringsAsFactors = FALSE)
-  installed <- function() vapply(needs$name, function(name) {
-    version <- suppressWarnings(utils::packageDescription(name, lib.loc = unique(c(target, .libPaths())), fields = "Version"))
-    if (is.character(version) && !is.na(version)) version else NA_character_
-  }, "")
-  older <- function(have) !is.na(have) & !is.na(needs$least) &
-    mapply(function(a, b) !is.na(a) && !is.na(b) && utils::compareVersion(a, b) < 0, have, needs$least)
-  have <- installed()
-  if (any(older(have))) {
-    utils::install.packages(needs$name[older(have)], lib = target)
-    have <- installed()
-  }
-  if (anyNA(have)) {
-    stop(pkg, " was not changed. These packages it needs could not be installed: ",
-         paste(needs$name[is.na(have)], collapse = ", "),
-         ".\nCheck the internet connection, then run the installation block again.", call. = FALSE)
-  }
-  if (any(older(have))) {
-    stop(pkg, " was not changed. It needs newer versions of: ",
-         paste(sprintf("%s (at least %s, installed %s)", needs$name, needs$least, have)[older(have)], collapse = ", "),
-         ".\n", restart, ", update them with install.packages(), then run the installation block again.", call. = FALSE)
+  # R can stop here for one package that failed. What is still missing is
+  # tried again below and named, so its report is kept instead.
+  refused <- tryCatch({
+    remotes::install_deps(package, dependencies = NA, upgrade = upgrade, lib = target, ...)
+    NULL
+  }, error = function(e) conditionMessage(e))
+  provide(asks(read.dcf(description, "Imports")[1L, 1L]), tried = TRUE, reported = refused)
+  if (!is.null(refused)) {
+    message("R reported a problem while it installed packages (", refused, "). Every package ", pkg,
+            " needs is installed, so the installation continues.")
   }
 
   # 3. Let go of a copy this session has loaded; R cannot replace code in use.
@@ -200,7 +305,7 @@ install_scorch <- function(path = NULL, ref = "v1.3.0", lib = NULL, upgrade = "n
     done <- TRUE
     message(pkg, " ", wanted, " is installed, but this R session cannot use it yet.\n",
             "One step remains, once: ", restart, ". Then run:\n  ", reopen,
-            "\nDo not run the installation block again. The new version is already installed.")
+            "\nDo not run the installation block again. The new version is already installed.", aside)
     return(invisible(NULL))
   }
   if (attached) suppressPackageStartupMessages(library(pkg, character.only = TRUE, lib.loc = target))

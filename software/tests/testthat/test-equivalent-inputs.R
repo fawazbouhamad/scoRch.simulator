@@ -82,9 +82,6 @@ test_that("equivalent selections give identical daily maximum temperature and ev
   from_prepared <- run(prepared, "out-prepared")
   from_raw <- run(raw_zip, "out-raw")
   expect_gt(nrow(from_prepared$events$events), 0L)
-  for (stage in c("heatwaves", "regional", "clusters", "ellipses", "events", "power_law")) {
-    expect_identical(from_raw[[stage]], from_prepared[[stage]], info = stage)
-  }
   books <- c(file.path("catalogs", c("01_heatwave_events.xlsx", "02_regionally_extensive_heatwaves.xlsx",
                                      "03_extreme_heatwave_clusters.xlsx", "04_extreme_heatwave_ellipses.xlsx",
                                      "05_compound_heatwave_events.xlsx")), "Heatwave_Statistics.xlsx")
@@ -92,4 +89,34 @@ test_that("equivalent selections give identical daily maximum temperature and ev
     expect_identical(workbook_tables(file.path(folder, "out-raw", book)),
                      workbook_tables(file.path(folder, "out-prepared", book)), info = book)
   }
+  # The stage results agree bit for bit as well (compared on an installed build only).
+  skip_stage_identity_from_source()
+  for (stage in c("heatwaves", "regional", "clusters", "ellipses", "events", "power_law")) {
+    expect_identical(from_raw[[stage]], from_prepared[[stage]], info = stage)
+  }
+})
+
+test_that("a ZIP that holds the same file name in two folders is opened and read in full", {
+  folder <- withr::local_tempdir()
+  hourly <- array(295 + seq_len(24 * 3 * 4) / 100, c(24, 3, 4))
+  for (year in 2011:2012) {
+    dir.create(file.path(folder, "era5", year), recursive = TRUE)
+    seconds <- (as.numeric(as.Date(sprintf("%d-07-01", year))) * 24 + 0:23) * 3600
+    write_grid(file.path(folder, "era5", year, "data.nc"), list(t2m = hourly + year - 2011), seconds, c(10, 11, 12, 13),
+               c(42, 41, 40), units = "K", time_units = "seconds since 1970-01-01",
+               dims = c("longitude", "latitude", "valid_time"))
+  }
+  # Mirror mode keeps the folders, so the archive holds data.nc twice.
+  archive <- file.path(folder, "years.zip")
+  zip::zip(archive, c("2011", "2012"), root = file.path(folder, "era5"), mode = "mirror")
+  expect_identical(sum(basename(zip::zip_list(archive)$filename) == "data.nc"), 2L)
+  source <- open_temperature_source(archive)
+  expect_identical(basename(source$files), c("data.nc", "data.nc"))
+  expect_true(all(file.exists(source$files)))
+  close_temperature_source(source)
+  read <- read_selection(archive, months = 7)
+  expect_identical(read$info$files, 2L)
+  expect_equal(read$tmax$dates, as.Date(c("2011-07-01", "2012-07-01")))
+  # Each date comes from its own file: the second file is one degree warmer.
+  expect_equal(read$tmax$tmax[2, ] - read$tmax$tmax[1, ], rep(1, ncol(read$tmax$tmax)))
 })

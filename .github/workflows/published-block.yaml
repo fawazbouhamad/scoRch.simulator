@@ -1,0 +1,136 @@
+# The block on the repository homepage, pasted into a new R session on Linux
+# and on Windows as a first-time reader pastes it: the two lines are taken from
+# README.md unchanged, R has no packages beyond its own, and the window that
+# opens is driven by the browser test.
+# It reads the published tag from GitHub, so it can only pass once the release
+# the block names exists. Publishing a release starts it; it can also be
+# started by hand.
+name: Published block
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+
+permissions: read-all
+
+jobs:
+  block:
+    runs-on: ${{ matrix.os }}
+    name: README block on ${{ matrix.os }}
+    timeout-minutes: 150
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: r-lib/actions/setup-r@v2
+        with:
+          r-version: 'release'
+      - name: Install the system library the README names for Linux
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libnetcdf-dev
+      - name: Check that the release names one version everywhere
+        run: Rscript software/setup/maintenance.R check-release
+      - name: Paste the README block into a new R session and drive the window it opens
+        shell: bash
+        env:
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+        run: |
+          tmp="${RUNNER_TEMP//\\//}"
+          export SCORCH_UI_PROJECT="$tmp/scorch-project"
+          export SCORCH_UI_DATA="${GITHUB_WORKSPACE//\\//}/demo/input/north_america_processed_tmax.nc"
+          export SCORCH_UI_FIXTURES="$tmp/scorch-fixtures"
+          export SCORCH_UI_SHOTS="$tmp/scorch-window"
+          export SCORCH_UI_URL_FILE="$tmp/scorch-window-url.txt"
+          mkdir -p "$SCORCH_UI_PROJECT" "$SCORCH_UI_SHOTS"
+          rm -f "$SCORCH_UI_URL_FILE"
+          if [ "$RUNNER_OS" = "Windows" ]; then
+            export CHROME_BIN="C:/Program Files/Google/Chrome/Application/chrome.exe"
+            powershell -NoProfile -Command "Compress-Archive -LiteralPath '$SCORCH_UI_DATA' -DestinationPath '$SCORCH_UI_PROJECT/temperatures.zip'"
+            # Rterm asserts an interactive session when its input is piped.
+            session=("$(Rscript --vanilla -e 'cat(file.path(R.home("bin"), "Rterm.exe"))')" --vanilla --ess)
+          else
+            export CHROME_BIN="$(command -v google-chrome)"
+            zip -q -j "$SCORCH_UI_PROJECT/temperatures.zip" "$SCORCH_UI_DATA"
+            session=(R --vanilla --interactive)
+          fi
+          test -f "$CHROME_BIN"
+          test -f "$SCORCH_UI_PROJECT/temperatures.zip"
+          # The small files the browser test opens first (a file that holds July
+          # and August only, a daily minimum, undeclared missing values), written
+          # before the window opens. They need ncdf4, which the pasted session
+          # must still install for itself: this copy goes into a library of its
+          # own that no other R session here searches.
+          mkdir -p "$tmp/scorch-fixture-library"
+          Rscript --vanilla -e 'install.packages("ncdf4", lib = commandArgs(TRUE)[1L], repos = "https://cloud.r-project.org")' "$tmp/scorch-fixture-library"
+          R_LIBS="$tmp/scorch-fixture-library" Rscript --vanilla software/tests/browser/fixtures.R "$SCORCH_UI_DATA" "$SCORCH_UI_FIXTURES"
+          test -f "$SCORCH_UI_FIXTURES/july_august.nc"
+          npm install --prefix "$tmp/scorch-browser" --no-audit --no-fund playwright-core@1.55.0
+          export NODE_PATH="$tmp/scorch-browser/node_modules"
+
+          # The fenced R block of the README that calls install_scorch(), as it is.
+          tr -d '\r' < README.md | awk '
+            /^```r *$/ { inside = 1; block = ""; next }
+            inside && /^``` *$/ { if (index(block, "install_scorch()")) printf "%s", block; inside = 0; next }
+            inside { block = block $0 "\n" }
+          ' > "$tmp/scorch-block.R"
+          cat "$tmp/scorch-block.R"
+          test "$(wc -l < "$tmp/scorch-block.R")" -eq 2
+          tag="$(sed -n '1s|^source("https://raw[.]githubusercontent[.]com/fawazbouhamad/scoRch[.]simulator/\(v[0-9.]*\)/software/setup/install[.]R")$|\1|p' "$tmp/scorch-block.R")"
+          test -n "$tag"
+          test "$(sed -n 2p "$tmp/scorch-block.R")" = "install_scorch()"
+          # A published release must be the one its own README installs.
+          if [ -n "$RELEASE_TAG" ]; then test "$tag" = "$RELEASE_TAG"; fi
+
+          # The only additions come before the block: a fixed port, and a viewer
+          # that writes the address it is given to a file instead of opening it.
+          printf '%s\n' 'options(shiny.port = 7123L, shinygadgets.showdialog = function(caption, url, ...) writeLines(url, Sys.getenv("SCORCH_UI_URL_FILE")))' > "$tmp/scorch-options.R"
+          log="$tmp/scorch-block.log"
+          (cd "$SCORCH_UI_PROJECT" && cat "$tmp/scorch-options.R" "$tmp/scorch-block.R" | "${session[@]}" > "$log" 2>&1) &
+          server=$!
+          trap 'kill "$server" 2>/dev/null || true' EXIT
+          # The window is open once its address has been written. On Linux R
+          # builds every package from source first; allow up to two hours.
+          for attempt in $(seq 1 3600); do
+            [ -s "$SCORCH_UI_URL_FILE" ] && break
+            kill -0 "$server" 2>/dev/null || break
+            sleep 2
+          done
+          [ -s "$SCORCH_UI_URL_FILE" ] || { cat "$log"; echo "The block did not open the window."; exit 1; }
+          # The address as the viewer received it: it opens only with its ?token=.
+          export SCORCH_UI_URL="$(head -n 1 "$SCORCH_UI_URL_FILE" | tr -d '\r')"
+          node software/tests/browser/guided.cjs || { cat "$log"; exit 1; }
+          # Closing the window ends the block, and with it the session.
+          for attempt in $(seq 1 150); do
+            kill -0 "$server" 2>/dev/null || break
+            sleep 2
+          done
+          tr -d '\r' < "$log" > "$tmp/scorch-block.txt"
+          cat "$tmp/scorch-block.txt"
+          grep -Fxq "Installed scoRch.simulator ${tag#v}." "$tmp/scorch-block.txt"
+          grep -Fq "You do not need to run the installation block again" "$tmp/scorch-block.txt"
+          grep -Fq "Nothing is analyzed until you click Run analysis" "$tmp/scorch-block.txt"
+          grep -Fq "To open it again, run scoRch.simulator::run_scorch()" "$tmp/scorch-block.txt"
+          test "$(grep -Fc "Opening the SCORCH window" "$tmp/scorch-block.txt")" -eq 1
+      - name: The installed copy is the published release
+        env:
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+        run: |
+          version <- unname(read.dcf("software/setup/DESCRIPTION", "Version")[1L, 1L])
+          tag <- Sys.getenv("RELEASE_TAG", paste0("v", version))
+          if (!nzchar(tag)) tag <- paste0("v", version)
+          found <- utils::packageDescription("scoRch.simulator")
+          print(found[c("Version", "Config/scoRch/source", "Built")])
+          stopifnot(identical(found$Version, version), identical(found[["Config/scoRch/source"]], tag))
+        shell: Rscript {0}
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: published-block-${{ matrix.os }}
+          path: |
+            ${{ runner.temp }}/scorch-window
+            ${{ runner.temp }}/scorch-block.log

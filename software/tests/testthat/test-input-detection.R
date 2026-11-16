@@ -26,6 +26,7 @@ test_that("standard files are recognized without a question and keep automatic n
   expect_identical(info[c("format", "variable", "longitude", "latitude", "time", "units")],
                    list(format = "daily_tmax", variable = "tmax", longitude = "lon", latitude = "lat",
                         time = "time", units = "degC"))
+  expect_true(info$identified)
   expect_equal(info$dates, grid_dates)
   expect_identical(info$per_day, 1L)
   expect_equal(info$sample_c, range(celsius[1, , ]))
@@ -38,9 +39,11 @@ test_that("standard files are recognized without a question and keep automatic n
   raw <- write_grid(file.path(folder, "hourly.nc"), list(t2m = hourly), hours, grid_lon, rev(grid_lat), units = "K",
                     time_units = "seconds since 1970-01-01", dims = c("longitude", "latitude", "valid_time"))
   info <- detect_input(raw)
+  expect_length(info$questions, 0L)
   expect_identical(info$format, "era5")
   expect_identical(info$per_day, 24L)
   expect_identical(info$units, "K")
+  expect_true(info$identified)
   expect_equal(info$dates, as.Date(c("2000-07-01", "2000-07-02")))
   expect_identical(plan_for(raw, info)$config$input$variable, "auto")
 })
@@ -56,6 +59,7 @@ test_that("other names are found from CF metadata and written into the configura
   expect_length(info$questions, 0L)
   expect_identical(info[c("format", "variable", "longitude", "latitude", "time", "units")],
                    list(format = "daily_tmax", variable = "tasmax", longitude = "x", latitude = "y", time = "t", units = "K"))
+  expect_true(info$identified)
   expect_equal(info$sample_c, range(celsius[1, , ]))
   settings <- plan_for(named, info)
   expect_identical(settings$config$input[c("format", "variable", "longitude", "latitude", "time")],
@@ -106,6 +110,9 @@ test_that("one focused question is asked when the file leaves a decision open", 
   info <- detect_input(several)
   expect_named(info$questions, "variable")
   expect_named(info$questions$variable$choices, c("skin (Skin temperature)", "dew (Dew point temperature)"))
+  # The chosen variable is read, and still not described as a daily maximum.
+  expect_identical(detect_input(several, variable = "skin")[c("variable", "identified")],
+                   list(variable = "skin", identified = FALSE))
 
   unlabelled <- write_grid(file.path(folder, "row-col.nc"), celsius, grid_days, grid_lon, grid_lat,
                            dims = c("col", "row", "time"), dim_units = c("", ""))
@@ -116,6 +123,275 @@ test_that("one focused question is asked when the file leaves a decision open", 
   expect_identical(answered[c("longitude", "latitude")], list(longitude = "col", latitude = "row"))
   expect_identical(plan_for(unlabelled, answered, answers = list(longitude = "col"))$config$input[c("longitude", "latitude")],
                    list(longitude = "col", latitude = "row"))
+})
+
+test_that("a lone temperature that the file does not identify is confirmed, not assumed", {
+  folder <- withr::local_tempdir()
+  hours <- (as.numeric(as.Date("2000-07-01")) * 24 + 0:47) * 3600
+  hourly <- array(295 + seq_len(48 * 3 * 4) / 100, c(48, 3, 4))
+  daily <- function(name, attributes = list(), units = "K") {
+    write_grid(file.path(folder, paste0(name, "-day.nc")),
+               stats::setNames(list(celsius + if (units == "K") 273.15 else 0), name), grid_days, grid_lon, grid_lat,
+               units = units, attributes = stats::setNames(list(attributes), name))
+  }
+  subdaily <- function(name, attributes = list()) {
+    write_grid(file.path(folder, paste0(name, "-1hr.nc")), stats::setNames(list(hourly), name), hours, grid_lon,
+               rev(grid_lat), units = "K", time_units = "seconds since 1970-01-01",
+               dims = c("longitude", "latitude", "valid_time"), attributes = stats::setNames(list(attributes), name))
+  }
+  cf <- function(long, method) list(standard_name = "air_temperature", long_name = long, cell_methods = method)
+
+  # A minimum, a mean, a dew point or a sea temperature is never taken for the daily maximum.
+  asked <- list(
+    tasmin = daily("tasmin", cf("Daily Minimum Near-Surface Air Temperature", "area: mean time: minimum")),
+    tas = daily("tas", cf("Near-Surface Air Temperature", "area: time: mean")),
+    tn = daily("tn", list(long_name = "minimum temperature"), units = "Celsius"),
+    tg = daily("tg", list(long_name = "mean temperature"), units = "Celsius"),
+    tmin = daily("tmin", units = "degC"),
+    d2m = subdaily("d2m", list(long_name = "2 metre dewpoint temperature")),
+    sst = subdaily("sst", list(long_name = "Sea surface temperature")),
+    mn2t = subdaily("mn2t", list(long_name = "Minimum temperature at 2 metres since previous post-processing")))
+  for (name in names(asked)) {
+    info <- detect_input(asked[[name]])
+    expect_named(info$questions, "variable", info = name)
+    question <- info$questions$variable
+    expect_identical(question$id, "variable", info = name)
+    expect_identical(unname(question$choices), name, info = name)
+    expect_true(is.na(question$recommended), info = name)
+    expect_match(question$detail, sprintf("holds the variable '%s'", name), fixed = TRUE, info = name)
+  }
+  question <- detect_input(asked$tasmin)$questions$variable
+  expect_identical(question$title, "Is this the temperature to analyze?")
+  expect_named(question$choices, "Analyze 'tasmin' as the daily temperature")
+  expect_match(question$detail, "long name 'Daily Minimum Near-Surface Air Temperature'", fixed = TRUE)
+  expect_match(question$detail, "cell methods 'area: mean time: minimum'", fixed = TRUE)
+  expect_match(question$detail, "does not identify it as daily maximum temperature", fixed = TRUE)
+  question <- detect_input(asked$d2m)$questions$variable
+  expect_named(question$choices, "Analyze the daily maximum of 'd2m'")
+  expect_match(question$detail, "with 24 values per day", fixed = TRUE)
+  expect_match(question$detail, "does not identify it as 2 m air temperature", fixed = TRUE)
+
+  # What the file identifies is read without a question, as before.
+  known <- list(
+    tasmax = daily("tasmax", cf("Daily Maximum Near-Surface Air Temperature", "area: mean time: maximum")),
+    tmax = daily("tmax", units = "degC"), mx2t = daily("mx2t"), t2m = subdaily("t2m"),
+    tas = subdaily("tas", cf("Near-Surface Air Temperature", "area: mean time: point")))
+  for (name in names(known)) {
+    info <- detect_input(known[[name]])
+    expect_identical(length(info$questions), 0L, info = name)
+    expect_identical(info$variable, name, info = name)
+    expect_true(info$identified, info = name)
+  }
+
+  # Air temperature on one pressure level is not the 2 m temperature; the
+  # 2 m height that some files carry as a dimension is.
+  axes <- list(longitude = list(units = "degrees_east", values = grid_lon),
+               latitude = list(units = "degrees_north", values = grid_lat),
+               pressure_level = list(units = "hPa", values = 850), height = list(units = "m", values = 2),
+               valid_time = list(units = "seconds since 1970-01-01", values = hours))
+  on_level <- function(name, level) {
+    dims <- c("longitude", "latitude", level, "valid_time")
+    write_layout(file.path(folder, paste0(name, "-level.nc")), axes[dims], stats::setNames(list(list(
+      dims = dims, units = "K", values = array(aperm(hourly, c(3, 2, 1)), c(4, 3, 1, 48)),
+      attributes = list(standard_name = "air_temperature"))), name))
+  }
+  expect_named(detect_input(on_level("t", "pressure_level"))$questions, "variable")
+  expect_true(detect_input(on_level("tas", "height"))$identified)
+
+  # The answer names the variable, as a configuration would. It is then read
+  # without another question, and still not described as a daily maximum.
+  answered <- detect_input(asked$tasmin, variable = "tasmin")
+  expect_length(answered$questions, 0L)
+  expect_identical(answered[c("format", "variable", "identified")],
+                   list(format = "daily_tmax", variable = "tasmin", identified = FALSE))
+  settings <- plan_for(asked$tasmin, answered, answers = list(variable = "tasmin"))
+  expect_identical(settings$config$input$variable, "tasmin")
+  write_guided_config(settings$config, folder)
+  replay <- suppressMessages(read_configured_input(read_config(file.path(folder, "config.yaml"))))
+  expect_equal(replay$tmax, matrix(aperm(celsius, c(1, 3, 2)), nrow = 4), tolerance = 1e-12)
+  expect_identical(detect_input(asked$d2m, variable = "d2m")[c("format", "variable", "identified")],
+                   list(format = "era5", variable = "d2m", identified = FALSE))
+})
+
+test_that("numbers that cannot be air temperature stop the selection", {
+  folder <- withr::local_tempdir()
+  stored <- function(name, values, ...) {
+    write_grid(file.path(folder, paste0(name, ".nc")), values, grid_days, grid_lon, grid_lat, ...)
+  }
+  fahrenheit <- celsius * 1.8 + 32
+
+  # A missing-value code that the file does not declare is a number like any
+  # other. The message prints the range (20.25 to 31.25 without the code).
+  expect_error(detect_input(stored("fill-1e20", replace(celsius, 5, 1e20))), "ranges from 20[.][23] to 1e[+]20 ")
+  expect_error(detect_input(stored("fill-9999", replace(celsius, 5, 9999))), "to 9999 .*does not declare as missing")
+  expect_error(detect_input(stored("fill-minus", replace(celsius, 5, -9999))), "ranges from -9999 to 31[.][23] ")
+  expect_error(detect_input(stored("zero-kelvin", replace(celsius + 273.15, 5, 0), units = "K")),
+               "ranges from 0 to 304[.]4 K .*cannot be air temperature")
+
+  # Other units under a Celsius or Kelvin label, and Fahrenheit however it is spelled.
+  expect_error(detect_input(stored("fahrenheit-as-celsius", fahrenheit)), "cannot be air temperature.*Fahrenheit")
+  expect_error(detect_input(stored("tenths", celsius * 10, units = "0.1 degC")), "not whole degrees")
+  expect_error(detect_input(stored("times-ten", celsius * 10, units = "degC*10")), "not whole degrees")
+  spellings <- c("\u00b0F", "Farenheit", "deg. F", "degrees F.", "degree_F")
+  for (i in seq_along(spellings)) {
+    expect_error(detect_input(stored(paste0("spelling-", i), fahrenheit, units = spellings[i])), "Fahrenheit",
+                 info = spellings[i])
+  }
+
+  # Without units the question is asked only when one of its answers could be
+  # right, and that answer is the one suggested.
+  expect_error(detect_input(stored("no-units-fahrenheit", fahrenheit, units = "")),
+               "records no units.*cannot be air temperature")
+  expect_error(detect_input(stored("unknown-units", fahrenheit, units = "imperial")), "records the units as 'imperial'")
+  plain <- stored("no-units-celsius", celsius, units = "")
+  expect_identical(detect_input(plain)$questions$units$recommended, "degC")
+  expect_error(detect_input(plain, units = "K"), "ranges from 20[.][23] to 31[.][23] K [(]-252[.]9 to -241[.]9 ")
+  gap <- celsius + 273.15
+  gap[1, , ] <- NA
+  expect_true(is.na(detect_input(stored("first-step-missing", gap, units = ""))$questions$units$recommended))
+  expect_true(anyNA(detect_input(stored("first-step-missing-kelvin", gap, units = "K"))$sample_c))
+
+  # Real extremes pass: an Antarctic winter and a desert afternoon.
+  expect_equal(detect_input(stored("cold", celsius - 110))$sample_c, range(celsius[1, , ]) - 110)
+  expect_equal(detect_input(stored("hot", celsius + 303.15, units = "K"))$sample_c, range(celsius[1, , ]) + 30)
+})
+
+test_that("attributes written in Latin-1 are read, and units in such text are confirmed", {
+  folder <- withr::local_tempdir()
+  latin1 <- function(...) rawToChar(as.raw(c(...)))
+  stored <- function(name, values, ...) {
+    write_grid(file.path(folder, paste0(name, ".nc")), values, grid_days, grid_lon, grid_lat,
+               attributes = list(tmax = list(...)))
+  }
+  # An accented long name does not stop the reading.
+  accented <- stored("accented", celsius, long_name = latin1(0x54, 0x65, 0x6d, 0x70, 0xe9, 0x72, 0x61, 0x74, 0x75, 0x72, 0x65))
+  expect_identical(detect_input(accented)[c("variable", "units")], list(variable = "tmax", units = "degC"))
+
+  # A degree sign in Latin-1 is legible here but not to the readers, so the
+  # unit is asked and the answer travels with the configuration.
+  degree <- stored("degree", celsius, units = latin1(0xb0, 0x43))
+  question <- detect_input(degree)$questions$units
+  expect_identical(question$recommended, "degC")
+  expect_match(question$detail, "text encoding")
+  answered <- detect_input(degree, units = "degC")
+  expect_identical(answered$units, "degC")
+  write_guided_config(plan_for(degree, answered, answers = list(units = "degC"))$config, folder)
+  replay <- suppressMessages(read_configured_input(read_config(file.path(folder, "config.yaml"))))
+  expect_equal(replay$dates, grid_dates)
+  expect_error(detect_input(stored("fahrenheit", celsius * 1.8 + 32, units = latin1(0xb0, 0x46))), "Fahrenheit")
+})
+
+test_that("selections that the readers could not read stop before the run", {
+  folder <- withr::local_tempdir()
+  hours <- (as.numeric(as.Date("2000-07-01")) * 24 + 0:47) * 3600
+  hourly <- array(295 + seq_len(48 * 3 * 4) / 100, c(48, 3, 4))
+  era5 <- function(path, name = "t2m", day = 0, lon = grid_lon, dims = c("longitude", "latitude", "valid_time")) {
+    write_grid(path, stats::setNames(list(hourly), name), hours + day * 86400, lon, grid_lat, units = "K",
+               time_units = "seconds since 1970-01-01", dims = dims)
+  }
+
+  # Prepared daily Tmax is read with exactly three dimensions.
+  axes <- list(lon = list(units = "degrees_east", values = grid_lon), lat = list(units = "degrees_north", values = grid_lat),
+               height = list(units = "m", values = 2), expver = list(values = c(1, 5)),
+               time = list(units = "days since 2000-01-01", values = grid_days))
+  tall <- write_layout(file.path(folder, "height.nc"), axes[c("lon", "lat", "height", "time")], list(tasmax = list(
+    dims = c("lon", "lat", "height", "time"), units = "degC", values = array(aperm(celsius, c(3, 2, 1)), c(4, 3, 1, 4)),
+    attributes = list(cell_methods = "time: maximum"))))
+  expect_error(detect_input(tall), "has 4 dimensions (lon, lat, height, time)", fixed = TRUE)
+  expect_error(detect_input(tall), "exactly three: time, latitude and longitude.*extra dimension 'height'")
+  expect_identical(detect_input(tall, format = "era5")$format, "era5")
+  versions <- write_layout(file.path(folder, "expver.nc"), axes[c("lon", "lat", "expver", "time")], list(mx2t = list(
+    dims = c("lon", "lat", "expver", "time"), units = "K", values = array(300, c(4, 3, 2, 4)))))
+  expect_error(detect_input(versions), "extra dimension 'expver'.*data format to ERA5 temperature")
+
+  # Both readers need constant spacing. Longitudes are judged in the order the
+  # ERA5 reader gives them, so a region across 180 degrees stays regular.
+  gaussian <- write_grid(file.path(folder, "gaussian.nc"), celsius, grid_days, grid_lon, c(44.7611, 46.6658, 48.57))
+  expect_error(detect_input(gaussian), "not on a regular longitude-latitude grid.*latitude values are not evenly spaced")
+  expect_error(detect_input(era5(file.path(folder, "uneven.nc"), lon = c(10, 11, 12, 14))),
+               "longitude values are not evenly spaced")
+  dateline <- era5(file.path(folder, "dateline.nc"), lon = c(179, 180, 181, 182))
+  expect_length(detect_input(dateline)$questions, 0L)
+  expect_s3_class(suppressMessages(read_era5(dateline, months = 7, cell_size = NULL)), "scorch_tmax")
+
+  # One selection is read with one set of names. Names that differ are fine
+  # only when `auto` finds each of them by itself.
+  found <- file.path(folder, "found-by-auto")
+  dir.create(found)
+  era5(file.path(found, "a.nc"))
+  era5(file.path(found, "b.nc"), day = 2, dims = c("lon", "lat", "time"))
+  info <- detect_input(found)
+  expect_identical(info$files, 2L)
+  expect_setequal(info$longitude, c("longitude", "lon"))
+  expect_identical(plan_for(found, info)$config$input[c("variable", "longitude", "latitude", "time")],
+                   list(variable = "auto", longitude = "auto", latitude = "auto", time = "auto"))
+  both <- read_config(list(input = list(file = found, format = "era5"), period = list(warm_season_months = 7)))
+  expect_length(suppressMessages(read_configured_input(both))$dates, 4L)
+
+  variables <- file.path(folder, "two-variables")
+  dir.create(variables)
+  era5(file.path(variables, "a.nc"))
+  era5(file.path(variables, "b.nc"), name = "mx2t", day = 2)
+  expect_error(detect_input(variables), "a.nc and b.nc name the temperature variable differently ('t2m' and 'mx2t')",
+               fixed = TRUE)
+  expect_error(detect_input(variables, variable = "t2m"), "b.nc has no temperature variable called 't2m'")
+
+  coordinates <- file.path(folder, "two-coordinates")
+  dir.create(coordinates)
+  era5(file.path(coordinates, "a.nc"), dims = c("lon", "lat", "time"))
+  era5(file.path(coordinates, "b.nc"), day = 2, dims = c("x", "y", "time"))
+  expect_error(detect_input(coordinates), "a.nc and b.nc name the longitude dimension differently ('lon' and 'x')",
+               fixed = TRUE)
+})
+
+test_that("coordinates that are not longitudes and latitudes in degrees are not taken for them", {
+  folder <- withr::local_tempdir()
+  no_grid <- "no temperature variable on a time, latitude and longitude grid"
+  days <- list(units = "days since 2000-01-01", values = grid_days)
+  field <- aperm(celsius, c(3, 2, 1))
+
+  # The dimension left beside a labelled coordinate must itself pass for the
+  # other one: a pressure level or a numbered level is not a longitude.
+  levels <- write_grid(file.path(folder, "levels.nc"), list(ta = celsius + 273.15), grid_days, c(1000, 850, 700, 500) * 100,
+                       grid_lat, units = "K", dims = c("plev", "lat", "time"), dim_units = c("Pa", "degrees_north"))
+  expect_error(detect_input(levels), no_grid)
+  numbered <- write_grid(file.path(folder, "numbered.nc"), list(ta = celsius + 273.15), grid_days, 1:4, grid_lat,
+                         units = "K", dims = c("level", "lat", "time"), dim_units = c("", "degrees_north"),
+                         attributes = list(level = list(axis = "Z", positive = "down")))
+  expect_error(detect_input(numbered), no_grid)
+  beyond <- write_grid(file.path(folder, "beyond.nc"), celsius, grid_days, grid_lon, c(100.5, 101.5, 102.5),
+                       dim_units = c("", ""))
+  expect_error(detect_input(beyond), no_grid)
+
+  # A rotated pole and a curvilinear grid say so in the variable, not in the dimensions.
+  rotated <- write_layout(file.path(folder, "rotated.nc"),
+    list(rlon = list(units = "degrees", values = c(-4, -3, -2, -1), attributes = list(axis = "X")),
+         rlat = list(units = "degrees", values = c(-2, -1, 0), attributes = list(axis = "Y")), time = days),
+    list(tasmax = list(dims = c("rlon", "rlat", "time"), units = "degC", values = field,
+                       attributes = list(grid_mapping = "rotated_pole", coordinates = "lat lon")),
+         lat = list(dims = c("rlon", "rlat"), units = "degrees_north", values = matrix(45, 4, 3)),
+         lon = list(dims = c("rlon", "rlat"), units = "degrees_east", values = matrix(5, 4, 3)),
+         rotated_pole = list(attributes = list(grid_mapping_name = "rotated_latitude_longitude"))))
+  expect_error(detect_input(rotated), "projected or rotated")
+  curved <- write_layout(file.path(folder, "curved.nc"),
+    list(i = list(values = 0:3), j = list(values = 0:2), time = days),
+    list(tasmax = list(dims = c("i", "j", "time"), units = "degC", values = field,
+                       attributes = list(coordinates = "latitude longitude")),
+         latitude = list(dims = c("i", "j"), units = "degrees_north", values = matrix(45, 4, 3)),
+         longitude = list(dims = c("i", "j"), units = "degrees_east", values = matrix(5, 4, 3))))
+  expect_error(detect_input(curved), "projected or rotated")
+
+  # Plain grids are read as before: one that names a latitude-longitude
+  # mapping, and one completed from the coordinate that is labelled.
+  mapped <- write_layout(file.path(folder, "mapped.nc"),
+    list(lon = list(values = grid_lon), lat = list(values = grid_lat), time = days),
+    list(tmax = list(dims = c("lon", "lat", "time"), units = "degC", values = field,
+                     attributes = list(grid_mapping = "crs")),
+         crs = list(attributes = list(grid_mapping_name = "latitude_longitude"))))
+  expect_identical(detect_input(mapped)[c("longitude", "latitude")], list(longitude = "lon", latitude = "lat"))
+  completed <- write_grid(file.path(folder, "completed.nc"), celsius, grid_days, grid_lon, grid_lat,
+                          dims = c("lon", "nlat", "time"), dim_units = c("degrees_east", ""))
+  expect_identical(detect_input(completed)[c("longitude", "latitude")], list(longitude = "lon", latitude = "nlat"))
 })
 
 test_that("files SCORCH cannot analyze are refused with the reason", {
@@ -152,4 +428,19 @@ test_that("time origins written with single digits are read", {
   expect_equal(decode_time(c(0, 24), "hours since 1900-01-01 00:00:0.0"), as.Date(c("1900-01-01", "1900-01-02")))
   expect_equal(decode_time(1, "days since 1915-1-1 0:0:0"), as.Date("1915-01-02"))
   expect_error(decode_time(0, "days since 2000-01-01 12:61:00"), "valid time")
+})
+
+test_that("a time origin before 1582-10-15 is refused in the standard calendar, later origins decode", {
+  decode_time <- scoRch.simulator:::decode_time
+  # CF's standard calendar is Julian before that date and R's is not: these
+  # 17067072 hours end on 1948-01-01, where R's arithmetic gives two days later.
+  expect_error(decode_time(17067072, "hours since 1-1-1 00:00:0.0"), "1582")
+  expect_error(decode_time(711128, "days since 0001-01-01 00:00:00", "gregorian"), "Re-encode the time axis")
+  expect_error(decode_time(0, "days since 1582-10-14"), "1582")
+  expect_equal(decode_time(17067072, "hours since 1-1-1 00:00:0.0", "proleptic_gregorian"), as.Date("1948-01-03"))
+  expect_equal(decode_time(0, "days since 1582-10-15"), as.Date("1582-10-15"))
+  expect_equal(decode_time(1297320, "hours since 1800-01-01 00:00:0.0"), as.Date("1948-01-01"))
+  expect_equal(decode_time(c(0, 17531), "days since 1900-01-01"), as.Date(c("1900-01-01", "1948-01-01")))
+  expect_equal(decode_time(c(0, 24), "hours since 1900-01-01 00:00:0.0", "gregorian"),
+               as.Date(c("1900-01-01", "1900-01-02")))
 })

@@ -43,10 +43,19 @@ test_that("the event map shows the cells, clusters and ellipses of the run", {
   expect_equal(unclass(overview$extent), c(min(window$lon) - 0.5, max(window$lon) + 0.5, min(window$lat) - 0.5, max(window$lat) + 0.5))
   expect_true(all(diff(unclass(overview$breaks)) > 0))
   expect_true(min(overview$breaks) <= min(cell_tmax) && max(overview$breaks) >= max(cell_tmax))
+  # A wider range keeps its classes, here ten of one degree. The map script blends the heat ramp
+  # so that each has its own colour; the classes are not coarsened to fit eight colours.
+  wide <- 35.4 + (cell_tmax - min(cell_tmax)) / diff(range(cell_tmax)) * 8.8
+  expect_equal(unclass(scoRch.simulator:::event_overview(result, wide, "Events", "window")$breaks), 35:45)
   expect_match(overview$terms$cell, "95th percentile")
   expect_match(overview$terms$day, sprintf("at least %d of the 120 cells", result$regional$threshold_cells))
+  # The map prints the cluster number it is sent, and the text beside it says which number that is.
+  expect_match(overview$terms$cluster, "Catalogs 3 and 4 (dbscan_label, cluster_number_in_day)", fixed = TRUE)
+  expect_match(overview$terms$cluster, "from 0", fixed = TRUE)
 
   days <- result$events$event_days
+  catalog <- result$clusters$clusters
+  expect_identical(catalog$cluster_number_in_day, catalog$dbscan_label)
   for (id in events$compound_event_id) {
     frames <- scoRch.simulator:::event_frames(result, cell_tmax, id)
     dates <- sort(days$date[days$compound_event_id == id])
@@ -64,8 +73,15 @@ test_that("the event map shows the cells, clusters and ellipses of the run", {
       expect_equal(frame$heatwave_cells, nrow(here))
       ellipses <- result$ellipses[result$ellipses$date == dates[k], ]
       expect_length(frame$ellipses, days$n_clusters[days$date == dates[k]])
+      # A cell's cluster number on the map is its number in Catalog 3 (clusters) and Catalog 4 (ellipses):
+      # -1 outside every cluster, otherwise counted from 0 on each day.
+      numbers <- sort(setdiff(unique(unclass(frame$cluster)), -1L))
+      expect_identical(numbers, sort(catalog$cluster_number_in_day[catalog$date == dates[k]]))
+      expect_identical(numbers, sort(ellipses$cluster_number_in_day))
+      if (length(numbers)) expect_identical(numbers, seq_along(numbers) - 1L)
       for (i in seq_along(frame$ellipses)) {
         drawn <- frame$ellipses[[i]]
+        expect_equal(sum(unclass(frame$cluster) == ellipses$cluster_number_in_day[i]), drawn$cells)
         outline <- matrix(unclass(drawn$outline), ncol = 2, byrow = TRUE)
         expect_equal(outline[1, ], outline[nrow(outline), ], tolerance = 1e-3)
         expect_equal(unclass(drawn$centroid), c(ellipses$centroid_lon_weighted[i], ellipses$centroid_lat_weighted[i]),

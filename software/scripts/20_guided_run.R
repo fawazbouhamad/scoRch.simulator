@@ -27,9 +27,14 @@ scorch_bundled_file <- function() {
 next_run_folder <- function(parent, reserve = FALSE) {
   if (reserve && !dir.exists(parent) && !dir.create(parent, recursive = TRUE, showWarnings = FALSE) &&
       !dir.exists(parent)) fail("Could not create the results folder: ", parent)
-  i <- 1L
+  # Number after the highest run in the folder, so the name of a deleted run
+  # is not given to a newer one. Nine digits stay within R's whole numbers.
+  used <- list.files(parent, pattern = "^SCORCH_run_[0-9]{1,9}$")
+  i <- max(0L, as.integer(sub("^SCORCH_run_", "", used))) + 1L
+  # A drive or file-system root already ends in a slash.
+  root <- sub("/+$", "", parent)
   repeat {
-    folder <- file.path(parent, sprintf("SCORCH_run_%03d", i))
+    folder <- file.path(root, sprintf("SCORCH_run_%03d", i))
     if (!file.exists(folder)) {
       if (!reserve || dir.create(folder, showWarnings = FALSE)) return(folder)
       if (!file.exists(folder)) fail("Could not create ", folder, ". Choose another results folder.")
@@ -113,18 +118,47 @@ guided_settings <- function(base, form, path, info, dest, answers = list()) {
   for (section in c("heatwaves", "regional_days", "clustering", "ellipses", "power_law", "lgcp")) {
     for (key in names(base[[section]])) {
       value <- form[[paste(section, key, sep = "_")]]
-      if (section == "clustering")
+      if (section == "clustering") {
         value <- suppressWarnings(as.numeric(strsplit(trimws(value), "[,[:space:]]+")[[1]]))
+        # Whole numbers are saved as a scripted run saves them: "- 4", not "- 4.0".
+        if (key == "min_samples_values" && all(is.finite(value)) && all(value == round(value)) &&
+            all(abs(value) <= .Machine$integer.max)) value <- as.integer(value)
+      }
       cfg[[section]][key] <- list(value)
     }
   }
   cfg$output$directory <- dest
-  checked <- read_config(cfg, input_required = FALSE)
+  # A refused setting is named as the window labels it, not by its YAML key.
+  checked <- tryCatch(read_config(cfg, input_required = FALSE),
+                      error = function(e) form_problem(conditionMessage(e)))
+  if (info$format == "era5" && !is.null(checked$input$era5_cell_size_deg))
+    check_cell_size(info, checked$input$era5_cell_size_deg)
   keep <- as.integer(format(dates, "%m")) %in% months
   if (!is.null(checked$period$start_date)) keep <- keep & dates >= checked$period$start_date
   if (!is.null(checked$period$end_date)) keep <- keep & dates <= checked$period$end_date
   if (!any(keep)) fail("Your chosen months and dates contain no observations in this dataset.")
   list(config = cfg, dates = dates[keep], period = period_summary(dates[keep], months, dates))
+}
+
+# The reader averages raw grid points to cells only when the cell size is a
+# whole multiple of the grid spacing (average_to_cells()). The same rule and
+# words, applied to the coordinates of the header, stop such a selection
+# before Run instead of after it.
+check_cell_size <- function(info, size) {
+  file <- if (length(info$file)) basename(info$file[[1L]]) else "the selected data"
+  axes <- list(longitude = wrap_longitudes(as.numeric(info$lon))$lon, latitude = sort(as.numeric(info$lat)))
+  for (name in names(axes)) {
+    step <- abs(grid_step(axes[[name]], name))
+    n <- size / step
+    if (n < 1 - 1e-6 || abs(n - round(n)) > 1e-6) {
+      fail_advanced(sprintf("The ERA5 %s spacing (%g degrees) in %s does not divide '%s' (%g).",
+                            name, step, file, SETTING_LABELS[["era5_cell_size_deg"]], size))
+    }
+    if (!any(table(floor(axes[[name]] / size + 1e-6)) == round(n))) {
+      fail_advanced(sprintf("The ERA5 grid in %s is too small for one %g-degree cell.", file, size))
+    }
+  }
+  invisible(NULL)
 }
 
 write_guided_config <- function(cfg, where) {
@@ -162,7 +196,8 @@ execute_guided_run <- function(settings, parent, source) {
 
 open_run_file <- function(path) {
   path <- normalizePath(path, mustWork = TRUE)
-  if (.Platform$OS.type == "windows") shell.exec(path)
+  # shell.exec() exists on Windows only; looked up by name, other platforms do not miss it.
+  if (.Platform$OS.type == "windows") get("shell.exec", envir = baseenv())(path)
   else if (Sys.info()[["sysname"]] == "Darwin") system2("open", shQuote(path), wait = FALSE)
   else if (nzchar(Sys.which("xdg-open"))) system2("xdg-open", shQuote(path), wait = FALSE)
   else utils::browseURL(paste0("file://", utils::URLencode(path)))

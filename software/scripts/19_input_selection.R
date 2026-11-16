@@ -13,7 +13,8 @@ open_temperature_source <- function(path, progress = NULL) {
   members <- entries$filename
   invalid <- grepl("(^/|(^|/)[.][.](/|$)|\\\\|:|[[:cntrl:]])", members) |
     grepl("^(CON|AUX|NUL|PRN|COM[1-9]|LPT[1-9])([.]|$)", basename(members), ignore.case = TRUE)
-  if (any(invalid) || anyDuplicated(members) || any(entries$type != "file"))
+  # zip_list() reports the entry type from zip 2.3.3 on; older versions cannot report links.
+  if (any(invalid) || anyDuplicated(members) || (!is.null(entries$type) && any(entries$type != "file")))
     fail("The ZIP contains a repeated, linked or unsupported NetCDF entry. Choose ordinary NetCDF files.")
   scratch <- tempfile("scorch-input-")
   if (!dir.create(scratch)) fail("Could not create the temporary input folder.")
@@ -52,15 +53,48 @@ reader_names <- function(format) {
   }
 }
 
-# One attribute as text; "" when the variable has none.
+# One attribute as text; "" when the variable has none. Older files store
+# accents and the degree sign in Latin-1, which is read as that.
 nc_text <- function(nc, name, attribute) {
   value <- tryCatch(ncdf4::ncatt_get(nc, name, attribute), error = function(e) list(hasatt = FALSE))
-  if (isTRUE(value$hasatt)) trimws(as.character(value$value)[1]) else ""
+  if (!isTRUE(value$hasatt)) return("")
+  text <- as.character(value$value)[1]
+  if (!validUTF8(text)) text <- iconv(text, "latin1", "UTF-8")
+  trimws(text)
+}
+
+# Could the coordinate values of a dimension be degrees no larger than `limit`?
+# Metres, projected or rotated axes, vertical axes, and the axes of a variable
+# on a mapped or curvilinear grid (`mapped`), are another kind of grid.
+degree_axis <- function(nc, name, limit, mapped) {
+  dim <- nc$dim[[name]]
+  isTRUE(dim$create_dimvar) && is.numeric(dim$vals) && all(is.finite(dim$vals)) && all(abs(dim$vals) <= limit) &&
+    !grepl("^(m|km|met(er|re)s?)$", tolower(trimws(paste(dim$units, collapse = "")))) &&
+    !grepl("projection|grid_", tolower(nc_text(nc, name, "standard_name"))) && !name %in% mapped &&
+    tolower(nc_text(nc, name, "axis")) != "z" && !nzchar(nc_text(nc, name, "positive"))
+}
+
+# Dimensions of variables that say their grid is not plain longitude-latitude:
+# a grid mapping of another kind, or latitudes and longitudes given as
+# two-dimensional variables in the `coordinates` attribute.
+mapped_dimensions <- function(nc) {
+  listed <- function(name, attribute) strsplit(nc_text(nc, name, attribute), "[[:space:]]+")[[1L]]
+  unique(unlist(lapply(names(nc$var), function(name) {
+    # "crs: x y" names a mapping before each colon; "crs" alone is the mapping.
+    mapping <- listed(name, "grid_mapping")
+    if (any(grepl(":$", mapping))) mapping <- sub(":$", "", mapping[grepl(":$", mapping)])
+    plain <- vapply(mapping, function(v) v %in% names(nc$var) &&
+      identical(tolower(nc_text(nc, v, "grid_mapping_name")), "latitude_longitude"), logical(1))
+    curved <- vapply(intersect(listed(name, "coordinates"), names(nc$var)), function(v) nc$var[[v]]$ndims > 1L &&
+      (grepl("^degrees?[ _]?(e|east|n|north)$", tolower(nc_text(nc, v, "units"))) ||
+         tolower(nc_text(nc, v, "standard_name")) %in% c("longitude", "latitude")), logical(1))
+    if (!all(plain) || any(curved)) vapply(nc$var[[name]]$dim, function(d) d$name, "")
+  }), use.names = FALSE))
 }
 
 # Which dimension is time, longitude or latitude: CF units and standard names
 # first, then axis letters and familiar names for coordinates in degrees.
-dimension_roles <- function(nc, input) {
+dimension_roles <- function(nc, input, mapped = mapped_dimensions(nc)) {
   role <- function(name) {
     dim <- nc$dim[[name]]
     known <- isTRUE(dim$create_dimvar)
@@ -72,11 +106,9 @@ dimension_roles <- function(nc, input) {
     if (grepl("^degrees?[ _]?(e|east)$", units) || standard == "longitude") return("longitude")
     if (grepl("^degrees?[ _]?(n|north)$", units) || standard == "latitude") return("latitude")
     if (axis == "t" || short %in% c("time", "valid_time", "t", "date")) return("time")
-    degrees <- known && is.numeric(dim$vals) && all(is.finite(dim$vals)) &&
-      !grepl("^(m|km|met(er|re)s?)$", units) && !grepl("projection|grid_", standard)
-    if (degrees && all(abs(dim$vals) <= 360) && (axis == "x" || short %in% c("lon", "longitude", "long", "x")))
+    if ((axis == "x" || short %in% c("lon", "longitude", "long", "x")) && degree_axis(nc, name, 360, mapped))
       return("longitude")
-    if (degrees && all(abs(dim$vals) <= 90) && (axis == "y" || short %in% c("lat", "latitude", "y")))
+    if ((axis == "y" || short %in% c("lat", "latitude", "y")) && degree_axis(nc, name, 90, mapped))
       return("latitude")
     NA_character_
   }
@@ -98,7 +130,7 @@ dimension_roles <- function(nc, input) {
 # Gridded variables: one time, one longitude and one latitude dimension. Other
 # dimensions must have length one, except ERA5's expver. A variable with one
 # unnamed horizontal dimension left is completed from the one that is known.
-grid_variables <- function(nc, roles) {
+grid_variables <- function(nc, roles, mapped = mapped_dimensions(nc)) {
   found <- list()
   for (name in names(nc$var)) {
     var <- nc$var[[name]]
@@ -109,7 +141,11 @@ grid_variables <- function(nc, roles) {
     open <- is.na(role) & sizes > 1 & dims != "expver"
     if (sum(role %in% "time") != 1L) next
     horizontal <- sum(role %in% "longitude") + sum(role %in% "latitude")
-    if (horizontal == 1L && sum(open) == 1L) {
+    # The remaining dimension takes the missing role only when its values could
+    # be that coordinate; a pressure level next to a latitude is not a longitude.
+    if (horizontal == 1L && sum(open) == 1L &&
+        (!isTRUE(nc$dim[[dims[open]]]$create_dimvar) ||
+           degree_axis(nc, dims[open], if ("latitude" %in% role) 360 else 90, mapped))) {
       role[open] <- setdiff(c("longitude", "latitude"), role)
       open[] <- FALSE
       horizontal <- 2L
@@ -117,12 +153,7 @@ grid_variables <- function(nc, roles) {
     if (horizontal == 0L && sum(open) == 2L) {
       # Two unlabelled dimensions can be asked about only when both could be
       # degrees; metres, rotated poles and projections are another kind of grid.
-      degrees <- vapply(dims[open], function(d) {
-        dim <- nc$dim[[d]]
-        isTRUE(dim$create_dimvar) && is.numeric(dim$vals) && all(is.finite(dim$vals)) && all(abs(dim$vals) <= 360) &&
-          !grepl("^(m|km|met(er|re)s?)$", tolower(trimws(paste(dim$units, collapse = "")))) &&
-          !grepl("projection|grid_", tolower(nc_text(nc, d, "standard_name")))
-      }, logical(1))
+      degrees <- vapply(dims[open], function(d) degree_axis(nc, d, 360, mapped), logical(1))
       found[[name]] <- if (all(degrees)) list(name = name, unknown = dims[open], time = dims[role %in% "time"])
                        else list(name = name, projected = dims[open])
       next
@@ -134,24 +165,94 @@ grid_variables <- function(nc, roles) {
   found
 }
 
-# What the metadata of a variable says about temperature.
+# What the metadata of a variable says about temperature: its units, and
+# whether its name, standard_name, long_name or cell_methods call it a
+# maximum, a minimum, a time mean, 2 m air temperature or another kind of
+# temperature (dew point, sea, soil, skin, an anomaly).
 temperature_evidence <- function(nc, name) {
   units <- nc_text(nc, name, "units")
   unit <- if (nzchar(units)) tryCatch(temperature_unit(units), error = function(e) NA_character_) else NA_character_
-  described <- grepl("temperature", paste(nc_text(nc, name, "standard_name"), nc_text(nc, name, "long_name")),
-                     ignore.case = TRUE)
+  standard <- nc_text(nc, name, "standard_name")
+  long <- nc_text(nc, name, "long_name")
+  methods <- nc_text(nc, name, "cell_methods")
+  described <- grepl("temperature", paste(standard, long), ignore.case = TRUE)
   named <- grepl("^(t2m|2m_temperature|tx|tas|temp|mx2t|mn2t)$|tmax|tmin|tasm|tmm[xn]|temperature", name,
                  ignore.case = TRUE)
-  list(units = units, unit = unit,
-       fahrenheit = grepl("fahrenheit|^deg(ree)?s?[ _]?f$|^f$", units, ignore.case = TRUE),
+  # Whole words of the two descriptive names: "Near-Surface" and
+  # "air_temperature" read "near surface" and "air temperature".
+  text <- paste0(" ", gsub("[^a-z0-9]+", " ", tolower(paste(standard, long))), " ")
+  says <- function(in_name, in_text, in_time = NULL) {
+    grepl(in_name, name, ignore.case = TRUE) || grepl(in_text, text) ||
+      (!is.null(in_time) && grepl(paste0("time: *", in_time), methods, ignore.case = TRUE))
+  }
+  # A number beside the unit scales the stored values: "0.1 degC", "K*10".
+  factors <- as.numeric(regmatches(units, gregexpr("[0-9]*[.]?[0-9]+", units))[[1L]])
+  # The readers take the units as they are stored and stop on text that is not valid UTF-8.
+  stored <- tryCatch(ncdf4::ncatt_get(nc, name, "units"), error = function(e) list(hasatt = FALSE))
+  list(units = units, unit = unit, legible = !isTRUE(stored$hasatt) || all(validUTF8(as.character(stored$value))),
+       fahrenheit = grepl("fah?renheit|^(deg(ree)?s?)?f$", gsub("[^A-Za-z]", "", units, useBytes = TRUE),
+                          ignore.case = TRUE),
+       scaled = !is.na(unit) && (any(factors != 1) || grepl("tenth|hundredth", units, ignore.case = TRUE)),
        temperature = !is.na(unit) || described || named,
-       maximum = grepl("max|^tx$|tmmx|mx2t", name, ignore.case = TRUE) ||
-         grepl("time: *maximum", nc_text(nc, name, "cell_methods"), ignore.case = TRUE))
+       maximum = says("max|^tx$|tmmx|mx2t", " (max|maximum|maximal|maxima|tmax|tasmax|t2mmax|tmmx|mx2t) ", "max"),
+       minimum = says("min|^tn$|tmmn|mn2t", " (min|minimum|minimal|minima|tmin|tasmin|t2mmin|tmmn|mn2t) ", "min"),
+       mean = says("mean|avg|average|^tg$", " (mean|average|averaged|avg) ", "mean"),
+       air = tolower(standard) == "air_temperature" ||
+         says("^(t2m|2m_temperature|tas)$",
+              " 2 ?m(et(re|er)s?)? (air )?temperature | temperature (at|in) 2 ?m|surface air temperature "),
+       other = tolower(standard) == "surface_temperature" ||
+         says("dew|sst|skt|soil|skin|anom|^(d2m|tdps|ts|tos)$",
+              paste0(" (dew|dewpoint|wet bulb|wetbulb|sea|soil|skin|lake|ice|potential|apparent|brightness) ",
+                     "|anomal| land surface temperature ")))
+}
+
+# Does the file itself identify the variable as what SCORCH analyzes? Daily
+# values must be a daily maximum; sub-daily values must be 2 m air temperature,
+# whose highest value of each day is the daily maximum. The names that `auto`
+# reads in the scripted workflow (tmax, t2m) count unless the file objects.
+temperature_identified <- function(evidence, variable, format, per_day) {
+  highest <- evidence$maximum && !evidence$minimum
+  if (format == "daily_tmax") return(variable == "tmax" || (highest && !evidence$other))
+  known <- variable %in% reader_names("era5")$variable
+  if (per_day > 1L) return((known || evidence$air || highest) && !evidence$minimum && !evidence$other)
+  (known || highest) && !evidence$minimum && !evidence$mean && !evidence$other
+}
+
+# Is a dimension of length one a level above the surface? A pressure, sigma
+# or model level is; the height of a few metres that some files carry is not.
+upper_level <- function(nc, name) {
+  dim <- nc$dim[[name]]
+  units <- tolower(trimws(paste(dim$units, collapse = "")))
+  near_surface <- grepl("^(m|met(er|re)s?)$", units) && isTRUE(dim$create_dimvar) && all(abs(dim$vals) <= 10)
+  !near_surface && (grepl("^(pa|hpa|mb|mbar|millibars?)$", units) || tolower(nc_text(nc, name, "axis")) == "z" ||
+                      nzchar(nc_text(nc, name, "positive")) ||
+                      grepl("lev|pressure|isobaric|sigma|height|altitude", name, ignore.case = TRUE))
 }
 
 # One decision the file leaves open, for the setup window to ask.
 input_question <- function(id, title, detail, choices, recommended = NULL) {
   list(id = id, title = title, detail = detail, choices = choices, recommended = recommended)
+}
+
+# A temperature variable that the file does not identify is confirmed by the
+# user, never assumed: a minimum, a mean or a dew point gives other heatwaves.
+variable_question <- function(nc, label, variable, per_day) {
+  facts <- c("long name" = nc_text(nc, variable, "long_name"), "standard name" = nc_text(nc, variable, "standard_name"),
+             "cell methods" = nc_text(nc, variable, "cell_methods"))
+  facts <- facts[nzchar(facts)]
+  hourly <- per_day > 1L
+  input_question("variable", "Is this the temperature to analyze?",
+    paste0(sprintf("%s holds the variable '%s'%s, with %s. ", label, variable,
+                   if (length(facts)) sprintf(" (%s)", paste(sprintf("%s '%s'", names(facts), facts), collapse = ", ")) else "",
+                   if (hourly) sprintf("%d values per day", per_day) else "one value per day"),
+           if (hourly) paste("The file does not identify it as 2 m air temperature. SCORCH detects heatwaves in daily",
+                             "maximum temperature, which it would take from the highest value of each day.")
+           else paste("The file does not identify it as daily maximum temperature, which is what SCORCH analyzes",
+                      "to detect heatwaves."),
+           " If this is not the variable you meant, choose other data."),
+    stats::setNames(variable, if (hourly) sprintf("Analyze the daily maximum of '%s'", variable)
+                              else sprintf("Analyze '%s' as the daily temperature", variable)),
+    NA_character_)
 }
 
 # Read coordinate arrays, attributes and one time step only. No temperature
@@ -161,15 +262,27 @@ temperature_header <- function(file, input) {
   nc <- ncdf4::nc_open(file)
   on.exit(ncdf4::nc_close(nc), add = TRUE)
   label <- basename(file)
-  roles <- dimension_roles(nc, input)
-  grids <- grid_variables(nc, roles)
+  mapped <- mapped_dimensions(nc)
+  roles <- dimension_roles(nc, input, mapped)
+  grids <- grid_variables(nc, roles, mapped)
   raw <- reader_names("era5")$variable
   questions <- list()
   variable <- input$variable
+  several <- function(found) {
+    input_question("variable", "Which variable holds the temperature?",
+      sprintf("%s has %d gridded temperature variables.", label, length(found)),
+      stats::setNames(found, vapply(found, function(v) {
+        long <- nc_text(nc, v, "long_name")
+        if (nzchar(long)) sprintf("%s (%s)", v, long) else v
+      }, "")))
+  }
+  # The variables among which one was preferred, to ask about them all when
+  # the file does not identify the preferred one after all.
+  among <- character(0)
   if (identical(variable, "auto")) {
     names_found <- names(grids)
-    evidence <- lapply(names_found, temperature_evidence, nc = nc)
-    warm <- names_found[vapply(evidence, function(e) e$temperature, logical(1))]
+    clues <- lapply(names_found, temperature_evidence, nc = nc)
+    warm <- names_found[vapply(clues, function(e) e$temperature, logical(1))]
     if ("tmax" %in% names_found && any(raw %in% names_found)) {
       if (!identical(input$format, "auto")) {
         variable <- if (input$format == "era5") intersect(raw, names_found)[1] else "tmax"
@@ -187,22 +300,19 @@ temperature_header <- function(file, input) {
     } else if (length(warm) == 1L) {
       variable <- warm
     } else if (length(warm) > 1L) {
-      highest <- warm[vapply(evidence[match(warm, names_found)], function(e) e$maximum, logical(1))]
-      if (length(highest) == 1L) variable <- highest else {
-        questions$variable <- input_question("variable", "Which variable holds the temperature?",
-          sprintf("%s has %d gridded temperature variables.", label, length(warm)),
-          stats::setNames(warm, vapply(warm, function(v) {
-            long <- nc_text(nc, v, "long_name")
-            if (nzchar(long)) sprintf("%s (%s)", v, long) else v
-          }, "")))
-      }
+      highest <- warm[vapply(clues[match(warm, names_found)], function(e) e$maximum && !e$minimum && !e$other,
+                             logical(1))]
+      if (length(highest) == 1L) {
+        variable <- highest
+        among <- warm
+      } else questions$variable <- several(warm)
     } else if (length(names_found)) {
       # Nothing calls itself temperature. A variable recorded in other units
       # (mm, m s-1) is not one; a variable without units may be.
-      other <- vapply(evidence, function(e) nzchar(e$units), logical(1))
+      other <- vapply(clues, function(e) nzchar(e$units), logical(1))
       if (all(other)) {
         fail(sprintf("%s does not appear to hold temperature. Its gridded variables are: %s.", label,
-                     paste(sprintf("%s (%s)", names_found, vapply(evidence, function(e) e$units, "")), collapse = ", ")))
+                     paste(sprintf("%s (%s)", names_found, vapply(clues, function(e) e$units, "")), collapse = ", ")))
       }
       if (sum(!other) == 1L) variable <- names_found[!other] else {
         questions$variable <- input_question("variable", "Which variable holds the temperature?",
@@ -228,21 +338,8 @@ temperature_header <- function(file, input) {
                        "projected or rotated coordinates. SCORCH needs longitudes and latitudes in degrees."),
                  label, variable, paste(grid$projected, collapse = " and ")))
   }
-  if (!is.null(grid$unknown)) {
-    span <- vapply(grid$unknown, function(d) {
-      values <- nc$dim[[d]]$vals
-      sprintf("%s (%d values, %s to %s)", d, length(values), format(min(values)), format(max(values)))
-    }, "")
-    return(list(file = file, questions = list(longitude = input_question("longitude",
-      "Which dimension is the longitude?",
-      sprintf("%s does not label the two horizontal dimensions of '%s'. The other one is used as latitude.",
-              label, variable),
-      stats::setNames(grid$unknown, span)))))
-  }
-  for (name in c(grid$time, grid$latitude, grid$longitude)) {
-    if (!isTRUE(nc$dim[[name]]$create_dimvar)) {
-      fail(sprintf("The dimension '%s' in %s has no coordinate values.", name, label))
-    }
+  if (!isTRUE(nc$dim[[grid$time]]$create_dimvar)) {
+    fail(sprintf("The dimension '%s' in %s has no coordinate values.", grid$time, label))
   }
 
   # Dates and time step, decoded as the readers decode them.
@@ -268,41 +365,130 @@ temperature_header <- function(file, input) {
                  label, per_day))
   }
 
-  # One time step shows whether the stored numbers agree with the stated units.
+  # read_tmax() takes exactly three dimensions; only the ERA5 reader drops
+  # dimensions of length one and merges expver.
   dims <- vapply(nc$var[[variable]]$dim, function(d) d$name, "")
-  sample <- tryCatch(suppressWarnings(range(ncdf4::ncvar_get(nc, variable, start = rep(1, length(dims)),
-    count = ifelse(dims == grid$time, 1, -1)), na.rm = TRUE)), error = function(e) c(NA_real_, NA_real_))
-  if (!all(is.finite(sample))) sample <- c(NA_real_, NA_real_)
-  looks <- if (is.na(sample[1])) NA_character_ else if (sample[1] > 150) "K" else if (sample[2] < 100) "degC" else NA_character_
+  extra <- setdiff(dims, c(grid$time, grid$latitude, grid$longitude, grid$unknown))
+  if (format == "daily_tmax" && length(dims) != 3L) {
+    fail(sprintf(paste("'%s' in %s has %d dimensions (%s). Prepared daily Tmax must have exactly three: time, latitude",
+                       "and longitude. Save the variable without the extra dimension %s, then choose that file.%s"),
+                 variable, label, length(dims), paste(dims, collapse = ", "), paste0("'", extra, "'", collapse = " and "),
+                 if ("expver" %in% extra) paste(" For ERA5 data, setting the data format to ERA5 temperature under",
+                                                "Advanced settings merges 'expver' instead.") else ""))
+  }
+
+  # Units that no answer could make readable stop the selection before any question.
   evidence <- temperature_evidence(nc, variable)
   if (evidence$fahrenheit) {
     fail(sprintf("%s stores temperature in Fahrenheit. Provide degrees Celsius or Kelvin.", label))
   }
+  if (evidence$scaled && identical(input$units, "auto")) {
+    fail(sprintf(paste("%s records the units of '%s' as '%s', so its numbers are not whole degrees.",
+                       "Provide degrees Celsius or Kelvin."), label, variable, evidence$units))
+  }
+
+  # A variable that detection found is analyzed only when the file identifies
+  # it. Otherwise the user confirms it, which names it like a configuration.
+  # Temperature on a pressure or model level is not the 2 m temperature.
+  identified <- temperature_identified(evidence, variable, format, per_day) &&
+    !any(vapply(extra, upper_level, logical(1), nc = nc))
+  if (identical(input$variable, "auto") && !identified) {
+    return(list(file = file, questions = list(variable =
+      if (length(among) > 1L) several(among) else variable_question(nc, label, variable, per_day))))
+  }
+
+  if (!is.null(grid$unknown)) {
+    span <- vapply(grid$unknown, function(d) {
+      values <- nc$dim[[d]]$vals
+      sprintf("%s (%d values, %s to %s)", d, length(values), format(min(values)), format(max(values)))
+    }, "")
+    return(list(file = file, questions = list(longitude = input_question("longitude",
+      "Which dimension is the longitude?",
+      sprintf("%s does not label the two horizontal dimensions of '%s'. The other one is used as latitude.",
+              label, variable),
+      stats::setNames(grid$unknown, span)))))
+  }
+
+  # The readers need constant spacing. Check the coordinates as they will see
+  # them: the ERA5 reader wraps the longitudes and sorts both coordinates.
+  coordinates <- list(longitude = grid$longitude, latitude = grid$latitude)
+  for (axis in names(coordinates)) {
+    if (!isTRUE(nc$dim[[coordinates[[axis]]]]$create_dimvar)) {
+      fail(sprintf("The dimension '%s' in %s has no coordinate values.", coordinates[[axis]], label))
+    }
+    coordinates[[axis]] <- as.numeric(nc$dim[[coordinates[[axis]]]]$vals)
+    if (length(coordinates[[axis]]) < 2L || anyNA(coordinates[[axis]])) {
+      fail(sprintf("%s needs at least two %s values, without missing values.", label, axis))
+    }
+  }
+  if (format == "era5") {
+    coordinates <- list(longitude = wrap_longitudes(coordinates$longitude)$lon, latitude = sort(coordinates$latitude))
+  }
+  for (axis in names(coordinates)) {
+    tryCatch(grid_step(coordinates[[axis]], axis), error = function(e) {
+      fail(sprintf(paste("%s is not on a regular longitude-latitude grid. %s SCORCH needs the same spacing between all",
+                         "%ss; regrid a Gaussian or otherwise uneven grid first."), label, conditionMessage(e), axis))
+    })
+  }
+
+  # One time step shows whether the stored numbers can be air temperature in
+  # the stated units: between -100 and 70 degrees Celsius.
+  sample <- tryCatch(suppressWarnings(range(ncdf4::ncvar_get(nc, variable, start = rep(1, length(dims)),
+    count = ifelse(dims == grid$time, 1, -1)), na.rm = TRUE)), error = function(e) c(NA_real_, NA_real_))
+  if (!all(is.finite(sample))) sample <- c(NA_real_, NA_real_)
+  celsius <- list(K = sample - 273.15, degC = sample)
+  fits <- vapply(celsius, function(range) !anyNA(range) && range[1] >= -100 && range[2] <= 70, logical(1))
+  implausible <- function(unit) {
+    span <- sprintf("%s to %s", format(round(sample[1], 1)), format(round(sample[2], 1)))
+    fail(sprintf("The first time step of %s ranges from %s", label, span),
+         if (is.na(unit)) {
+           sprintf(" and %s. These numbers cannot be air temperature in degrees Celsius or in Kelvin.",
+                   if (nzchar(evidence$units)) sprintf("the file records the units as '%s'", evidence$units)
+                   else "the file records no units")
+         } else if (unit == "K") {
+           sprintf(" K (%s to %s \u00b0C), which cannot be air temperature.",
+                   format(round(celsius$K[1], 1)), format(round(celsius$K[2], 1)))
+         } else " \u00b0C, which cannot be air temperature.",
+         " The file may mark missing data with a number that it does not declare as missing (such as 9999 or 1e20),",
+         " or its values may be in other units, such as Fahrenheit or tenths of a degree.")
+  }
   units <- input$units
-  stated <- evidence$unit
+  # Units that only this preview can read are settled by a question, whose
+  # answer the configuration then carries to the readers.
+  stated <- if (evidence$legible) evidence$unit else NA_character_
   if (identical(units, "auto")) {
     seen <- if (is.na(sample[1])) "" else sprintf(" The first time step ranges from %s to %s.",
                                                   format(round(sample[1], 1)), format(round(sample[2], 1)))
     choices <- c("Kelvin" = "K", "Degrees Celsius" = "degC")
-    if (is.na(stated)) {
+    # At most one unit can fit. It is suggested; a question that neither
+    # answer could satisfy is not asked.
+    likely <- if (any(fits)) names(fits)[fits] else NA_character_
+    if (!is.na(stated) && (is.na(sample[1]) || fits[[stated]])) {
+      units <- stated
+    } else if (!is.na(sample[1]) && is.na(likely)) {
+      implausible(stated)
+    } else if (is.na(stated)) {
+      recorded <- sprintf("%s records the units of '%s' as '%s', ", label, variable, evidence$units)
       questions$units <- input_question("units", "Which units are these temperatures in?",
-        paste0(if (nzchar(evidence$units)) sprintf("%s records the units of '%s' as '%s', which SCORCH does not recognize.",
-                                                    label, variable, evidence$units)
+        paste0(if (!evidence$legible) paste0(recorded, "in a text encoding that the analysis cannot read.")
+               else if (nzchar(evidence$units)) paste0(recorded, "which SCORCH does not recognize.")
                else sprintf("%s does not record the units of '%s'.", label, variable), seen),
-        choices, looks)
-    } else if (!is.na(looks) && looks != stated) {
+        choices, likely)
+    } else {
       questions$units <- input_question("units", "Which units are these temperatures in?",
         sprintf("%s records '%s' for '%s', but the numbers look like %s.%s", label, evidence$units, variable,
-                if (looks == "K") "Kelvin" else "degrees Celsius", seen),
-        choices, looks)
-    } else units <- stated
+                if (likely == "K") "Kelvin" else "degrees Celsius", seen),
+        choices, likely)
+    }
   } else units <- temperature_unit(units)
   if (length(questions)) return(list(file = file, questions = questions))
+  if (!is.na(sample[1]) && !fits[[units]]) implausible(units)
 
   list(file = file, format = format, variable = variable, longitude = grid$longitude,
        latitude = grid$latitude, time = grid$time, units = units, stated_units = evidence$units,
-       dates = dates, per_day = per_day, lon = nc$dim[[grid$longitude]]$vals, lat = nc$dim[[grid$latitude]]$vals,
-       sample_c = if (units == "K") sample - 273.15 else sample, questions = list())
+       identified = identified, dates = dates, per_day = per_day,
+       lon = nc$dim[[grid$longitude]]$vals, lat = nc$dim[[grid$latitude]]$vals,
+       sample_c = celsius[[units]], questions = list())
 }
 
 inspect_temperature_source <- function(source, input) {
@@ -313,7 +499,8 @@ inspect_temperature_source <- function(source, input) {
     if (inherits(header, "error") || length(header$questions)) {
       fail(sprintf(paste("%s does not hold temperature in the same way as %s%s.",
                          "Select the files of one temperature dataset only."), basename(file), basename(first$file),
-                   if (inherits(header, "error")) paste0(" (", conditionMessage(header), ")") else ""))
+                   if (inherits(header, "error")) paste0(" (", conditionMessage(header), ")")
+                   else sprintf(" (on its own it raises the question: %s)", header$questions[[1L]]$title)))
     }
     header
   }))
@@ -322,6 +509,23 @@ inspect_temperature_source <- function(source, input) {
   folder_selected <- length(input$file) > 0L && any(dir.exists(input$file))
   if (first$format == "daily_tmax" && (length(headers) != 1L || folder_selected))
     fail("For prepared daily Tmax, select one NetCDF file or a ZIP containing one prepared file.")
+  # The readers apply one set of names to all files. Names that differ are
+  # read correctly only when `auto` finds each of them by itself.
+  expected <- reader_names(first$format)
+  what <- c(variable = "temperature variable", longitude = "longitude dimension", latitude = "latitude dimension",
+            time = "time dimension")
+  for (h in headers[-1L]) {
+    for (key in names(what)) {
+      if (h[[key]] != first[[key]] && !all(c(h[[key]], first[[key]]) %in% expected[[key]])) {
+        fail(sprintf(paste("%s and %s name the %s differently ('%s' and '%s'). SCORCH reads all files of a selection",
+                           "with the same names. Select the files of one temperature dataset only%s."),
+                     basename(first$file), basename(h$file), what[[key]], first[[key]], h[[key]],
+                     if (key == "variable" && identical(input$variable, "auto"))
+                       paste("; if every file holds the variable you want, name it as the temperature variable",
+                             "under Advanced settings") else ""))
+      }
+    }
+  }
   for (h in headers[-1L]) {
     if (!isTRUE(all.equal(sort(h$lon %% 360), sort(first$lon %% 360), tolerance = 1e-6)) ||
         !isTRUE(all.equal(sort(h$lat), sort(first$lat), tolerance = 1e-6)))
@@ -332,6 +536,7 @@ inspect_temperature_source <- function(source, input) {
   first$dates <- dates
   for (key in c("variable", "longitude", "latitude", "time", "units", "per_day"))
     first[[key]] <- unique(unlist(lapply(headers, "[[", key)))
+  first$identified <- all(vapply(headers, function(h) isTRUE(h$identified), logical(1)))
   first$files <- length(headers)
   first
 }

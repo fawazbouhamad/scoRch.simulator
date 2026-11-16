@@ -45,10 +45,20 @@
     return (m1 === m2 ? String(d1) : d1 + ' ' + MONTHS[m1 - 1]) + ' to ' + longDate(end);
   }
 
-  // n colours spread over the heat ramp.
+  // n colours spread over the heat ramp. Up to eight classes take the ramp's
+  // own colours; more classes are blended between neighbouring colours, so
+  // that no two classes share one.
   function heat(n) {
     if (n <= 1) return [HEAT[4]];
-    return Array.from({ length: n }, (_, i) => HEAT[Math.round(i * (HEAT.length - 1) / (n - 1))]);
+    const last = HEAT.length - 1;
+    if (n <= HEAT.length) return Array.from({ length: n }, (_, i) => HEAT[Math.round(i * last / (n - 1))]);
+    const rgb = HEAT.map(colour => [1, 3, 5].map(at => parseInt(colour.slice(at, at + 2), 16)));
+    return Array.from({ length: n }, (_, i) => {
+      const at = i * last / (n - 1);
+      const k = Math.min(Math.floor(at), last - 1);
+      return '#' + rgb[k].map((value, channel) => Math.round(value + (rgb[k + 1][channel] - value) * (at - k))
+        .toString(16).padStart(2, '0')).join('');
+    });
   }
 
   // One small picture per type: day tiles holding the clusters of that day.
@@ -78,6 +88,7 @@
       this.timer = null;
       this.day = 0;
       this.still = calm.matches;
+      this.pointer = null;         // where the pointer rests on the map, if it does
     }
 
     load(data) {
@@ -143,16 +154,17 @@
       this.dateLabel = h('strong', { class: 'map-date' });
       this.dayLabel = h('span', { class: 'map-day' });
       this.tip = h('div', { class: 'map-tip', hidden: true });
-      this.map.addEventListener('mousemove', event => this.hover(event));
-      this.map.addEventListener('mouseleave', () => { this.tip.hidden = true; });
+      this.map.addEventListener('mousemove', event => { this.pointer = event; this.hover(event); });
+      this.map.addEventListener('mouseleave', () => { this.pointer = null; this.tip.hidden = true; });
 
       const control = (label, action, text) => h('button', { type: 'button', class: 'btn btn-default', onclick: action,
         'aria-label': label, text });
       this.previous = control('Previous day', () => this.step(-1), '‹ Previous day');
       this.playButton = h('button', { type: 'button', class: 'btn btn-default play', onclick: () => this.toggle() });
       this.next = control('Next day', () => this.step(1), 'Next day ›');
+      // Read the chosen day first: stop() puts the slider back on the day shown.
       this.slider = h('input', { type: 'range', min: 1, max: 1, step: 1, value: 1, 'aria-label': 'Day of the event',
-        oninput: () => { this.stop(); this.draw(Number(this.slider.value) - 1); } });
+        oninput: () => { const day = Number(this.slider.value) - 1; this.stop(); this.draw(day); } });
       this.stillButton = h('button', { type: 'button', class: 'btn btn-default still-toggle',
         onclick: () => this.setStill(!this.still), text: 'Still view' });
       this.strip = h('ol', { class: 'days' });
@@ -221,6 +233,7 @@
           h('span', { class: 'legend-title', text: 'Heatwave cells in a cluster, by daily maximum temperature (°C)' }), classes),
         h('ul', { class: 'legend-marks' },
           swatch('outside', 'Heatwave cell outside every cluster'),
+          swatch('edge', 'Edge of the heatwave cells'),
           swatch('ring', 'Ellipse fitted to a cluster'),
           swatch('axes', 'Major and minor axes'),
           swatch('dot', 'Temperature-weighted centroid')),
@@ -233,22 +246,40 @@
       const grid = this.data.grid;
       const width = grid.lon_step * this.scale;
       const height = grid.lat_step * this.scale;
+      const across = width.toFixed(2);
+      const down = height.toFixed(2);
       const paths = this.colours.map(() => '');
       let outside = '';
+      let edge = '';
       const cells = list(frame.cell);
       const clusters = list(frame.cluster);
       const tmax = list(frame.tmax);
+      const held = new Set(cells);
       for (let k = 0; k < cells.length; k++) {
         const column = cells[k] % grid.columns;
         const row = Math.floor(cells[k] / grid.columns);
-        const rect = 'M' + this.x(grid.lon + (column - 0.5) * grid.lon_step).toFixed(1) + ' ' +
-          this.y(grid.lat + (row + 0.5) * grid.lat_step).toFixed(1) +
-          'h' + width.toFixed(2) + 'v' + height.toFixed(2) + 'h-' + width.toFixed(2) + 'Z';
+        const left = this.x(grid.lon + (column - 0.5) * grid.lon_step).toFixed(1);
+        const top = this.y(grid.lat + (row + 0.5) * grid.lat_step).toFixed(1);
+        const rect = 'M' + left + ' ' + top + 'h' + across + 'v' + down + 'h-' + across + 'Z';
         if (clusters[k] < 0) outside += rect; else paths[this.classOf(tmax[k])] += rect;
+        // Sides that no other heatwave cell of this day shares.
+        if (!held.has(cells[k] + grid.columns)) edge += 'M' + left + ' ' + top + 'h' + across;
+        if (!held.has(cells[k] - grid.columns)) edge += 'M' + left + ' ' + (Number(top) + height).toFixed(2) + 'h' + across;
+        if (column === 0 || !held.has(cells[k] - 1)) edge += 'M' + left + ' ' + top + 'v' + down;
+        if (column === grid.columns - 1 || !held.has(cells[k] + 1)) {
+          edge += 'M' + (Number(left) + width).toFixed(2) + ' ' + top + 'v' + down;
+        }
       }
       const group = s('g', { class: 'day' + (small ? ' small' : '') });
-      if (outside) group.append(s('path', { class: 'cell outside', d: outside }));
-      paths.forEach((d, k) => { if (d) group.append(s('path', { class: 'cell', d, fill: this.colours[k] })); });
+      // The white line between cells keeps its share of the cell on fine grids
+      // (0.55 of a ten-unit cell at one degree); a fixed width would wash the
+      // colours out of quarter-degree cells.
+      const line = 'stroke-width:' + Math.min(0.55, Math.min(width, height) / 18).toFixed(3);
+      if (outside) group.append(s('path', { class: 'cell outside', d: outside, style: line }));
+      paths.forEach((d, k) => { if (d) group.append(s('path', { class: 'cell', d, fill: this.colours[k], style: line })); });
+      // One outline around all heatwave cells of the day. The coolest classes
+      // are almost the colour of the land; the outline shows where they end.
+      if (edge) group.append(s('path', { class: 'footprint', d: edge }));
       for (const ellipse of list(frame.ellipses)) {
         const outline = this.line(list(ellipse.outline), true);
         group.append(s('path', { class: 'ellipse-halo', d: outline }), s('path', { class: 'ellipse', d: outline }));
@@ -301,7 +332,10 @@
       const ready = !!this.frames[id];
       this.waiting.hidden = ready;
       if (!ready) {
+        // Nothing is drawn until the days arrive, so nothing is described either.
         this.layer.textContent = '';
+        this.shown = null;
+        this.tip.hidden = true;
         if (this.request) this.request(id);
         this.sync();
         return;
@@ -337,6 +371,9 @@
       const tmax = list(frame.tmax);
       this.lookup = new Map(cells.map((cell, k) => [cell, k]));
       this.shown = frame;
+      // The tooltip follows the day: it describes the cell under a resting
+      // pointer on the day now shown, or goes.
+      if (this.pointer) this.hover(this.pointer); else this.tip.hidden = true;
       const formed = list(frame.ellipses).length;
       const outside = clusters.filter(label => label < 0).length;
       const hottest = tmax.length ? Math.max(...tmax) : NaN;
@@ -422,19 +459,29 @@
     hover(event) {
       const frame = this.shown;
       const box = this.map.getBoundingClientRect();
-      if (!frame || !box.width) return;
+      const view = this.map.getScreenCTM();
+      if (!frame || !box.width || !view) return;
       const grid = this.data.grid;
-      const lon = this.ext[0] + (event.clientX - box.left) / box.width * (this.ext[1] - this.ext[0]);
-      const lat = this.ext[3] - (event.clientY - box.top) / box.height * (this.ext[3] - this.ext[2]);
+      // A region taller than wide is drawn narrower than its element and
+      // centred in it, so the picture itself says where the pointer is.
+      const at = this.map.createSVGPoint();
+      at.x = event.clientX;
+      at.y = event.clientY;
+      const here = at.matrixTransform(view.inverse());
+      const lon = this.ext[0] + here.x / this.scale;
+      const lat = this.ext[3] - here.y / this.scale;
       const column = Math.floor((lon - grid.lon) / grid.lon_step + 0.5);
       const row = Math.floor((lat - grid.lat) / grid.lat_step + 0.5);
       const k = column < 0 || column >= grid.columns ? undefined : this.lookup.get(column + grid.columns * row);
       if (k === undefined) { this.tip.hidden = true; return; }
-      const east = ((grid.lon + column * grid.lon_step + 180) % 360 + 360) % 360 - 180;
-      const north = grid.lat + row * grid.lat_step;
+      // A step such as 0.1 degrees is not exact in binary: print 35.3, not 35.300000000000004.
+      const tidy = value => Math.round(value * 1e4) / 1e4;
+      const east = tidy(((grid.lon + column * grid.lon_step + 180) % 360 + 360) % 360 - 180);
+      const north = tidy(grid.lat + row * grid.lat_step);
+      // The cluster number is the one in the catalogs (dbscan_label), which count from 0.
       const label = list(frame.cluster)[k];
       this.tip.textContent = list(frame.tmax)[k].toFixed(1) + ' °C · ' + Math.abs(north) + '°' + (north < 0 ? 'S' : 'N') + ' ' +
-        Math.abs(east) + '°' + (east < 0 ? 'W' : 'E') + ' · ' + (label < 0 ? 'outside every cluster' : 'cluster ' + (label + 1));
+        Math.abs(east) + '°' + (east < 0 ? 'W' : 'E') + ' · ' + (label < 0 ? 'outside every cluster' : 'cluster ' + label);
       this.tip.hidden = false;
       const wrap = this.map.parentNode.getBoundingClientRect();
       this.tip.style.left = Math.min(event.clientX - wrap.left + 12, wrap.width - this.tip.offsetWidth - 4) + 'px';
@@ -467,6 +514,10 @@
     }
     explorers.run = new Explorer(root, id => window.Shiny.setInputValue('explorer_event', { id, at: Date.now() }, { priority: 'event' }));
     explorers.run.load(data);
+    // The results have replaced the settings: the keyboard and a screen
+    // reader continue from their heading, not from the top of the page.
+    const title = document.getElementById('results-title');
+    if (title) title.focus();
   }
 
   // The file dialog. R lists the folders; this part selects and opens rows.
@@ -476,6 +527,10 @@
       { priority: 'event' });
   }
   const picked = () => document.querySelector('.chooser-row[aria-selected="true"]');
+  // A long path shows its end, where the name of the folder or file is.
+  function showEnd(field) {
+    if (field) field.scrollLeft = field.scrollWidth;
+  }
   function pick(row) {
     const rows = row.closest('.chooser-list');
     rows.querySelectorAll('[aria-selected="true"]').forEach(other => other.setAttribute('aria-selected', 'false'));
@@ -483,6 +538,7 @@
     rows.setAttribute('aria-activedescendant', row.id);
     const field = document.getElementById('chooser_path');
     if (field) field.value = row.dataset.path;
+    showEnd(field);
     row.scrollIntoView({ block: 'nearest' });
   }
   function naming(show) {
@@ -504,7 +560,9 @@
     else if (what === 'unname') naming(false);
     else if (what === 'mkdir') act('mkdir', document.getElementById('chooser_name').value);
     else if (what === 'go') act('go', document.getElementById('chooser_path').value);
-    else if (what === 'use') act('use', picked() && picked().classList.contains('is-folder') ? picked().dataset.path : null);
+    // "Use this folder" means the folder named in the path field: the open
+    // folder, a highlighted row, or a path typed or pasted there.
+    else if (what === 'use') act('use', document.getElementById('chooser_path').value.trim());
     else act(what);
   });
   document.addEventListener('dblclick', event => {
@@ -558,7 +616,42 @@
         const typing = document.activeElement && document.activeElement.closest('.chooser') &&
           document.activeElement.tagName === 'INPUT';
         if (rows && !typing) rows.focus();
+        showEnd(document.getElementById('chooser_path'));
       }, 0);
+    });
+    // A refused advanced setting is reported above the Advanced section, in
+    // words that quote the label of its field. Mark the fields so named, and
+    // open the section when a new report arrives, so that the field is in view.
+    let reported = '';
+    window.jQuery(document).on('shiny:value', event => {
+      if (event.name !== 'advanced_problem') return;
+      const section = document.querySelector('details.advanced');
+      if (!section) return;
+      const html = event.value && typeof event.value.html === 'string' ? event.value.html : '';
+      const said = new DOMParser().parseFromString(html, 'text/html').body.textContent.trim();
+      section.querySelectorAll('[aria-invalid]').forEach(field => field.removeAttribute('aria-invalid'));
+      section.querySelectorAll('label[for]').forEach(label => {
+        const field = document.getElementById(label.getAttribute('for'));
+        if (!said || !field || !said.includes("'" + label.textContent.trim() + "'")) return;
+        // A group of checkboxes is marked box by box.
+        const fields = field.matches('input, select, textarea') ? [field] : field.querySelectorAll('input');
+        fields.forEach(one => one.setAttribute('aria-invalid', 'true'));
+      });
+      if (said && said !== reported) section.open = true;
+      reported = said;
+    });
+    // Bootstrap puts the keyboard on the dialog itself when it has faded in,
+    // after the list above was focused. Hand it on to the list, where the
+    // arrow keys choose a row, or back to the field the person was typing in.
+    let taken = null;
+    document.addEventListener('focusin', event => {
+      if (event.target.id === 'shiny-modal') taken = event.relatedTarget;
+    });
+    window.jQuery(document).on('shown.bs.modal', '#shiny-modal', () => {
+      const rows = document.getElementById('chooser_list');
+      const typing = taken && taken.tagName === 'INPUT' && taken.isConnected && taken.closest('.chooser');
+      if (typing) taken.focus(); else if (rows) rows.focus();
+      taken = null;
     });
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', mountDemonstration);

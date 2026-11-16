@@ -1,7 +1,7 @@
 # scoRch.simulator
 
 [![License: GPL-3.0-or-later](https://img.shields.io/badge/license-GPL--3.0--or--later-orange)](LICENSE.txt)
-[![R: 4.1 or newer](https://img.shields.io/badge/R-%E2%89%A54.1-blue)](software/setup/DESCRIPTION)
+[![R: 4.4 or newer](https://img.shields.io/badge/R-%E2%89%A54.4-blue)](#install-and-open)
 [![Version: 1.3.0](https://img.shields.io/badge/version-1.3.0-blue)](https://github.com/fawazbouhamad/scoRch.simulator/releases/tag/v1.3.0)
 [![Software checks](https://github.com/fawazbouhamad/scoRch.simulator/actions/workflows/checks.yaml/badge.svg?branch=main)](https://github.com/fawazbouhamad/scoRch.simulator/actions/workflows/checks.yaml)
 
@@ -16,7 +16,7 @@ figures. A complete North America example is included.
 
 ## Install and open
 
-You need **R 4.1 or newer**; RStudio is recommended. Paste this block into the
+You need **R 4.4 or newer**; RStudio is recommended. Paste this block into the
 Console and press Enter. It installs the package once and then opens the SCORCH
 window.
 
@@ -28,7 +28,11 @@ install_scorch()
 The block asks no questions. It downloads about 100 MB, which includes the
 example data, and installs any R packages that are still missing. Nothing is
 analyzed until you click **Run analysis**. Outside RStudio the window opens in
-your web browser.
+your web browser; R prints its address, which works only on this computer and
+only with the key that R adds to it.
+
+On Linux, R builds these packages from source and needs the netCDF system
+library first: `libnetcdf-dev` on Debian and Ubuntu, `netcdf-devel` on Fedora.
 
 **Every later visit** needs one line. The package stays installed.
 
@@ -73,8 +77,8 @@ date coverage, the months to analyze and the results folder.
 - **Temperature** is always shown in °C. A file in Kelvin is converted once, when
   it is read.
 - **A question** appears only when the file leaves something open, for example
-  missing units or two possible temperature variables. Your answer is saved with
-  the run.
+  missing units, two possible temperature variables, or a temperature that the
+  file does not call a daily maximum. Your answer is saved with the run.
 - **Results folder** shows the new folder for this run. **Choose or create folder**
   picks another location. Every run gets the next number, starting at
   `output/SCORCH_run_001` under your R working directory.
@@ -153,6 +157,18 @@ names from the file's CF metadata, such as `tasmax` or `tx` on `x`, `y` and `t`,
 and writes them into the run's `config.yaml`, so the saved file replays the same
 reading from a script. Rotated or projected grids, calendars other than
 Gregorian and Fahrenheit are refused with the reason.
+
+The window checks more than names before it offers **Run analysis**. It asks
+before it analyzes a temperature that the file does not identify as a daily
+maximum (for sub-daily values, as 2 m air temperature), such as `tasmin`, `tas`
+or a dew point. It stops, with the reason, when the numbers cannot be air
+temperature (outside -100 to 70 °C, as an undeclared missing-value code or
+tenths of a degree would be), when the units carry a factor such as `0.1 degC`,
+when the grid is Gaussian or otherwise unevenly spaced, when a prepared variable
+has a fourth dimension, and when the files of one selection name the variable or
+the coordinates differently. A time axis counted from before 1582-10-15 in the
+standard calendar is refused by the window and by scripted runs alike; re-encode
+it from a later origin, such as `days since 1900-01-01`.
 
 Hourly processing takes each native point's maximum over 24 UTC hours, converts
 Kelvin to Celsius, then averages complete blocks into the configured cell size.
@@ -341,20 +357,29 @@ or 1e-3 for LGCP results; elapsed time and local paths are normalized in the
 summary comparison. Full-study checks require the separate study input.
 
 Assemble a package with `Rscript software/setup/install.R .package`, then use
-`devtools::check(".package")`. The installer defaults to stable `v1.3.0`;
+`devtools::check(".package")`. The test suite compares runs bit for bit and must
+run against an installed build, as `R CMD check` does, not against
+`devtools::load_all()`. The installer defaults to stable `v1.3.0`;
 developers can request `install_scorch(ref = "main")`. `force = TRUE` reinstalls
 a release that is already installed and `open = FALSE` installs without opening
-the window. Dependency upgrades are disabled unless requested.
+the window. Dependency upgrades are disabled unless requested. A copy installed
+from a folder or a branch does not count as the release: the block then
+downloads and installs the published one.
 
 The window's files are in `software/launcher/`. Its demonstration,
 `showcase.json`, holds one event of each type computed from the bundled example
 with the study defaults; `Rscript software/setup/maintenance.R make-showcase`
 regenerates it and a package test compares it with a fresh calculation.
 `software/tests/browser/guided.cjs` drives the installed window in Chromium, from
-the opening screen through two runs. Other tests read the same temperature as a
+the opening screen through two runs; it needs the address R gives the window's
+viewer (`SCORCH_UI_URL`, with its key), and `software/tests/browser/fixtures.R`
+writes the small files it opens first. Other tests read the same temperature as a
 prepared file, a Kelvin copy, a ZIP, a folder and raw hourly files and require
 identical catalogs. `Rscript software/setup/maintenance.R check-release` confirms
 that the package, citation, installer and this README name one version.
+Publishing a release starts the `Published block` workflow, which pastes the
+block above into a new R session on Linux and on Windows and drives the window
+it opens; it can pass only once the release tag exists.
 
 To restore the exact published demo input, run
 `Rscript software/setup/maintenance.R make-demo path/to/SCORCH_NA_processed_1996_2025.nc`;

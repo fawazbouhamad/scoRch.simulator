@@ -19,6 +19,7 @@ Imports:
     dbscan,
     graphics,
     grDevices,
+    later,
     maps,
     ncdf4,
     openxlsx2,
@@ -27,7 +28,7 @@ Imports:
     spatstat.model,
     stats,
     utils,
-    yaml,
+    yaml (>= 2.3.0),
     zip (>= 2.3.0)
 Suggests:
     jsonlite,

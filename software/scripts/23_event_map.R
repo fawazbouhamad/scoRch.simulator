@@ -125,7 +125,10 @@ event_overview <- function(result, cell_tmax, title, source, demonstration = FAL
       day = sprintf(paste("Regionally extensive day: at least %d of the %d cells are heatwave cells,",
                           "the %gth percentile of all analyzed days."),
                     result$regional$threshold_cells, nrow(result$input$cells), cfg$regional_days$percentile),
-      cluster = "Cluster: neighbouring heatwave cells grouped by DBSCAN. Cells it leaves out stay grey.",
+      # The map prints dbscan_label as it is, so a cell can be looked up in the catalogs.
+      cluster = paste("Cluster: neighbouring heatwave cells grouped by DBSCAN. Cells it leaves out stay grey.",
+                      "Point at a cell to see its cluster number: it is the number in Catalogs 3 and 4",
+                      "(dbscan_label, cluster_number_in_day), which count each day's clusters from 0."),
       ellipse = sprintf(paste("Ellipse: the principal axes of a cluster, each %g standard deviations long from the centre,",
                               "drawn around the temperature-weighted centroid."), cfg$ellipses$scale_factor),
       event = "Compound event: consecutive regionally extensive days. Its type follows the number of clusters on each day."))

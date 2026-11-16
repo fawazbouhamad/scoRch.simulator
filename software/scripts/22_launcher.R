@@ -11,29 +11,107 @@ stale_session <- function() {
   now <- suppressWarnings(utils::packageDescription("scoRch.simulator", lib.loc = folder, fields = "Built"))
   loaded <- session_built$stamp
   if (is.character(loaded) && !is.na(loaded) && is.character(now) && !is.na(now) && !identical(now, loaded)) {
-    fail("scoRch.simulator was updated after this R session loaded it.
-",
-         "Restart R (in RStudio: Session > Restart R), then run scoRch.simulator::run_scorch()
-",
+    fail("scoRch.simulator was updated after this R session loaded it.\n",
+         "Restart R (in RStudio: Session > Restart R), then run scoRch.simulator::run_scorch()\n",
          "The new version is already installed; do not run the installation block again.")
   }
   invisible(NULL)
 }
 
+# A secret for the address of one window. It is drawn without touching the
+# session's random numbers: their state is put aside first, so a set.seed()
+# of the user neither fixes the token nor is moved on by it.
+launch_token <- function() {
+  old_seed <- if (exists(".Random.seed", envir = globalenv())) get(".Random.seed", envir = globalenv()) else NULL
+  on.exit(if (is.null(old_seed)) rm(".Random.seed", envir = globalenv())
+          else assign(".Random.seed", old_seed, envir = globalenv()), add = TRUE)
+  if (!is.null(old_seed)) rm(".Random.seed", envir = globalenv())
+  symbols <- c(letters, LETTERS, 0:9)
+  draw <- sample.int(length(symbols), 32L, replace = TRUE)
+  # R starts an unset generator from the clock and the process number, which
+  # another program could work out. The draw is therefore shifted by what such
+  # a program does not have: bytes of the system's random device where there
+  # is one (then the token cannot be guessed), and the random name of this
+  # session's temporary folder, which on Windows lies in the user's profile.
+  device <- suppressWarnings(tryCatch(as.integer(readBin("/dev/urandom", "raw", 32L)), error = function(e) integer()))
+  spread <- function(values) if (length(values) && !anyNA(values)) rep_len(values, 32L) else 0L
+  draw <- draw + spread(utf8ToInt(basename(tempdir()))) + spread(device)
+  paste(symbols[draw %% length(symbols) + 1L], collapse = "")
+}
+
+# Does the query of an address ("?token=...") carry the token of the window?
+# A query that cannot be read does not.
+holds_token <- function(query, token) {
+  identical(tryCatch(shiny::parseQueryString(query)[["token"]], error = function(e) NULL), token)
+}
+
+# What a request for the page receives: the window, or, without its token,
+# one plain sentence about the address (status 403).
+scorch_page <- function(page, token, seen = NULL) {
+  refused <- shiny::httpResponse(403L, "text/plain; charset=UTF-8", paste(
+    "This address belongs to an R session on this computer and opens only with the key that R adds to it.",
+    "To open the SCORCH window, run scoRch.simulator::run_scorch() in R."))
+  function(request) {
+    if (holds_token(request$QUERY_STRING, token)) return(page)
+    if (is.environment(seen)) seen$refused <- TRUE
+    refused
+  }
+}
+
+# The app behind one window. Its address holds a secret, `token`: without it
+# there is no page and no session, so another program on this computer can
+# neither use the window nor close it. `quit` ends the app `grace` seconds
+# after the last window has gone; a reload or a second tab keeps it open.
+# `seen` notes whether the page was refused and whether a window has opened.
+scorch_app <- function(token, kept, quit = shiny::stopApp, grace = 2, seen = new.env(parent = emptyenv())) {
+  windows <- 0L
+  shiny::shinyApp(
+    ui = scorch_page(scorch_ui(), token, seen),
+    server = function(input, output, session) {
+      # A client without the token gets no session. Nothing is registered for
+      # it, so its arrival or departure cannot stop the app either.
+      if (!holds_token(shiny::isolate(session$clientData$url_search), token)) return(session$close())
+      seen$opened <- TRUE
+      windows <<- windows + 1L
+      session$onSessionEnded(function() {
+        windows <<- windows - 1L
+        # A reload ends this session just before the next one begins.
+        later::later(function() if (windows == 0L) quit(), delay = grace)
+      })
+      scorch_server(input, output, session, kept)
+    })
+}
+
 scorch_launcher <- function() {
   stale_session()
   kept <- new.env(parent = emptyenv())
-  app <- shiny::shinyApp(ui = scorch_ui(), server = function(input, output, session) {
-    scorch_server(input, output, session, kept)
-    session$onSessionEnded(function() shiny::stopApp())
-  })
+  token <- launch_token()
+  # A window that goes after this call has returned must not stop a later one.
+  running <- TRUE
+  on.exit(running <- FALSE, add = TRUE)
+  seen <- new.env(parent = emptyenv())
+  app <- scorch_app(token, kept, quit = function() if (running) shiny::stopApp(), seen = seen)
+  viewer <- shiny::dialogViewer("SCORCH | Regional compound heatwaves", width = 1060, height = 860)
   message("Opening the SCORCH window. Nothing is analyzed until you click Run analysis.")
-  on.exit(message("The SCORCH window is closed. To open it again, run scoRch.simulator::run_scorch()
-",
+  on.exit(message("The SCORCH window is closed. To open it again, run scoRch.simulator::run_scorch()\n",
                   "The package stays installed; do not run the installation block again."), add = TRUE)
   # RStudio closes its dialog by interrupting R. The last finished analysis is returned all the same.
-  tryCatch(shiny::runApp(app, host = "127.0.0.1", display.mode = "normal",
-    launch.browser = shiny::dialogViewer("SCORCH | Regional compound heatwaves", width = 1060, height = 860)),
+  # quiet: Shiny's own "Listening on" line gives the address without its key.
+  tryCatch(shiny::runApp(app, host = "127.0.0.1", display.mode = "normal", quiet = TRUE,
+    launch.browser = function(url) {
+      address <- paste0(url, "/?token=", token)
+      # Outside RStudio the window is a browser tab, and only this address opens it.
+      if (is.null(getOption("shinygadgets.showdialog")))
+        message("If no browser opens, paste this address into one on this computer: ", address)
+      viewer(address)
+      # A viewer that passed the address on without its key shows the notice, not
+      # the window. Say how to get the window instead of leaving a dead end.
+      later::later(function() {
+        if (running && isTRUE(seen$refused) && !isTRUE(seen$opened))
+          message("The window was asked for without the key in its address, so it shows a notice instead of SCORCH.\n",
+                  "To use SCORCH now, paste this address into a web browser on this computer:\n  ", address)
+      }, delay = 8)
+    }),
     interrupt = function(e) NULL)
   invisible(kept$result)
 }
@@ -68,6 +146,11 @@ scorch_server <- function(input, output, session, kept = new.env(parent = emptye
     actual <- if (is.null(path)) scorch_bundled_file() else path
     if (!all(file.exists(actual))) fail("The configured data could not be found. Choose the data file or folder.")
     if (any(grepl("[.]zip$", actual, ignore.case = TRUE))) {
+      # Extracting can take minutes. The page stays busy until the screen
+      # that follows has been sent, so that nothing on the opening screen can
+      # be clicked while the archive is still being opened.
+      session$sendCustomMessage("scorch-busy", TRUE)
+      session$onFlushed(function() session$sendCustomMessage("scorch-busy", FALSE))
       state$source <- shiny::withProgress(message = "Opening ZIP", value = 0,
         open_temperature_source(actual, function(i, total, name) {
           shiny::setProgress(value = (i - 1) / total,
@@ -97,6 +180,9 @@ scorch_server <- function(input, output, session, kept = new.env(parent = emptye
         }
         base(cfg)
         state$loaded <- basename(path)
+        # The months and dates of this configuration stay, also when it is
+        # what makes a selection readable that showed an error before.
+        state$fresh <- FALSE
         state$error <- NULL
         parent <- cfg$output$directory
         state$parent <- if (grepl("^SCORCH_run_[0-9]+$", basename(parent))) dirname(parent) else parent
@@ -105,7 +191,6 @@ scorch_server <- function(input, output, session, kept = new.env(parent = emptye
       } else {
         open_source(guided_path(path))
         reset_input_names()
-        state$loaded <- NULL
         state$fresh <- TRUE
       }
     }, error = report)
@@ -115,20 +200,24 @@ scorch_server <- function(input, output, session, kept = new.env(parent = emptye
     while (!dir.exists(folder) && !identical(dirname(folder), folder)) folder <- dirname(folder)
     folder
   }
-  shiny::observeEvent(input$browse_file, chooser("data"))
+  # The two buttons of the opening screen act only while no data are open. A
+  # click or key press that waited behind a long extraction is not obeyed
+  # afterwards, when it would replace the data that were just opened.
+  shiny::observeEvent(input$browse_file, if (is.null(state$source)) chooser("data"))
   shiny::observeEvent(input$load_config, chooser("config", existing(state$parent)))
   shiny::observeEvent(input$browse_output, chooser("output", existing(state$parent)))
   shiny::observeEvent(input$use_example, {
+    if (!is.null(state$source)) return()
     tryCatch({
       open_source()
       reset_input_names()
-      state$loaded <- NULL
       state$fresh <- TRUE
     }, error = report)
   })
+  # Other data keep the settings of a loaded configuration, so its note stays too.
   shiny::observeEvent(input$change_data, {
     close_temperature_source(state$source)
-    state$source <- state$path <- state$error <- state$loaded <- NULL
+    state$source <- state$path <- state$error <- NULL
     state$answers <- list()
   })
   header <- shiny::reactive({
@@ -152,6 +241,8 @@ scorch_server <- function(input, output, session, kept = new.env(parent = emptye
   shiny::observe({
     info <- header()
     if (!isTRUE(state$fresh) || inherits(info, "error") || length(info$questions)) return()
+    # An update sent before the month fields are in the page would be lost.
+    shiny::req(input$month_from)
     state$fresh <- FALSE
     limits <- season_limits(available_season(shiny::isolate(base())$period$warm_season_months, info$dates))
     shiny::updateSelectInput(session, "month_from", selected = limits[1L])
@@ -167,6 +258,9 @@ scorch_server <- function(input, output, session, kept = new.env(parent = emptye
   })
   for (id in c("screen", "asking", "rawInput")) shiny::outputOptions(output, id, suspendWhenHidden = FALSE)
   output$settings <- shiny::renderUI(settings_ui(base()))
+  # The form is built while the opening screen still shows, so the months of
+  # the first dataset chosen in a session arrive at fields that exist.
+  shiny::outputOptions(output, "settings", suspendWhenHidden = FALSE)
   output$date_fields <- shiny::renderUI({
     info <- header()
     if (inherits(info, "error") || length(info$questions)) return()
@@ -195,7 +289,7 @@ scorch_server <- function(input, output, session, kept = new.env(parent = emptye
   })
   output$loaded <- shiny::renderUI({
     if (!is.null(state$loaded)) tags$p(class = "fine", "Settings loaded from ", tags$strong(state$loaded),
-                                       ". The selected dataset is unchanged.")
+      " stay in use when you change the data, including the advanced settings and the results folder.")
   })
   dest <- shiny::reactive({
     state$finished # Recalculate the preview after reserving a run folder.
@@ -206,8 +300,15 @@ scorch_server <- function(input, output, session, kept = new.env(parent = emptye
     info <- header()
     if (inherits(info, "error")) return(info)
     if (length(info$questions)) return(simpleError("Answer the question about this file to continue."))
-    shiny::req(input$month_from, input$clustering_eps_values)
+    # Wait for the form, not for its values: an emptied field is reported, not passed over.
+    shiny::req(!is.null(input$month_from), !is.null(input$clustering_eps_values))
     tryCatch(guided_settings(base(), input, state$path, info, dest(), state$answers), error = identity)
+  })
+  # A refused advanced setting is also shown where that section begins: the
+  # Review card can be far below the field being edited.
+  output$advanced_problem <- shiny::renderUI({
+    p <- plan()
+    if (inherits(p, "advanced_setting")) tags$p(class = "problem", conditionMessage(p))
   })
   output$period_note <- shiny::renderUI({
     p <- plan()

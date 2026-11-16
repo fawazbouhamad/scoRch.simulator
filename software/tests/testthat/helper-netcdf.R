@@ -1,6 +1,7 @@
 # A small NetCDF file of gridded values for the input tests. `values` is
 # time x latitude x longitude, or a named list of such arrays, one variable
 # each. Units "" leave a variable or coordinate without a units attribute.
+# `attributes` are named by variable or by coordinate.
 write_grid <- function(path, values, time, lon, lat, units = "degC", time_units = "days since 2000-01-01",
                        dims = c("lon", "lat", "time"), dim_units = c("degrees_east", "degrees_north"),
                        attributes = list()) {
@@ -12,9 +13,35 @@ write_grid <- function(path, values, time, lon, lat, units = "degC", time_units 
                    names(values), units)
   nc <- ncdf4::nc_create(path, unname(variables))
   on.exit(ncdf4::nc_close(nc), add = TRUE)
-  for (name in names(values)) {
-    ncdf4::ncvar_put(nc, variables[[name]], aperm(values[[name]], c(3, 2, 1)))
+  for (name in names(values)) ncdf4::ncvar_put(nc, variables[[name]], aperm(values[[name]], c(3, 2, 1)))
+  for (name in names(attributes)) {
     for (key in names(attributes[[name]])) ncdf4::ncatt_put(nc, name, key, attributes[[name]][[key]])
+  }
+  path
+}
+
+# Any other layout, for files write_grid() cannot describe: an extra
+# dimension, two-dimensional coordinates, a grid mapping. `dims` is a named
+# list of list(units, values, attributes) and `variables` a named list of
+# list(dims, units, values, attributes), with values in the order of `dims`.
+# A variable without dimensions is a scalar that only carries attributes.
+write_layout <- function(path, dims, variables) {
+  text <- function(x) if (is.null(x)) "" else x
+  axes <- Map(function(name, dim) ncdf4::ncdim_def(name, text(dim$units), dim$values), names(dims), dims)
+  defined <- Map(function(name, variable) {
+    if (!length(variable$dims)) return(ncdf4::ncvar_def(name, "", list(), prec = "integer"))
+    ncdf4::ncvar_def(name, text(variable$units), unname(axes[variable$dims]), missval = NA, prec = "double")
+  }, names(variables), variables)
+  nc <- ncdf4::nc_create(path, unname(defined))
+  on.exit(ncdf4::nc_close(nc), add = TRUE)
+  for (name in names(variables)) {
+    if (!is.null(variables[[name]]$values)) ncdf4::ncvar_put(nc, defined[[name]], variables[[name]]$values)
+  }
+  described <- c(dims, variables)
+  for (name in names(described)) {
+    for (key in names(described[[name]]$attributes)) {
+      ncdf4::ncatt_put(nc, name, key, described[[name]]$attributes[[key]])
+    }
   }
   path
 }

@@ -35,6 +35,12 @@ compare_output <- function(results_dir = "output") {
   }
 
   normalize_summary <- function(lines) {
+    # A run made in the SCORCH window ends with its own folder and saved
+    # settings. A scripted run has no such lines, so they are not compared.
+    footer <- max(c(0L, which(lines == "RUN FILES")))
+    if (footer > 1L && !nzchar(lines[footer - 1L]) && all(startsWith(lines[-seq_len(footer)], "  "))) {
+      lines <- lines[seq_len(footer - 2L)]
+    }
     lines <- lines[!grepl("^Run started ", lines)]
     lines <- sub("^(  Source: |    file: ).*north_america_tmax[.]nc.*$", "\\1<installed north_america_tmax.nc>", lines)
     sub("^(  Figure for this event: ).*/figures/", "\\1<output>/figures/", lines)
@@ -208,8 +214,10 @@ make_showcase <- function() {
 }
 
 # A release names one version everywhere a reader or the installer looks:
-# the package, the citation, the installer's default, the README block and
-# the reference summary. Development versions (x.y.z.9000) are not checked.
+# the package, the citation, the installer's default, the README badge, block
+# and maintenance note, and the reference summary. Whole lines and whole
+# version numbers are compared, so 1.3.0 does not pass for 1.3.0.9000.
+# Development versions (x.y.z.9000) are not checked.
 check_release <- function() {
   version <- unname(read.dcf(file.path("software", "setup", "DESCRIPTION"), "Version")[1L, 1L])
   if (length(strsplit(version, ".", fixed = TRUE)[[1L]]) > 3L) {
@@ -217,17 +225,29 @@ check_release <- function() {
     return(invisible(TRUE))
   }
   tag <- paste0("v", version)
-  readme <- readLines("README.md", encoding = "UTF-8")
-  has <- function(lines, text) any(grepl(text, lines, fixed = TRUE))
+  whole <- function(file) trimws(readLines(file, encoding = "UTF-8"), "right")
+  readme <- whole("README.md")
+  # Every place in the README that fits the pattern, so that a second, older
+  # reference is found as well as a missing one.
+  named <- function(pattern) unique(unlist(regmatches(readme, gregexpr(pattern, readme))))
+  installer <- new.env()
+  sys.source(file.path("software", "setup", "install.R"), envir = installer)
+  raw <- sprintf("raw.githubusercontent.com/fawazbouhamad/scoRch.simulator/%s/software/setup/install.R", tag)
+  first <- sprintf('source("https://%s")', raw)
+  at <- match(first, readme)
   checks <- c(
-    "CITATION.cff names this version" = has(readLines("CITATION.cff"), paste0("version: ", version)),
-    "install_scorch() installs this release by default" =
-      has(readLines(file.path("software", "setup", "install.R")), sprintf('ref = "%s"', tag)),
-    "the README block sources this release's installer" =
-      has(readme, sprintf("scoRch.simulator/%s/software/setup/install.R", tag)),
-    "the README block installs and opens with one call" = has(readme, "install_scorch()"),
-    "the README links this release" = has(readme, sprintf("releases/tag/%s", tag)),
-    "demo/output/Summary.txt was written by this version" =
+    "CITATION.cff names this version" =
+      any(gsub("[\"']", "", whole("CITATION.cff")) == paste0("version: ", version)),
+    "install_scorch() installs this release by default" = identical(formals(installer$install_scorch)$ref, tag),
+    "the README block sources this release's installer" = identical(named("raw[.]githubusercontent[.]com/[^\"]*"), raw),
+    "the README block is that line and install_scorch()" =
+      !is.na(at) && at > 1L && identical(readme[at + -1:2], c("```r", first, "install_scorch()", "```")),
+    "the README badge shows this release" =
+      identical(named("!\\[Version: [^]]*\\]"), sprintf("![Version: %s]", version)) &&
+      identical(named("badge/version-[^-]*-"), sprintf("badge/version-%s-", version)),
+    "the README links this release" = identical(named("releases/tag/[^)[:space:]]+"), paste0("releases/tag/", tag)),
+    "the README maintenance note names this release" = identical(named("stable `[^`]*`"), sprintf("stable `%s`", tag)),
+    "demo/output/Summary.txt names this version" =
       identical(readLines(file.path("demo", "output", "Summary.txt"), n = 1L),
                 sprintf("scoRch.simulator %s results: COMPLETE", version)))
   cat(sprintf("%-55s %s\n", names(checks), ifelse(checks, "yes", "NO")), sep = "")

@@ -3,12 +3,17 @@
   --ink: #1c2330; --muted: #566070; --line: #e1dcd1; --paper: #f6f4ee; --card: #fff;
   --blue: #1f5fbf; --blue-deep: #174a97; --blue-soft: #dce8fa; --alarm: #9b2c1f;
   --heat: linear-gradient(90deg, #ffd166, #ff8c42 45%, #d93a2b 78%, #6d0f1f);
+  /* Both stand out at least 3:1 from what they sit on: the focus ring from the page and
+     from white cards, the outline of the heatwave cells from land and sea. */
+  --focus: #b85c00; --edge: #6b7280;
 }
 [hidden] { display: none !important; }
 body { background: var(--paper); color: var(--ink); font: 15px/1.5 "Segoe UI", -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, system-ui, sans-serif; }
 .scorch { max-width: 1000px; margin: 0 auto; padding: 20px 8px 28px; }
 .scorch h1, .scorch h2, .scorch h3 { color: var(--ink); font-weight: 650; margin: 0 0 8px; }
 .scorch h1 { font-size: 27px; line-height: 1.2; } .scorch h2 { font-size: 19px; }
+/* A long file name without spaces wraps where it stands instead of widening the page. */
+.scorch h2, .eyebrow, .explorer-source, .review p { overflow-wrap: anywhere; }
 .scorch h3 { font-size: 15px; margin-top: 18px; text-transform: none; }
 .scorch p { margin: 0 0 10px; } .scorch p:last-child { margin-bottom: 0; }
 .scorch code { color: inherit; background: #efece4; border-radius: 3px; padding: 1px 4px; }
@@ -38,8 +43,14 @@ ul.problem { list-style: none; padding-left: 10px; margin: 0; }
 .scorch .btn-primary:hover, .modal .btn-primary:hover, .scorch .btn-primary:active { background: var(--blue-deep); border-color: var(--blue-deep); color: #fff; }
 .scorch .btn[disabled], .modal .btn[disabled] { opacity: .5; cursor: not-allowed; }
 .btn:focus-visible, summary:focus-visible, select:focus-visible, input:focus-visible, .chooser-list:focus-visible,
-.type-card:focus-visible, .day-chip:focus-visible, .still:focus-visible, .chooser-place:focus-visible, .chooser-crumb:focus-visible {
-  outline: 3px solid #f08a24; outline-offset: 2px; }
+.type-card:focus-visible, .day-chip:focus-visible, .still:focus-visible, .chooser-place:focus-visible, .chooser-crumb:focus-visible,
+#results-title:focus-visible {
+  outline: 3px solid var(--focus); outline-offset: 2px; }
+/* The results heading takes the keyboard when a run ends; its ring fits the words, not the card. */
+#results-title { width: fit-content; }
+/* A field whose setting was refused; the message above the Advanced section says why. */
+.scorch [aria-invalid="true"] { border-color: var(--alarm); box-shadow: inset 0 0 0 1px var(--alarm); }
+.scorch input[type="checkbox"][aria-invalid="true"]:not(:focus-visible) { outline: 2px solid var(--alarm); outline-offset: 1px; }
 .btn.link-button { color: var(--blue-deep); background: transparent; border-color: transparent; text-decoration: underline; padding: 4px 6px; font-weight: 600; }
 
 /* Opening screen */
@@ -95,7 +106,8 @@ ul.problem { list-style: none; padding-left: 10px; margin: 0; }
   padding: 8px 10px 8px 11px; display: flex; flex-direction: column; gap: 4px; color: var(--ink); font: inherit; cursor: pointer; }
 .type-card:hover:not([disabled]) { border-color: #9aa3b2; border-left-color: var(--type); }
 .type-card[aria-pressed="true"] { background: #f4f8fe; border-color: var(--blue); border-left-color: var(--type); box-shadow: 0 0 0 1px var(--blue); }
-.type-card[disabled] { opacity: .55; cursor: default; }
+/* A type without events keeps its definition readable; a dashed frame, not grey text, says it cannot be shown. */
+.type-card[disabled] { cursor: default; border-style: dashed; border-left-style: solid; background: #faf9f6; }
 .type-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; }
 .type-card .type-n { display: block; font-size: 11.5px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
 .type-card .type-name { display: block; font-weight: 650; line-height: 1.25; }
@@ -114,6 +126,8 @@ svg.map { width: 100%; height: auto; max-height: 470px; border-radius: 6px; disp
 .map .graticule text { font: 10.5px "Segoe UI", -apple-system, "Helvetica Neue", Arial, sans-serif; fill: #5f6877; }
 .map .map-edge { fill: none; stroke: #8e949d; stroke-width: 1; }
 .map .cell { stroke: #fff; stroke-width: .55; } .map .cell.outside { fill: #b6b1a6; opacity: .8; }
+/* One screen pixel at every map size, drawn sharp so that it keeps its full colour. */
+.map .footprint { fill: none; stroke: var(--edge); stroke-width: 1px; stroke-linecap: square; vector-effect: non-scaling-stroke; shape-rendering: crispEdges; }
 .map .ellipse-halo { fill: none; stroke: #fff; stroke-width: 5; opacity: .85; }
 .map .ellipse, .map .axis { fill: none; stroke: var(--ink); stroke-linecap: round; }
 .map .ellipse { stroke-width: 2.1; } .map .axis.major { stroke-width: 1.9; } .map .axis.minor { stroke-width: 1.2; }
@@ -146,6 +160,7 @@ svg.map { width: 100%; height: auto; max-height: 470px; border-radius: 6px; disp
 .legend-marks li { display: flex; align-items: center; gap: 7px; }
 .swatch { flex: none; width: 22px; height: 14px; display: inline-block; position: relative; }
 .swatch.outside { background: #b6b1a6; opacity: .8; } .swatch.ring { border: 2px solid var(--ink); border-radius: 50%; }
+.swatch.edge { background: #ffe9a8; border: 1px solid var(--edge); }
 .swatch.axes::before, .swatch.axes::after { content: ""; position: absolute; background: var(--ink); }
 .swatch.axes::before { left: 0; right: 0; top: 6px; height: 2px; } .swatch.axes::after { left: 10px; top: 1px; bottom: 1px; width: 1.4px; }
 .swatch.dot::before { content: ""; position: absolute; left: 6px; top: 2px; width: 10px; height: 10px; border-radius: 50%; background: var(--ink); }
@@ -165,9 +180,12 @@ svg.map { width: 100%; height: auto; max-height: 470px; border-radius: 6px; disp
 .chooser-new label { margin: 0; font-weight: 600; } .chooser-new input { flex: 1 1 180px; width: auto; }
 .chooser-head, .chooser-row { display: grid; grid-template-columns: minmax(0, 1fr) 110px 86px 128px; gap: 0 10px; padding: 5px 10px; }
 .chooser-head { font-size: 12px; font-weight: 650; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; border-bottom: 1px solid var(--line); }
-.chooser-list { height: 286px; overflow-y: auto; border: 1px solid var(--line); border-top: 0; border-radius: 0 0 6px 6px; background: #fff; }
+/* The list gives up height in a short window, so that the dialog and its buttons fit. */
+.chooser-list { height: 286px; max-height: calc(100vh - 360px); min-height: 110px; overflow-y: auto; border: 1px solid var(--line); border-top: 0; border-radius: 0 0 6px 6px; background: #fff; }
 .chooser-row { cursor: default; font-size: 14px; user-select: none; } .chooser-row:hover { background: #f4f1ea; }
-.chooser-row[aria-selected="true"] { background: var(--blue-soft); }
+/* The chosen row: a bar and a bold name as well as the tint. */
+.chooser-row[aria-selected="true"] { background: var(--blue-soft); box-shadow: inset 4px 0 0 var(--blue); }
+.chooser-row[aria-selected="true"] .chooser-name { font-weight: 650; }
 .chooser-row span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; } .chooser-row span + span { color: var(--muted); font-size: 13px; }
 .chooser-name::before { content: ""; display: inline-block; width: 17px; height: 13px; margin-right: 8px; vertical-align: -1px; border-radius: 2px; }
 .is-folder .chooser-name::before { background: #f0b541; box-shadow: inset 0 3px 0 #d99a1f; }
@@ -176,7 +194,11 @@ svg.map { width: 100%; height: auto; max-height: 470px; border-radius: 6px; disp
 .chooser-path { display: flex; align-items: center; gap: 10px; margin: 10px 0 6px; } .chooser-path label { margin: 0; white-space: nowrap; font-weight: 600; }
 .chooser-path input { font: 13px Consolas, Menlo, monospace; }
 .chooser-hint { color: var(--muted); font-size: 13px; margin: 0 0 10px; }
-.chooser-actions { display: flex; justify-content: flex-end; gap: 8px; }
+/* Cancel, Use this folder and Open stay at the bottom edge of a window too short for the dialog;
+   what they cover fades out above them, and a row chosen with the keyboard is scrolled clear of them. */
+.chooser-actions { display: flex; justify-content: flex-end; gap: 8px; position: sticky; bottom: 0; padding: 10px 0 8px; margin: -10px 0 -8px;
+  background: linear-gradient(rgba(255, 255, 255, 0), #fff 10px); }
+.modal { scroll-padding-bottom: 56px; }
 
 /* Run progress */
 #shiny-notification-panel { width: 420px; max-width: 100%; }
@@ -190,9 +212,23 @@ body.scorch-busy .scorch > :not(.masthead) { opacity: .5; pointer-events: none; 
   .hero, .fields, .legend, .legend-marks, .explorer-grid { grid-template-columns: 1fr; } .type-counts { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .type-cards { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .facts { grid-template-columns: 1fr; gap: 0; } .facts dd { margin-bottom: 8px; }
+}
+/* Below 992px the dialog is 600px wide: places go above the list, and the name gets the room of size and date. */
+@media (max-width: 991px) {
   .chooser { grid-template-columns: 1fr; } .chooser-places { flex-direction: row; flex-wrap: wrap; border-right: 0; padding-right: 0; }
   .chooser-head, .chooser-row { grid-template-columns: minmax(0, 1fr) 96px; } .chooser-head span:nth-child(n+3), .chooser-row span:nth-child(n+3) { display: none; }
+  .chooser-list { max-height: calc(100vh - 412px); }
 }
 @media (prefers-reduced-motion: reduce) {
   .map .day.entering, .map .day.leaving { animation: none; } * { scroll-behavior: auto !important; transition: none !important; }
+}
+/* Windows contrast themes replace backgrounds and shadows: keep the colours of the key, and
+   mark the chosen row with the system's own selection colours. */
+@media (forced-colors: active) {
+  .heat-scale li, .swatch.outside, .swatch.edge, .chooser-name::before { forced-color-adjust: none; }
+  .heat-scale span { forced-color-adjust: auto; }
+  .swatch.axes::before, .swatch.axes::after, .swatch.dot::before { background: CanvasText; }
+  .chooser-row[aria-selected="true"] { forced-color-adjust: none; background: Highlight; color: HighlightText; }
+  .chooser-row[aria-selected="true"] span { color: HighlightText; }
+  .chooser-actions { background: Canvas; }
 }
