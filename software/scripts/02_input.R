@@ -244,8 +244,12 @@ even_coordinates <- function(values, accepted = NULL) {
   steps <- diff(values)
   uneven <- max(abs(steps - steps[1]))
   if (is.null(accepted)) accepted <- uneven <= 1e-4 * abs(steps[1])
-  rounding <- 2^-21 * max(abs(values))
-  if (any(steps == 0) || accepted || uneven > rounding) return(as_given)
+  # Each value is rounded by at most 2^-24 of its size, so two steps differ by
+  # at most 2^-22 of the largest. Only values that are single-precision numbers
+  # can owe their unevenness to that rounding.
+  rounding <- 2^-22 * max(abs(values))
+  single <- all(values == readBin(writeBin(values, raw(), size = 4L), "double", size = 4L, n = length(values)))
+  if (any(steps == 0) || accepted || !single || uneven > rounding) return(as_given)
   list(values = seq(values[1], values[length(values)], length.out = length(values)), slack = rounding)
 }
 

@@ -700,3 +700,14 @@ test_that("the dialog names itself, its list and every row for assistive technol
   expect_false(grepl(">NA<", unread, fixed = TRUE))
   expect_false(grepl("NA bytes", unread, fixed = TRUE))
 })
+
+test_that("Use this folder looks into a limited number of subfolders, and not into results of runs", {
+  root <- withr::local_tempdir()
+  dir.create(file.path(root, "SCORCH_run_001"))
+  file.create(file.path(root, "SCORCH_run_001", "prepared_tmax.nc"))
+  expect_false(netcdf_below(root))
+  dir.create(file.path(root, "2001"))
+  file.create(file.path(root, "2001", "data.nc4"))
+  expect_true(netcdf_below(root))
+  expect_false(netcdf_below(root, most = 0L))
+})

@@ -190,13 +190,13 @@ test_that("a folder may hold .nc4 files, or its files in the folders directly in
   expect_identical(input_files(months), file.path(months, c("2010-05", "2010-06"), "data.nc"))
   expect_identical(read(months)[same], whole[same])
   expect_match(read(months)$source, "2 ERA5 files")
-  # Each of these folders gives its .nc files, or without any its .nc4 files.
+  # One kind of file for all of these folders: .nc where any of them has such files.
   kinds <- folder("kinds")
   days(file.path(folder("kinds", "b"), "late.nc4"), 3:4)
   days(file.path(folder("kinds", "a"), "early.nc"), 1:2)
   days(file.path(kinds, "a", "ignored.nc4"), 3:4)
-  expect_identical(input_files(kinds), c(file.path(kinds, "a", "early.nc"), file.path(kinds, "b", "late.nc4")))
-  expect_identical(read(kinds)[same], whole[same])
+  expect_identical(input_files(kinds), file.path(kinds, "a", "early.nc"))
+  expect_identical(read(kinds)$dates, whole$dates[1:2])
   # A folder whose name ends like a file is a folder.
   named <- folder("named")
   days(file.path(folder("named", "grids.nc4"), "a.nc"), 1:2)

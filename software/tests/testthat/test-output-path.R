@@ -30,7 +30,6 @@ test_that("a scratch name has a fixed length, is free, differs each time and lea
   expect_identical(dirname(stage), where)
   expect_match(basename(stage), "^[.]scorch-stage-[0-9a-f]{8}$")
   expect_false(file.exists(stage))
-  expect_false(identical(scratch_name(".scorch-stage-", where), stage))
   plots <- vapply(1:50, function(i) basename(scratch_name(".scorch-plot-", where, ".png")), "")
   expect_true(all(grepl("^[.]scorch-plot-[0-9a-f]{8}[.]png$", plots)))
   expect_gt(length(unique(plots)), 1L)

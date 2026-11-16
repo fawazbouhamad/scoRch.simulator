@@ -181,6 +181,22 @@ holds_files <- function(folder, ending) {
   FALSE
 }
 
+# Whether a folder without NetCDF files of its own has some in the folders
+# directly inside it, which the reader then takes (folder_netcdf()). A home
+# folder or a share can hold thousands of folders: the first 200 are looked
+# into, each up to its first file, for no longer than a second. The results
+# folders of SCORCH runs are not data.
+netcdf_below <- function(folder, most = 200L, seconds = 1) {
+  inside <- list.dirs(folder, full.names = TRUE, recursive = FALSE)
+  inside <- inside[!grepl("^SCORCH_run_[0-9]+$", basename(inside))]
+  started <- proc.time()[["elapsed"]]
+  for (path in utils::head(inside, most)) {
+    if (holds_files(path, "[.]nc4?$")) return(TRUE)
+    if (proc.time()[["elapsed"]] - started > seconds) break
+  }
+  FALSE
+}
+
 # Whether two texts are the same but for the blanks at their ends, which the
 # page leaves out of the text it sends. Text that is not valid cannot be
 # trimmed and equals nothing.
@@ -329,7 +345,7 @@ scorch_chooser <- function(input, output, session, selected) {
       # Files can have arrived since then: a count of none is looked into once more.
       found <- (identical(target, here$folder) && here$netcdf > 0L) || holds_files(target, "[.]nc$")
       # Otherwise the reader's own rule decides: .nc4 files, or files one level down.
-      if (!found) found <- length(tryCatch(folder_netcdf(target), error = function(e) character())) > 0L
+      if (!found) found <- holds_files(target, "[.]nc4$") || netcdf_below(target)
       if (!found) {
         show(here$kind, target, paste("This folder has no NetCDF (.nc or .nc4) files, and neither do the folders",
                                       "directly inside it. Open the folder that holds your ERA5 files, or select",

@@ -216,8 +216,19 @@ folder_netcdf <- function(path) {
   }
   inside <- own(path)
   if (!length(inside)) {
+    # One extension for all of them, .nc where any folder has such files; the
+    # results folders of SCORCH runs (prepared_tmax.nc) are not data.
     entries <- sort(list.files(path, full.names = TRUE))
-    inside <- unlist(lapply(entries[dir.exists(entries)], own), use.names = FALSE)
+    folders <- entries[dir.exists(entries) & !grepl("^SCORCH_run_[0-9]+$", basename(entries)) &
+                         !file.exists(file.path(entries, "Summary.txt"))]
+    for (pattern in c("[.]nc$", "[.]nc4$")) {
+      found <- unlist(lapply(folders, function(folder) {
+        files <- sort(list.files(folder, pattern = pattern, full.names = TRUE, ignore.case = TRUE))
+        files[!dir.exists(files)]
+      }), use.names = FALSE)
+      if (length(found)) break
+    }
+    inside <- found
   }
   if (!length(inside)) {
     fail("The input folder contains no NetCDF (.nc or .nc4) files, and neither do the folders directly inside it: ", path)

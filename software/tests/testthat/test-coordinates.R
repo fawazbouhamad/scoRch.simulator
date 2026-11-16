@@ -60,7 +60,7 @@ test_that("coordinates are made even only where single precision explains their 
   expect_error(grid_step(stored, "longitude"), "not evenly spaced")
   even <- even_coordinates(stored)
   expect_identical(even$values, seq(stored[1], stored[40], length.out = 40))
-  expect_identical(even$slack, 2^-21 * max(abs(stored)))
+  expect_identical(even$slack, 2^-22 * max(abs(stored)))
   expect_equal(grid_step(even$values, "longitude"), 0.1, tolerance = 1e-5)
   expect_lte(max(abs(even$values - true)), 2^-24 * max(abs(true)))
   expect_lt(max(abs(even$values - true)), even$slack)
@@ -98,7 +98,7 @@ test_that("raw input keeps the coordinates that were read before, and only those
   expect_error(cell_axis(sort(north), "latitude", 1, "grid.nc"), "does not divide era5_cell_size_deg")
   averaged <- raw_coordinates(lon, north, cell_size = 1)
   expect_identical(averaged$lat, rev(seq(north[1], north[81], length.out = 81)))
-  expect_identical(averaged$slack, c(longitude = 0, latitude = 2^-21 * 66))
+  expect_identical(averaged$slack, c(longitude = 0, latitude = 2^-22 * 66))
   expect_identical(raw_coordinates(lon, north, cell_size = 1, even = FALSE)[c("lat", "slack")],
                    list(lat = sort(north), slack = none))
   # South of 64 S it is the other way round: uneven once sorted, so refused
@@ -293,4 +293,30 @@ test_that("several files are made even only where their spacing is measured", {
   # Averaged to cells, every file is measured, and files in either precision give the same cells.
   expect_identical(suppressMessages(read_era5(c(first, second), months = 7, cell_size = 0.05))[parts],
                    suppressMessages(read_era5(c(first, both), months = 7, cell_size = 0.05))[parts])
+})
+
+test_that("only coordinates that are single-precision numbers are made even", {
+  # Longitudes near 350 with steps of 0.001 and 0.00115 are 15 percent uneven,
+  # whatever their size; in double precision they are refused as they are.
+  uneven <- 350 + cumsum(c(0, rep(c(0.001, 0.00115), 5)))
+  expect_identical(even_coordinates(uneven), list(values = uneven, slack = 0))
+  expect_error(grid_step(uneven, "longitude"), "not evenly spaced")
+  # The same grid of 0.1 degrees as stored in single precision is made even.
+  single <- readBin(writeBin(250 + (0:5) / 10, raw(), size = 4L), "double", size = 4L, n = 6L)
+  even <- even_coordinates(single)
+  expect_gt(even$slack, 0)
+  expect_equal(even$values, 250 + (0:5) / 10, tolerance = 1e-6)
+})
+
+test_that("year subfolders give one kind of file, and results folders of runs are not data", {
+  root <- withr::local_tempdir()
+  for (year in c("2001", "2002")) dir.create(file.path(root, year))
+  file.create(file.path(root, "2001", "a.nc"), file.path(root, "2002", "b.nc4"))
+  dir.create(file.path(root, "SCORCH_run_001"))
+  file.create(file.path(root, "SCORCH_run_001", "prepared_tmax.nc"))
+  dir.create(file.path(root, "results"))
+  file.create(file.path(root, "results", c("Summary.txt", "prepared_tmax.nc")))
+  expect_identical(basename(folder_netcdf(root)), "a.nc")
+  unlink(file.path(root, "2001", "a.nc"))
+  expect_identical(basename(folder_netcdf(root)), "b.nc4")
 })
