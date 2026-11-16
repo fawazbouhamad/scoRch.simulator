@@ -407,7 +407,8 @@ test_that("with the long-path switch of Windows on, the probe is no file of the 
   expect_true(length(seen) > 0L)
   expect_true(all(startsWith(seen, paste0(parent, "/.scorch-"))))
   expect_identical(list.files(tempdir(), pattern = "^[.]scorch-long-", all.files = TRUE), before)
-  expect_false(is.null(probe$works))
+  # Only Windows asks: elsewhere the check ends before any long path is tried.
+  expect_identical(is.null(probe$works), .Platform$OS.type != "windows")
   # A second check gives the stored answer and tries nothing.
   probe$works <- "stored"
   expect_identical(works(), "stored")
