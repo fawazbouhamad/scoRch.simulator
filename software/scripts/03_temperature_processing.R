@@ -112,10 +112,14 @@ read_era5 <- function(files, variable = "auto", lon = "auto", lat = "auto", time
 
 # The temperature named in the configuration: raw ERA5 through read_era5(),
 # daily maximum temperature through read_tmax().
-read_configured_input <- function(cfg) {
+read_configured_input <- function(cfg, source = NULL) {
   input <- cfg$input
   period <- cfg$period
-  files <- input_files(input$file)
+  if (is.null(source)) {
+    source <- open_temperature_source(input$file)
+    on.exit(close_temperature_source(source), add = TRUE)
+  }
+  files <- source$files
   format <- input$format
   if (identical(format, "auto")) format <- detect_input_format(files[1])
   if (format == "era5") {
@@ -124,7 +128,7 @@ read_configured_input <- function(cfg) {
                        start = period$start_date, end = period$end_date, cell_size = input$era5_cell_size_deg)
     if (!is.null(input$processed_file)) {
       destination <- input$processed_file
-      if (normalizePath(destination, mustWork = FALSE) %in% normalizePath(files, mustWork = TRUE)) {
+      if (normalizePath(destination, mustWork = FALSE) %in% normalizePath(c(files, source$archive), mustWork = TRUE)) {
         fail("The processed output must not replace an ERA5 input file: ", destination)
       }
       if (!dir.exists(dirname(destination)) &&
@@ -139,6 +143,8 @@ read_configured_input <- function(cfg) {
       tmax$preprocessing <- paste0(tmax$preprocessing, "; saved to ", destination)
       message("Prepared daily Tmax saved to ", destination, ".")
     }
+    if (!is.null(source$archive))
+      tmax$source <- sprintf("%s (%d NetCDF files)", source$archive, length(files))
     return(tmax)
   }
   if (!is.null(input$processed_file)) {
@@ -156,8 +162,10 @@ read_configured_input <- function(cfg) {
   lat <- pick_name(input$latitude, c("lat", "latitude"), dims, "latitude dimension", files)
   time <- pick_name(input$time, c("time", "valid_time"), dims, "time dimension", files)
   ncdf4::nc_close(nc)
-  read_tmax(files, variable = variable, lon = lon, lat = lat, time = time, units = input$units,
-            months = period$warm_season_months, start = period$start_date, end = period$end_date)
+  tmax <- read_tmax(files, variable = variable, lon = lon, lat = lat, time = time, units = input$units,
+                    months = period$warm_season_months, start = period$start_date, end = period$end_date)
+  if (!is.null(source$archive)) tmax$source <- paste0(source$archive, " (", basename(files), ")")
+  tmax
 }
 
 # era5 when the file holds ERA5 2-m temperature, otherwise daily_tmax.

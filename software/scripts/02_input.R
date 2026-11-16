@@ -231,7 +231,7 @@ decode_time <- function(values, units, calendar = "standard") {
 cf_time_seconds <- function(values, units, calendar = "standard") {
   pattern <- paste0("^\\s*([A-Za-z]+)\\s+since\\s+",
                     "(\\d{1,4}-\\d{1,2}-\\d{1,2})",
-                    "(?:[ T](\\d{1,2}):(\\d{2})(?::(\\d{2}(?:\\.\\d+)?))?)?",
+                    "(?:[ T](\\d{1,2}):(\\d{1,2})(?::(\\d{1,2}(?:\\.\\d+)?))?)?",
                     "(?:\\s*(Z|UTC|[+-]\\d{1,2}:?\\d{2}))?\\s*$")
   parts <- regmatches(units, regexec(pattern, units, perl = TRUE))[[1]]
   if (length(parts) == 0) {
@@ -244,6 +244,12 @@ cf_time_seconds <- function(values, units, calendar = "standard") {
   }
   origin <- as.Date(parts[3])
   if (is.na(origin)) fail(sprintf("The time origin '%s' is not a valid date.", parts[3]))
+  # CF 'standard' and 'gregorian' count Julian dates before 1582-10-15; R dates do not.
+  if (origin < as.Date("1582-10-15") && tolower(calendar) != "proleptic_gregorian") {
+    fail(sprintf(paste("The time origin in '%s' is before 1582-10-15, where the '%s' calendar is Julian.",
+                       "Re-encode the time axis from a later origin, such as 'days since 1900-01-01'."),
+                 units, calendar))
+  }
   hour <- if (nzchar(parts[4])) as.numeric(parts[4]) else 0
   minute <- if (nzchar(parts[5])) as.numeric(parts[5]) else 0
   second <- if (nzchar(parts[6])) as.numeric(parts[6]) else 0

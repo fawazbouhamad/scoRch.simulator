@@ -1,12 +1,13 @@
 # SCORCH configuration: all analysis settings in one file
-# Run scoRch.simulator::run_scorch() from this file's folder.
+# Run scoRch.simulator::run_scorch("config.yaml") from this file's folder,
+# or choose Reuse a saved configuration in the SCORCH window.
 # Edit the paths and period first. Other settings keep the SCORCH study defaults
 # unless you choose to change them. Keep the indentation; # starts a comment.
 
 # START HERE: data, results folder and analysis period
 input:
   file: null                  # null = bundled example; otherwise a quoted NetCDF path,
-                              # or an ERA5 folder/list of files; use forward slashes in paths
+                              # a ZIP of NetCDFs, or an ERA5 folder/list; use forward slashes
   format: auto                # auto detects the format; daily_tmax = prepared daily maxima;
                               # era5 = local hourly or daily ERA5 temperature
   processed_file: null        # optional saved Tmax path for ERA5 input; null = do not save;

@@ -1,8 +1,8 @@
 # scoRch.simulator
 
 [![License: GPL-3.0-or-later](https://img.shields.io/badge/license-GPL--3.0--or--later-orange)](LICENSE.txt)
-[![R: 4.1 or newer](https://img.shields.io/badge/R-%E2%89%A54.1-blue)](software/setup/DESCRIPTION)
-[![Version: 1.2.0](https://img.shields.io/badge/version-1.2.0-blue)](https://github.com/fawazbouhamad/scoRch.simulator/releases/tag/v1.2.0)
+[![R: 4.4 or newer](https://img.shields.io/badge/R-%E2%89%A54.4-blue)](#install-and-open)
+[![Version: 1.3.0](https://img.shields.io/badge/version-1.3.0-blue)](https://github.com/fawazbouhamad/scoRch.simulator/releases/tag/v1.3.0)
 [![Software checks](https://github.com/fawazbouhamad/scoRch.simulator/actions/workflows/checks.yaml/badge.svg?branch=main)](https://github.com/fawazbouhamad/scoRch.simulator/actions/workflows/checks.yaml)
 
 An R package implementing **SCORCH: Spatiotemporal Classification of Regional
@@ -14,53 +14,116 @@ figures. A complete North America example is included.
 
 <img src="software/figures/scorch_workflow.png" width="720" alt="SCORCH workflow from temperature data through detection, clustering and classification to catalogs, models and figures">
 
-## Installation
+## Install and open
 
-You need **R 4.1 or newer**. In R or RStudio, run:
+You need **R 4.4 or newer**; RStudio is recommended. Paste this block into the
+Console and press Enter. It installs the package once and then opens the SCORCH
+window.
 
 ```r
-options(repos = c(CRAN = "https://cloud.r-project.org"))
-install.packages("remotes")
-source("https://raw.githubusercontent.com/fawazbouhamad/scoRch.simulator/v1.2.0/software/setup/install.R")
+source("https://raw.githubusercontent.com/fawazbouhamad/scoRch.simulator/v1.3.0/software/setup/install.R")
 install_scorch()
 ```
 
-To update, restart R and run the same installation block.
+The block asks no questions. It downloads about 100 MB, which includes the
+example data, and installs any R packages that are still missing. Nothing is
+analyzed until you click **Run analysis**. Outside RStudio the window opens in
+your web browser; R prints its address, which works only on this computer and
+only with the key that R adds to it.
 
-## Running the software
+On Linux, R builds these packages from source. Besides R's own build tools
+(`r-base-dev` on Debian and Ubuntu), it needs two system libraries first, netCDF
+and libuv: `libnetcdf-dev` and `libuv1-dev` on Debian and Ubuntu, `netcdf-devel`
+and `libuv-devel` on Fedora.
 
-Open a new RStudio project and run the included example:
+**Every later visit** needs one line. The package stays installed.
 
 ```r
 scoRch.simulator::run_scorch()
 ```
 
-The software creates [config.yaml](config.yaml) in your project folder and runs
-the full analysis. No separate data download is needed.
+You never have to reinstall to open the window again. Pasting the block a second
+time downloads nothing and only opens the window. An update replaces the version
+this R session has loaded, so no restart is needed. If the Console does ask for
+one, choose **Session > Restart R** once and then do what its message names:
+usually the line above, and the block again only when the message says so.
+To move to a newer release, paste the block from that release's README.
 
-For **your own data**:
+## The SCORCH window
 
-1. Open the example's config.yaml, or create one in a new project with
-   `scoRch.simulator::write_scorch_config()`.
-2. Set your input path and format under `input`, results folder under `output`,
-   and months and dates under `period`.
-3. Save the file and run `scoRch.simulator::run_scorch()` again.
+<img src="software/figures/setup_window.png" width="720" alt="The SCORCH opening screen: Choose your own data, Use included example, and a map of heatwave cells with a fitted ellipse">
 
-Use the configuration and input instructions below, or watch the
-[animated walkthrough](software/figures/how_to_run.gif). To keep the result in R
-for later plotting, use `result <- scoRch.simulator::run_scorch()`.
+**1. Choose.** The opening screen has two buttons.
 
-## Use your own data
+- **Choose your own data** opens one file chooser. Browse to **Downloads** or any
+  other folder and select a prepared NetCDF, a raw ERA5 NetCDF or a ZIP, then
+  click **Open**. For a folder of ERA5 files, open the folder and click
+  **Use this folder**. SCORCH works out which of these you selected. Files are read
+  where they are; a ZIP is extracted into temporary local storage with progress.
+  The hourly Zenodo ZIP below needs about 6.4 GB of free temporary space.
+- **Use included example** goes straight to the settings of the bundled North
+  America dataset.
 
-In RStudio, choose **File > New Project > New Directory > New Project** and
-create a folder for your analysis. If you have not run the example there, run:
+The map on the opening screen is a **demonstration** from that bundled dataset.
+Play, pause or step through the days of one event of each type to see which grid
+cells qualify, where SCORCH fits ellipses and why the event has its type. **Still
+view** shows every day side by side; it is the default when your system asks for
+reduced motion.
+
+**2. Check the settings that need a decision.** SCORCH reads the variable,
+coordinates, time axis and units from the file and shows the dataset name, its
+date coverage, the months to analyze and the results folder. **Run analysis**
+stays in view at the lower edge of the window while you check them.
+
+- **Months** apply in every selected year. June through August of a file holding
+  1996–2025 means those three months in each of the 30 years, and the window says
+  so, with the number of days. **Limit the analysis dates** sets the first and
+  the last date to analyze.
+- **Temperature** is always shown in °C. A file in Kelvin is converted once, when
+  it is read.
+- **A question** appears only when the file leaves something open, for example
+  missing units, two possible temperature variables, or a temperature that the
+  file does not call a daily maximum. Your answer is saved with the run, and the
+  results of a completed run name a variable that you confirmed.
+- **Results folder** shows the new folder for this run. **Choose or create folder**
+  picks another location. Every run gets the next number, starting at
+  `output/SCORCH_run_001` under your R working directory.
+- **Advanced settings** are collapsed. They hold the heatwave definition,
+  clustering and ellipse settings, bootstrap repetitions and random seeds, the
+  spatial model predictors, ERA5 preprocessing (for raw ERA5 input) and how the
+  file is read: its format, units, and variable and coordinate names. These stay
+  on automatic detection unless you change them; the variable SCORCH found is
+  named on the dataset card. **Reuse a saved configuration** fills the settings
+  from the `config.yaml` of an earlier run and keeps the dataset you selected.
+  Its advanced settings and results folder stay in use when you change the data
+  afterwards. The months, the date limit and how the file is read start again
+  with other data; reuse the file to apply its months and dates again.
+
+**3. Run and read the result.** Click **Run analysis** and follow the progress.
+When it finishes, the window shows the number of events of each of the four types
+and the full results path, with **Open summary**, **Open results folder** and
+**Set up another run** directly below them. The dataset, the results of each
+stage and the settings are listed underneath, and the map now shows the events
+of your run. A reload of the window shows these results again, until you click
+**Set up another run**. Each run folder holds `Summary.txt`, the effective
+`config.yaml`, the catalogs, model workbooks and figures. The configuration
+refers to the original input, including an original ZIP. To keep the result in R,
+start with `result <- scoRch.simulator::run_scorch()`.
+
+## Scripted runs
+
+To run a saved configuration directly, supply its path to
+`scoRch.simulator::run_scorch("path/to/config.yaml")`. The command uses the
+output directory recorded in that file. A noninteractive script calling
+`run_scorch()` reads or creates the working folder's `config.yaml`.
+To write an editable configuration for a new script, run the following once.
 
 ```r
 scoRch.simulator::write_scorch_config()
 ```
 
 Open `config.yaml` from RStudio's Files pane. Edit your input, output and period,
-save the file, and run `scoRch.simulator::run_scorch()`. You do not need to clone
+save the file, and run `scoRch.simulator::run_scorch("config.yaml")`. You do not need to clone
 the repository or run the numbered scripts individually.
 
 For **prepared daily Tmax**, use:
@@ -99,6 +162,26 @@ NetCDF file, a folder of NetCDF files or a YAML list of files. Hourly files need
 complete UTC days on the same grid without overlapping dates. Daily ERA5 maxima
 are also accepted; daily means are not daily Tmax. Obtain your local files
 first; the software does not download ERA5 or require an API key.
+
+With `auto`, a configuration finds `tmax` in prepared files and `t2m` or
+`2m_temperature` in ERA5 files, with the coordinates `lon`/`longitude`,
+`lat`/`latitude` and `time`/`valid_time`. The SCORCH window also recognizes other
+names from the file's CF metadata, such as `tasmax` or `tx` on `x`, `y` and `t`,
+and writes them into the run's `config.yaml`, so the saved file replays the same
+reading from a script. Rotated or projected grids, calendars other than
+Gregorian and Fahrenheit are refused with the reason.
+
+The window checks more than names before it offers **Run analysis**. It asks
+before it analyzes a temperature that the file does not identify as a daily
+maximum (for sub-daily values, as 2 m air temperature), such as `tasmin`, `tas`
+or a dew point. It stops, with the reason, when the numbers cannot be air
+temperature (outside -100 to 70 °C, as an undeclared missing-value code or
+tenths of a degree would be), when the units carry a factor such as `0.1 degC`,
+when the grid is Gaussian or otherwise unevenly spaced, when a prepared variable
+has a fourth dimension, and when the files of one selection name the variable or
+the coordinates differently. A time axis counted from before 1582-10-15 in the
+standard calendar is refused by the window and by scripted runs alike; re-encode
+it from a later origin, such as `days since 1900-01-01`.
 
 Hourly processing takes each native point's maximum over 24 UTC hours, converts
 Kelvin to Celsius, then averages complete blocks into the configured cell size.
@@ -149,17 +232,17 @@ adjacent waters. Its data are archived separately on Zenodo:
 | Download | Approximate size | Use |
 |---|---|---|
 | [Processed NetCDF](https://zenodo.org/records/24232552/files/SCORCH_NA_processed_1996_2025.nc?download=1) | 34 MB | Ready to analyze; the same data are included with the package. |
-| [Unprocessed ERA5 ZIP](https://zenodo.org/records/24232552/files/SCORCH_NA_unprocessed_1996_2025.zip?download=1) | 6.33 GB | Extract the 30 yearly NetCDF files and use their folder as ERA5 input. |
+| [Unprocessed ERA5 ZIP](https://zenodo.org/records/24232552/files/SCORCH_NA_unprocessed_1996_2025.zip?download=1) | 6.33 GB | Select the ZIP directly. SCORCH opens the 30 yearly ERA5 files. |
 
 Processing details, checksums and attribution are recorded in the
 [data provenance](demo/PROVENANCE.txt). The two Zenodo files can be downloaded
-independently. Use the processed file as `daily_tmax`, or extract the ZIP once
-and point ERA5 input at its folder containing the 30 yearly NetCDF files.
+independently. Use the processed file as `daily_tmax`, or the ZIP as `era5`.
 
 ## Results
 
-Results go to `output/` in your project unless configured otherwise. **Open
-Summary.txt first** for the completion status, warnings and main results.
+The SCORCH window summarizes each finished run and displays the full path of its
+folder. **Open Summary.txt first** for the completion status, warnings and main
+results.
 
 | Example output | Contents |
 |---|---|
@@ -255,8 +338,8 @@ ellipse, so the type follows its daily cluster counts:
 
 <img src="software/figures/compound_event_types.png" width="720" alt="The four SCORCH compound-event types">
 
-Reruns replace package-generated files in the selected results folder. Choose a
-different output directory to keep separate runs.
+Scripted reruns using the same configured output directory replace package-generated
+files there. The guided window creates a separate folder on every run.
 
 ## Study and verification
 
@@ -287,9 +370,32 @@ or 1e-3 for LGCP results; elapsed time and local paths are normalized in the
 summary comparison. Full-study checks require the separate study input.
 
 Assemble a package with `Rscript software/setup/install.R .package`, then use
-`devtools::check(".package")`. The installer defaults to stable `v1.2.0`;
-developers can request `install_scorch(ref = "main")`. Dependency upgrades are
-disabled unless requested. To restore the exact published demo input, run
+`devtools::check(".package")`. The test suite compares runs bit for bit and must
+run against an installed build, as `R CMD check` does, not against
+`devtools::load_all()` or under `covr`, where the bit-for-bit comparisons are
+skipped. The installer defaults to stable `v1.3.0`;
+developers can request `install_scorch(ref = "main")`. `force = TRUE` reinstalls
+a release that is already installed and `open = FALSE` installs without opening
+the window. Dependency upgrades are disabled unless requested. A copy installed
+from a folder or a branch does not count as the release: the block then
+downloads and installs the published one.
+
+The window's files are in `software/launcher/`. Its demonstration,
+`showcase.json`, holds one event of each type computed from the bundled example
+with the study defaults; `Rscript software/setup/maintenance.R make-showcase`
+regenerates it and a package test compares it with a fresh calculation.
+`software/tests/browser/guided.cjs` drives the installed window in Chromium, from
+the opening screen through two runs; it needs the address R gives the window's
+viewer (`SCORCH_UI_URL`, with its key), and `software/tests/browser/fixtures.R`
+writes the small files it opens first. Other tests read the same temperature as a
+prepared file, a Kelvin copy, a ZIP, a folder and raw hourly files and require
+identical catalogs. `Rscript software/setup/maintenance.R check-release` confirms
+that the package, citation, installer and this README name one version.
+Publishing a release starts the `Published block` workflow, which pastes the
+block above into a new R session on Linux and on Windows and drives the window
+it opens; it can pass only once the release tag exists.
+
+To restore the exact published demo input, run
 `Rscript software/setup/maintenance.R make-demo path/to/SCORCH_NA_processed_1996_2025.nc`;
 the command verifies the published checksum. Maintenance `--help` lists the
 other checks. Data sources, checksums and licence terms remain in

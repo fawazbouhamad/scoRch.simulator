@@ -73,7 +73,7 @@ demo_settings <- function(config_file = "prepared", input = NULL, output = NULL)
   }
   if (example) {
     if (!cfg$input$format %in% c("auto", "daily_tmax")) fail("Set input: file to your local ERA5 file or folder.")
-    cfg$input$file <- system.file("extdata", "north_america_tmax.nc", package = "scoRch.simulator", mustWork = TRUE)
+    cfg$input$file <- scorch_bundled_file()
     cfg$input$format <- "daily_tmax"
   }
   if (example || identical(config_file, "hourly")) {

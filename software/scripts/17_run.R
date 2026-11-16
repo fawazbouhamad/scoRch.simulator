@@ -36,10 +36,14 @@
 #'
 #' @param config Path of a YAML configuration file (an edited copy from
 #'   [write_scorch_config()] or [scorch_template()]), or a list with the same
-#'   structure. With no arguments, reads `config.yaml` in the working folder
-#'   and creates it from the installed configuration if absent. A YAML file
-#'   with a null input runs the bundled US example. Explicit `NULL` uses the
-#'   study defaults and requires temperature supplied as `tmax`.
+#'   structure. With no arguments, an interactive session opens the SCORCH
+#'   setup window. Choose your own data (a prepared NetCDF, a raw ERA5 NetCDF,
+#'   a ZIP or a folder of ERA5 files) or the included example, review the
+#'   months and the results folder, then click Run analysis; nothing is
+#'   analysed before that click, and every run gets its own numbered folder.
+#'   Batch sessions read or create `config.yaml` in the working folder. A YAML
+#'   file with a null input runs the bundled North America example. Explicit
+#'   `NULL` uses the study defaults and requires temperature supplied as `tmax`.
 #' @param tmax Optional `scorch_tmax` object (from [read_tmax()] or
 #'   [tmax_from_array()]) to analyse instead of reading the file named in the
 #'   configuration. The configured warm-season months and date limits also
@@ -49,7 +53,9 @@
 #' @return A `scorch_result` list (invisibly) with the configuration, the
 #'   input description and the tables of every stage: `heatwaves`, `regional`,
 #'   `clusters`, `ellipses`, `events`, `power_law` and `lgcp`. Use it with
-#'   [scorch_figure()] to redraw a result plot.
+#'   [scorch_figure()] to redraw a result plot. The setup window returns the
+#'   result of its last completed analysis, or `NULL` when it is closed before
+#'   one; `scoRch.simulator::run_scorch()` opens it again at any time.
 #' @examples
 #' \donttest{
 #' old <- setwd(tempdir())                              # results go to tempdir()/output
@@ -60,15 +66,24 @@
 #' }
 #' @export
 run_scorch <- function(config = NULL, tmax = NULL, trace_date = NULL) {
+  if (interactive() && missing(config) && missing(tmax) && missing(trace_date))
+    return(invisible(scorch_launcher()))
   if (!is.null(trace_date)) {
     trace_date <- tryCatch(as.Date(trace_date), error = function(e) as.Date(NA))
     if (length(trace_date) != 1L || is.na(trace_date)) fail("trace_date must be one calendar date, e.g. '2012-06-30'.")
   }
-  started <- Sys.time()
+  # Preserve the no-argument command for batch jobs and reference comparisons.
   if (missing(config) && is.null(tmax)) {
     if (!file.exists("config.yaml")) write_scorch_config("config.yaml")
     config <- "config.yaml"
   }
+  run_scorch_analysis(config, tmax, trace_date)
+}
+
+# `observe`, used by the setup window, sees the finished result beside the
+# temperature it came from. It cannot change what a run computes or writes.
+run_scorch_analysis <- function(config, tmax = NULL, trace_date = NULL, source = NULL, observe = NULL) {
+  started <- Sys.time()
   if (is.character(config) && length(config) == 1L && is.null(tmax)) {
     config <- demo_settings(config)
     example <- system.file("extdata", "north_america_tmax.nc", package = "scoRch.simulator")
@@ -77,7 +92,9 @@ run_scorch <- function(config = NULL, tmax = NULL, trace_date = NULL) {
   cfg <- read_config(config, input_required = is.null(tmax))
   out <- cfg$output$directory
   published <- FALSE
-  on.exit(if (!published && dir.exists(out)) {
+  # Only a folder that held a summary before this run began has results of an earlier one.
+  earlier <- file.exists(file.path(out, "Summary.txt"))
+  on.exit(if (!published && earlier) {
     message("This run did not publish output; files in ", out, " belong to an earlier run.")
   }, add = TRUE)
   step <- function(...) message(format(Sys.time(), "%H:%M:%S "), sprintf(...))
@@ -89,7 +106,7 @@ run_scorch <- function(config = NULL, tmax = NULL, trace_date = NULL) {
 
   if (is.null(tmax)) {
     step("Reading %s", paste(cfg$input$file, collapse = ", "))
-    tmax <- read_configured_input(cfg)
+    tmax <- read_configured_input(cfg, source)
   } else if (!inherits(tmax, "scorch_tmax")) {
     fail("`tmax` must come from read_tmax() or tmax_from_array().")
   } else {
@@ -194,6 +211,7 @@ run_scorch <- function(config = NULL, tmax = NULL, trace_date = NULL) {
   if (!identical(warnings, "  None.")) message("Warnings:\n", paste(warnings, collapse = "\n"))
   message("Results folder: ", normalizePath(out, winslash = "/"))
   message("Open Summary.txt first.")
+  if (is.function(observe)) observe(result, tmax)
   invisible(result)
 }
 

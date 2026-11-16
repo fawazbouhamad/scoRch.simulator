@@ -1,5 +1,7 @@
-# Package checks on Windows, macOS and Linux, plus the demo and reference comparison.
+# Package checks on Windows, macOS and Linux, plus the installer, the installed
+# setup window, the demo and the reference comparison.
 # Pushes and pull requests run both jobs; manual runs retain demo-only behavior.
+# published-block.yaml pastes the README block itself once a release exists.
 name: Software checks
 
 on:
@@ -48,10 +50,17 @@ jobs:
 
   demo:
     runs-on: ubuntu-latest
+    timeout-minutes: 90
     env:
       GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
+      # The commit under test. The installer downloads it from GitHub the way
+      # the README block downloads a release, so that path is exercised too.
+      SCORCH_REF: ${{ github.event.pull_request.head.sha || github.sha }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          # The same commit as the download, not the merge with the base branch.
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
       - uses: r-lib/actions/setup-r@v2
         with:
           r-version: 'release'
@@ -61,14 +70,161 @@ jobs:
       - uses: r-lib/actions/setup-r-dependencies@v2
         with:
           working-directory: .package
+          extra-packages: any::remotes
           needs: check
-      - name: Install the assembled package
-        run: R CMD INSTALL .package
-      - name: Run the demonstration
-        run: Rscript demo/run.R
+      - name: Check that a release names one version everywhere
+        run: Rscript software/setup/maintenance.R check-release
+      - name: Install with the README call and drive the window it opens in Chromium
+        shell: bash
+        run: |
+          # The restored package cache can hold scoRch.simulator from an earlier
+          # run. Start without it, as a first-time reader does.
+          Rscript -e 'for (lib in .libPaths()) if (dir.exists(file.path(lib, "scoRch.simulator"))) remove.packages("scoRch.simulator", lib = lib)'
+          export SCORCH_UI_PROJECT="$(mktemp -d)"
+          export SCORCH_UI_DATA="$PWD/demo/input/north_america_processed_tmax.nc"
+          export SCORCH_UI_FIXTURES="$RUNNER_TEMP/scorch-fixtures"
+          export SCORCH_UI_SHOTS="$RUNNER_TEMP/scorch-window"
+          export SCORCH_UI_URL_FILE="$RUNNER_TEMP/scorch-window-url.txt"
+          export CHROME_BIN="$(command -v google-chrome)"
+          mkdir -p "$SCORCH_UI_SHOTS"
+          rm -f "$SCORCH_UI_URL_FILE"
+          zip -q -j "$SCORCH_UI_PROJECT/temperatures.zip" "$SCORCH_UI_DATA"
+          # The small files the browser test opens first (a file that holds July
+          # and August only, a daily minimum, undeclared missing values, numbers
+          # without units, raw ERA5 points on one row of cells). They need ncdf4
+          # alone, so they are written before anything is installed.
+          Rscript software/tests/browser/fixtures.R "$SCORCH_UI_DATA" "$SCORCH_UI_FIXTURES"
+          test -f "$SCORCH_UI_FIXTURES/july_august.nc"
+          npm install --prefix "$RUNNER_TEMP/scorch-browser" --no-audit --no-fund playwright-core@1.55.0
+          export NODE_PATH="$RUNNER_TEMP/scorch-browser/node_modules"
+          log="$RUNNER_TEMP/scorch-window.log"
+          # The README block from this checkout, for the commit under test: source
+          # the installer, call it, and the window opens. The viewer is replaced by
+          # a function that writes the address it is given to a file. An error
+          # skips the rest of its line, so nothing is reported for a failed step.
+          block='setwd(Sys.getenv("SCORCH_UI_PROJECT")); options(shiny.port = 7123L, shinygadgets.showdialog = function(caption, url, ...) writeLines(url, Sys.getenv("SCORCH_UI_URL_FILE"))); stopifnot(interactive(), !nzchar(system.file(package = "scoRch.simulator"))); source(file.path(Sys.getenv("GITHUB_WORKSPACE"), "software/setup/install.R")); result <- install_scorch(ref = Sys.getenv("SCORCH_REF")); cat("WINDOW RETURNED", class(result)[1L], "\n")'
+          # After the window closes, the same interactive session runs the saved
+          # configuration of the browser test's first run from a script.
+          scripted='saved <- file.path(Sys.getenv("SCORCH_UI_PROJECT"), "reviewer results", "SCORCH_run_001", "config.yaml"); again <- scoRch.simulator::run_scorch(saved); cat("SCRIPTED RUN RETURNED", class(again)[1L], "\n")'
+          printf '%s\n' "$block" "$scripted" | R --vanilla --interactive > "$log" 2>&1 &
+          server=$!
+          trap 'kill "$server" 2>/dev/null || true' EXIT
+          # The window is open once its address has been written (up to 30 minutes
+          # for the download and the installation).
+          for attempt in $(seq 1 900); do
+            [ -s "$SCORCH_UI_URL_FILE" ] && break
+            kill -0 "$server" 2>/dev/null || break
+            sleep 2
+          done
+          [ -s "$SCORCH_UI_URL_FILE" ] || { cat "$log"; echo "The installer did not open the window."; exit 1; }
+          # The address as the viewer received it: it opens only with its ?token=.
+          export SCORCH_UI_URL="$(head -n 1 "$SCORCH_UI_URL_FILE")"
+          node software/tests/browser/guided.cjs || { cat "$log"; exit 1; }
+          # The session ends by itself after the scripted run (up to 10 minutes).
+          for attempt in $(seq 1 300); do
+            kill -0 "$server" 2>/dev/null || break
+            sleep 2
+          done
+          cat "$log"
+          grep -Eq "^Installed scoRch[.]simulator [0-9.]+[.]$" "$log"
+          grep -Fq "You do not need to run the installation block again" "$log"
+          grep -Fq "Nothing is analyzed until you click Run analysis" "$log"
+          grep -Fq "To open it again, run scoRch.simulator::run_scorch()" "$log"
+          # The window hands back its last finished analysis. A configuration
+          # file is analysed, and the window opened once only.
+          grep -Fq "WINDOW RETURNED scorch_result" "$log"
+          grep -Fq "SCRIPTED RUN RETURNED scorch_result" "$log"
+          test "$(grep -Fc "Opening the SCORCH window" "$log")" -eq 1
+      - name: Running the block again neither downloads nor reinstalls
+        run: |
+          source("software/setup/install.R")
+          ref <- Sys.getenv("SCORCH_REF")
+          description <- system.file("DESCRIPTION", package = "scoRch.simulator")
+          before <- file.mtime(description)
+          # The installed copy records the commit it was downloaded from.
+          stopifnot(identical(utils::packageDescription("scoRch.simulator")[["Config/scoRch/source"]], ref))
+          said <- utils::capture.output(install_scorch(ref = ref, open = FALSE), type = "message")
+          writeLines(said)
+          stopifnot(any(grepl("is already installed. Nothing was downloaded or changed.", said, fixed = TRUE)),
+                    any(grepl("scoRch.simulator::run_scorch()", said, fixed = TRUE)),
+                    identical(before, file.mtime(description)))
+          # A package it needs has gone missing since then: the same call puts
+          # it back and still does not fetch scoRch.simulator again.
+          remove.packages("yaml", lib = dirname(system.file(package = "yaml")))
+          stopifnot(!nzchar(system.file(package = "yaml")))
+          said <- utils::capture.output(install_scorch(ref = ref, open = FALSE), type = "message")
+          writeLines(said)
+          stopifnot(any(grepl("is already installed. It was not downloaded again; packages it needs were installed: yaml.", said, fixed = TRUE)),
+                    any(grepl("scoRch.simulator::run_scorch()", said, fixed = TRUE)),
+                    nzchar(system.file(package = "yaml")),
+                    identical(before, file.mtime(description)))
+        shell: Rscript {0}
+      - name: An older version attached in the session is replaced without a restart
+        run: |
+          source("software/setup/install.R")
+          version <- unname(read.dcf("software/setup/DESCRIPTION", "Version")[1L, 1L])
+          # This checkout, relabelled as the previous release, in a library of its own.
+          lib <- tempfile("scorch-library-")
+          dir.create(lib)
+          old <- prepare_scorch_package(".", tempfile("scoRch-old-"))
+          description <- file.path(old, "DESCRIPTION")
+          writeLines(sub("^Version:.*$", "Version: 1.2.0", readLines(description)), description)
+          installed <- system2(file.path(R.home("bin"), "R"), c("CMD", "INSTALL", paste0("--library=", shQuote(lib)), shQuote(old)))
+          stopifnot(installed == 0L)
+          library(scoRch.simulator, lib.loc = lib)
+          stopifnot(identical(as.character(utils::packageVersion("scoRch.simulator")), "1.2.0"))
+          searched <- .libPaths()
+          said <- utils::capture.output(install_scorch(path = ".", lib = lib, open = FALSE), type = "message")
+          writeLines(said)
+          stopifnot(any(grepl(sprintf("Updated scoRch.simulator from 1.2.0 to %s.", version), said, fixed = TRUE)),
+                    any(grepl("no restart is needed", said, fixed = TRUE)),
+                    any(grepl("You do not need to run the installation block again", said, fixed = TRUE)),
+                    identical(as.character(utils::packageVersion("scoRch.simulator")), version),
+                    "package:scoRch.simulator" %in% search(),
+                    is.null(scoRch.simulator:::stale_session()))
+          # This library is not one R searches: the message says how to reach
+          # it, the search path is as it was, and a copy installed from a
+          # folder is not marked as a release.
+          stopifnot(any(grepl("R does not search this library by itself", said, fixed = TRUE)),
+                    any(grepl(".libPaths(c(", said, fixed = TRUE)),
+                    identical(searched, .libPaths()),
+                    identical(utils::packageDescription("scoRch.simulator", lib.loc = lib)[["Config/scoRch/source"]], "local"))
+        shell: Rscript {0}
+      - name: What an interrupted installation left behind is cleared by the next call
+        run: |
+          source("software/setup/install.R")
+          version <- unname(read.dcf("software/setup/DESCRIPTION", "Version")[1L, 1L])
+          # What R leaves when an update is cut off: its lock for this package
+          # with the copy it had set aside, and an empty package folder. R then
+          # refuses every later installation. The copy is the one installed above.
+          lib <- tempfile("scorch-library-")
+          lock <- file.path(lib, "00LOCK-scoRch.simulator")
+          dir.create(file.path(lock, "00new"), recursive = TRUE)
+          stopifnot(file.copy(system.file(package = "scoRch.simulator"), lock, recursive = TRUE),
+                    dir.create(file.path(lib, "scoRch.simulator")))
+          said <- utils::capture.output(install_scorch(path = ".", lib = lib, open = FALSE), type = "message")
+          writeLines(said)
+          stopifnot(any(grepl(sprintf("An earlier installation of scoRch.simulator was interrupted; version %s, which it had set aside, was put back", version), said, fixed = TRUE)),
+                    any(grepl(sprintf("Reinstalled scoRch.simulator %s.", version), said, fixed = TRUE)),
+                    !file.exists(lock),
+                    identical(as.character(utils::packageVersion("scoRch.simulator", lib.loc = lib)), version))
+        shell: Rscript {0}
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: setup-window
+          path: ${{ runner.temp }}/scorch-window
+      - name: Run the demonstration from an empty folder
+        shell: bash
+        run: |
+          mkdir "$RUNNER_TEMP/scorch-demo"
+          cd "$RUNNER_TEMP/scorch-demo"
+          Rscript "$GITHUB_WORKSPACE/demo/run.R"
+          # A batch run in a new folder writes the configuration it used.
+          test -f config.yaml
       - name: Compare the demo output with demo/output
-        run: Rscript software/setup/maintenance.R compare
+        run: Rscript software/setup/maintenance.R compare "$RUNNER_TEMP/scorch-demo/output"
       - uses: actions/upload-artifact@v4
         with:
           name: demo-output
-          path: output
+          path: ${{ runner.temp }}/scorch-demo/output
