@@ -57,8 +57,8 @@ To move to a newer release, paste the block from that release's README.
 
 - **Choose your own data** opens one file chooser. Browse to **Downloads** or any
   other folder and select a prepared NetCDF, a raw ERA5 NetCDF or a ZIP, then
-  click **Open**. For a folder of ERA5 files, open the folder and click
-  **Use this folder**. SCORCH works out which of these you selected. Files are read
+  click **Open**. For a folder of ERA5 files, or a folder that holds one folder
+  of files per year, open it and click **Use this folder**. SCORCH works out which of these you selected. Files are read
   where they are; a ZIP is extracted into temporary local storage with progress.
   The hourly Zenodo ZIP below needs about 6.4 GB of free temporary space.
 - **Use included example** goes straight to the settings of the bundled North
@@ -157,8 +157,16 @@ To use another configuration, run
 `scoRch.simulator::run_scorch("C:/analysis/config.yaml")`.
 
 **Accepted input:** a regular longitude-latitude NetCDF grid, in Celsius or
-Kelvin, with complete daily Tmax in every retained cell. ERA5 input can be one
-NetCDF file, a folder of NetCDF files or a YAML list of files. Hourly files need
+Kelvin, with complete daily Tmax in every retained cell. Coordinates stored in
+single precision, which are evenly spaced only up to their rounding (130.100006
+for 130.1), are read as the even grid between their first and last value. ERA5
+input can be one NetCDF file, a YAML list of files, or a folder: its `.nc`
+files; in a folder without any, its `.nc4` files; and in a folder without
+either, the files of the folders directly inside it, such as one unpacked
+download per year. A ZIP file is read the same way. Several files of daily
+values that are not ERA5 (one MERRA-2 file per day, for example) are read
+together as ERA5 input: in the window, set **Data format** to
+**ERA5 temperature** under Advanced settings. Hourly files need
 complete UTC days on the same grid without overlapping dates. Daily ERA5 maxima
 are also accepted; daily means are not daily Tmax. Obtain your local files
 first; the software does not download ERA5 or require an API key.
@@ -182,6 +190,13 @@ has a fourth dimension, and when the files of one selection name the variable or
 the coordinates differently. A time axis counted from before 1582-10-15 in the
 standard calendar is refused by the window and by scripted runs alike; re-encode
 it from a later origin, such as `days since 1900-01-01`.
+
+On Windows, unless long paths are switched on, no file path may have 260
+characters or more, and a run writes files about 70 characters deeper than its
+results folder. A results folder with a longer path is named before
+**Run analysis** in the window, and a scripted run stops at its start, before it
+reads any data, with the longest path the results folder may have there. Choose
+a results folder with a shorter path.
 
 Hourly processing takes each native point's maximum over 24 UTC hours, converts
 Kelvin to Celsius, then averages complete blocks into the configured cell size.

@@ -7,9 +7,12 @@ open_temperature_source <- function(path, progress = NULL) {
   if (length(path) != 1L) fail("Select one ZIP, or a set of extracted ERA5 files.")
   archive <- normalizePath(path, winslash = "/", mustWork = TRUE)
   entries <- zip::zip_list(archive)
-  entries <- entries[grepl("[.]nc$", entries$filename, ignore.case = TRUE) &
-                       !grepl("(^|/)(__MACOSX/|[.]_)", entries$filename), , drop = FALSE]
-  if (!nrow(entries)) fail("This ZIP contains no NetCDF (.nc) files.")
+  entries <- entries[!grepl("(^|/)(__MACOSX/|[.]_)", entries$filename), , drop = FALSE]
+  # Its .nc members, as in a folder; an archive without any gives its .nc4 members.
+  netcdf <- grepl("[.]nc$", entries$filename, ignore.case = TRUE)
+  if (!any(netcdf)) netcdf <- grepl("[.]nc4$", entries$filename, ignore.case = TRUE)
+  entries <- entries[netcdf, , drop = FALSE]
+  if (!nrow(entries)) fail("This ZIP contains no NetCDF (.nc or .nc4) files.")
   members <- entries$filename
   invalid <- grepl("(^/|(^|/)[.][.](/|$)|\\\\|:|[[:cntrl:]])", members) |
     grepl("^(CON|AUX|NUL|PRN|COM[1-9]|LPT[1-9])([.]|$)", basename(members), ignore.case = TRUE)
@@ -33,7 +36,17 @@ open_temperature_source <- function(path, progress = NULL) {
       fail("Could not extract the complete file ", members[i], ". Check available disk space.")
   }
   ready <- TRUE
-  list(files = files, archive = archive, scratch = scratch)
+  list(files = files, archive = archive, scratch = scratch, labels = members)
+}
+
+# How a message names one file of a selection: its name, or for a ZIP its
+# path in the archive, and the folder that holds it where two files of the
+# selection have the same name (one folder per year, for example).
+file_label <- function(source, file) {
+  i <- match(file, source$files)
+  if (!is.na(i) && !is.null(source$labels)) return(source$labels[[i]])
+  if (sum(basename(source$files) == basename(file)) > 1L) return(file.path(basename(dirname(file)), basename(file)))
+  basename(file)
 }
 
 close_temperature_source <- function(source) {
@@ -304,17 +317,10 @@ variable_question <- function(nc, label, variable, per_day) {
 # 180 degrees with negative longitudes, or a grid that really is uneven.
 # `values` are the coordinates as the reader sees them and `size` is the
 # largest of them as the file stores them.
-uneven_spacing <- function(label, axis, values, size, reason) {
+uneven_spacing <- function(label, axis, values, reason) {
   regular <- function(v) !inherits(tryCatch(grid_step(v, axis), error = identity), "error")
-  steps <- diff(values)
-  # Single precision moves a coordinate by up to 2^-24 of its size, so the
-  # steps of a regular grid then differ by less than 2^-21 of the largest value.
-  if (all(steps != 0) && max(abs(steps - steps[1])) <= 2^-21 * size) {
-    return(sprintf(paste("%s has coordinates that are regular only to single precision. %s SCORCH needs the same",
-                         "spacing between all %ss: save the longitude and latitude values in double precision, rounded",
-                         "to the exact grid values (such as 130.1 instead of 130.100006), then choose that file."),
-                   label, reason, axis))
-  }
+  # Coordinates that are regular to the rounding of single precision are read
+  # (even_coordinates()); what reaches this point is uneven beyond that.
   # Negative longitudes on one side of 180 degrees and positive ones on the
   # other are neighbours only when all are counted from 0 to 360.
   if (axis == "longitude" && any(values < 0) && any(values >= 0) && regular(sort(values %% 360))) {
@@ -504,13 +510,17 @@ temperature_header <- function(file, input) {
       fail(sprintf("%s needs at least two %s values, without missing values.", label, axis))
     }
   }
-  size <- vapply(coordinates, function(values) max(abs(values)), 1)
+  # Coordinates that are evenly spaced only to the rounding of single
+  # precision are made even first, as the readers do (even_coordinates()).
   if (format == "era5") {
-    coordinates <- list(longitude = wrap_longitudes(coordinates$longitude)$lon, latitude = sort(coordinates$latitude))
+    axes <- raw_coordinates(coordinates$longitude, coordinates$latitude)
+    coordinates <- list(longitude = axes$lon, latitude = axes$lat)
+  } else {
+    coordinates <- lapply(coordinates, function(values) even_coordinates(values)$values)
   }
   for (axis in names(coordinates)) {
     tryCatch(grid_step(coordinates[[axis]], axis), error = function(e) {
-      fail(uneven_spacing(label, axis, coordinates[[axis]], size[[axis]], conditionMessage(e)))
+      fail(uneven_spacing(label, axis, coordinates[[axis]], conditionMessage(e)))
     })
   }
 
@@ -586,7 +596,7 @@ inspect_temperature_source <- function(source, input) {
     header <- tryCatch(temperature_header(file, input), error = identity)
     if (inherits(header, "error") || length(header$questions)) {
       fail(sprintf(paste("%s does not hold temperature in the same way as %s%s.",
-                         "Select the files of one temperature dataset only."), basename(file), basename(first$file),
+                         "Select the files of one temperature dataset only."), file_label(source, file), file_label(source, first$file),
                    if (inherits(header, "error")) paste0(" (", conditionMessage(header), ")")
                    else sprintf(" (on its own it raises the question: %s)", header$questions[[1L]]$title)))
     }
@@ -595,8 +605,14 @@ inspect_temperature_source <- function(source, input) {
   if (any(vapply(headers, function(h) h$format != first$format, logical(1))))
     fail("This selection mixes ERA5 and prepared daily Tmax. Choose one dataset.")
   folder_selected <- length(input$file) > 0L && any(dir.exists(input$file))
-  if (first$format == "daily_tmax" && (length(headers) != 1L || folder_selected))
-    fail("For prepared daily Tmax, select one NetCDF file or a ZIP containing one prepared file.")
+  if (first$format == "daily_tmax" && (length(headers) != 1L || folder_selected)) {
+    # Several files of daily values (one per day or year, as MERRA-2 gives
+    # them) are read together by the ERA5 reader, which takes daily values as
+    # they are; it is chosen under Advanced settings.
+    fail("For prepared daily Tmax, select one NetCDF file or a ZIP containing one prepared file.",
+         if (length(headers) > 1L) paste(" To read these", length(headers), "files of daily values together, set",
+                                         "'Data format' to 'ERA5 temperature' under Advanced settings."))
+  }
   # The readers apply one set of names to all files. Names that differ are
   # read correctly only when `auto` finds each of them by itself.
   expected <- reader_names(first$format)
@@ -607,7 +623,7 @@ inspect_temperature_source <- function(source, input) {
       if (h[[key]] != first[[key]] && !all(c(h[[key]], first[[key]]) %in% expected[[key]])) {
         fail(sprintf(paste("%s and %s name the %s differently ('%s' and '%s'). SCORCH reads all files of a selection",
                            "with the same names. Select the files of one temperature dataset only%s."),
-                     basename(first$file), basename(h$file), what[[key]], first[[key]], h[[key]],
+                     file_label(source, first$file), file_label(source, h$file), what[[key]], first[[key]], h[[key]],
                      if (key == "variable" && identical(input$variable, "auto"))
                        paste("; if every file holds the variable you want, name it as the temperature variable",
                              "under Advanced settings") else ""))

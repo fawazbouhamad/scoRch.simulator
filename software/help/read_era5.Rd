@@ -18,8 +18,10 @@ read_era5(
 )
 }
 \arguments{
-\item{files}{Paths of one or several NetCDF files, or of a folder whose
-\code{.nc} files are all read.}
+\item{files}{Paths of one or several NetCDF files, or of a folder. All
+\code{.nc} files of a folder are read; a folder without \code{.nc} files gives its
+\code{.nc4} files, and a folder without either gives the files that the
+folders directly inside it hold (for example one folder per year).}
 
 \item{variable, lon, lat, time}{Names of the temperature variable and of the
 longitude, latitude and time dimensions. \code{"auto"} finds \code{t2m} (or
@@ -67,7 +69,11 @@ kept, so a region downloaded with its edges included (for example
 }
 
 Longitudes from 0 to 360 are converted to -180 to 180 when the region stays
-contiguous, and latitudes may run north to south. Several files (for
+contiguous, and latitudes may run north to south. Coordinates stored in
+single precision (32-bit floating point) are evenly spaced only up to their
+rounding, such as 130.100006 for 130.1; where that rounding alone would
+stop the reading, they are read as the evenly spaced values between the
+first and the last of them. Several files (for
 example one per year or month) are combined by date; each must contain
 whole days on the same grid, and no date may appear in two files. The
 warm-season months and date limits are applied before the files are

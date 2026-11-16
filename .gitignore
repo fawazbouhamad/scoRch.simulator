@@ -6,6 +6,7 @@
 /results/
 /output/
 .scorch-stage-*/
+.scorch-saved-*/
 /scorch_config.yaml
 /doc/
 /Meta/

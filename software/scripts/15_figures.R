@@ -47,7 +47,8 @@ scorch_figure <- function(result, name = NULL, file = NULL, dpi = NULL, number =
   if (!is.null(file)) {
     # Draw beside the requested file. A skipped or failed plot must not leave
     # a blank or partial PNG, or replace a plot from an earlier successful run.
-    temporary <- tempfile(".scorch-plot-", tmpdir = dirname(file), fileext = ".png")
+    # Its name has a fixed length, which output_path_problem() counts.
+    temporary <- scratch_name(SCRATCH_PREFIX[["plot"]], dirname(file), ".png")
     previous_device <- grDevices::dev.cur()
     grDevices::png(temporary, width = size[1], height = size[2], units = "in", res = dpi,
                     bg = "white", type = figure_bitmap_type())

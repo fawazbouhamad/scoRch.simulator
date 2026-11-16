@@ -26,7 +26,7 @@ async function run() {
   const nc = real(process.env.SCORCH_UI_DATA);
   const fixtures = process.env.SCORCH_UI_FIXTURES ? real(process.env.SCORCH_UI_FIXTURES) : null;
   for (const name of fixtures ? ["july_august.nc", "daily_minimum.nc", "undeclared_missing.nc", "no_units_66.nc",
-                                 "era5_one_row.nc"] : []) {
+                                 "era5_one_row.nc", "single_precision.nc"] : []) {
     assert.ok(fs.existsSync(path.join(fixtures, name)), name + " is not in SCORCH_UI_FIXTURES; fixtures.R writes it");
   }
   const browser = await chromium.launch({ executablePath: process.env.CHROME_BIN, headless: true });
@@ -289,6 +289,14 @@ async function run() {
       await button("Change data").click();
       await hero.waitFor();
 
+      // Coordinates stored in single precision on a 0.1-degree grid near 250 E: their spacing is
+      // even only to that rounding. The readers take the even grid, and so does the window.
+      await openData(path.join(fixtures, "single_precision.nc"));
+      await shows(selection, "6 by 4 cells at 0.1°");
+      await page.locator("#start:visible").waitFor();
+      await button("Change data").click();
+      await hero.waitFor();
+
       // Raw hourly ERA5 whose points fill one row of one-degree cells: the reader needs two cells
       // along each axis, so the selection is refused before Run, with the setting to change.
       await openData(path.join(fixtures, "era5_one_row.nc"));
@@ -381,16 +389,33 @@ async function run() {
     await goTo(dir, "temperatures.zip");
     await button("Use this folder").click();
     await shows(chooser.getByRole("alert"), "no NetCDF");
-    // Where the files are one level down, the answer names the subfolders that hold them.
+    // Where the files are one level down, one folder per year under one file name, the folder is
+    // read with the files of its subfolders. These two are daily values that are not ERA5's: the
+    // window says how they can be read together.
     const yearly = path.join(dir, "yearly");
     for (const year of ["2001", "2002"]) {
       fs.mkdirSync(path.join(yearly, year), { recursive: true });
-      fs.writeFileSync(path.join(yearly, year, "data.nc"), "");
+      fs.copyFileSync(nc, path.join(yearly, year, "data.nc"));
     }
     await goTo(yearly, "2001");
     await button("Use this folder").click();
-    await shows(chooser.getByRole("alert"),
-                "They are in its subfolders: 2001, 2002. Open one of them and click Use this folder.");
+    await shows(selection, "To read these 2 files of daily values together, set 'Data format' to 'ERA5 temperature'");
+    await button("Change data").click();
+    await hero.waitFor();
+    // A folder of .nc4 files only is taken the same way.
+    const nc4 = path.join(dir, "nc4 only");
+    fs.mkdirSync(nc4);
+    fs.copyFileSync(nc, path.join(nc4, "daily.nc4"));
+    await button("Choose your own data").click();
+    await chooser.waitFor();
+    await goTo(nc4, "daily.nc4");
+    await shows(chooser, "This folder has 1 .nc4 file. Use this folder analyzes it as one ERA5 dataset.");
+    await button("Use this folder").click();
+    await shows(selection, "daily.nc4");
+    await button("Change data").click();
+    await hero.waitFor();
+    await button("Choose your own data").click();
+    await chooser.waitFor();
     // Text that ends in half a character, as a cut emoji does, is answered in the dialog; it used
     // to end the session. The field is given that text directly: the typing of this test would repair it.
     const halved = await chooser.locator("#chooser_path").evaluate(field => {

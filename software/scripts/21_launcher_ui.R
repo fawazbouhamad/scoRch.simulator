@@ -221,16 +221,20 @@ period_text <- function(period) {
 cell_note <- function(lon, lat, size) {
   if (is.null(size)) return(" and keeps this grid.")
   if (!is.numeric(size) || length(size) != 1L || !is.finite(size) || size <= 0) return(".")
-  spacing <- function(values) abs(diff(sort(values))[1L])
-  per_cell <- size / c(spacing(lon), spacing(lat))
-  fits <- all(is.finite(per_cell)) && all(per_cell >= 1 - 1e-6 & abs(per_cell - round(per_cell)) <= 1e-6)
-  if (!fits) return(sprintf(". This grid cannot be averaged to %g\u00b0 cells.", size))
-  if (any(round(per_cell) > 1)) return(sprintf(" and averages complete blocks to %g\u00b0 cells.", size))
+  # The stored coordinates as the reader takes them, and its rule for cells.
+  cells <- tryCatch({
+    axes <- raw_coordinates(lon, lat, size)
+    list(lon = cell_axis(axes$lon, "longitude", size, "", axes$slack[["longitude"]]),
+         lat = cell_axis(axes$lat, "latitude", size, "", axes$slack[["latitude"]]))
+  }, error = function(e) NULL)
+  if (is.null(cells)) return(sprintf(". This grid cannot be averaged to %g\u00b0 cells.", size))
+  if (cells$lon$per_cell > 1 || cells$lat$per_cell > 1) {
+    return(sprintf(" and averages complete blocks to %g\u00b0 cells.", size))
+  }
   # Nothing is averaged: each point is labelled with the centre of the cell that holds it.
-  centre <- function(values) range((floor(values / size + 1e-6) + 0.5) * size)
   sprintf(". Each point becomes one %g\u00b0 cell, labelled by its centre: %s to %s and %s to %s.", size,
-          format_degrees(centre(lon)[1L], c("E", "W")), format_degrees(centre(lon)[2L], c("E", "W")),
-          format_degrees(centre(lat)[1L], c("N", "S")), format_degrees(centre(lat)[2L], c("N", "S")))
+          format_degrees(min(cells$lon$centre), c("E", "W")), format_degrees(max(cells$lon$centre), c("E", "W")),
+          format_degrees(min(cells$lat$centre), c("N", "S")), format_degrees(max(cells$lat$centre), c("N", "S")))
 }
 
 # What SCORCH found in the selected data, as label and value pairs.
@@ -252,7 +256,7 @@ dataset_facts <- function(info, cell_size) {
   unsure <- any(info$identified %in% FALSE)
   months <- sort(unique(as.integer(format(info$dates, "%m"))))
   # The reader moves 0-360 longitudes of raw input to -180..180; a prepared file keeps its own.
-  lon <- if (raw) wrap_longitudes(as.numeric(info$lon))$lon else as.numeric(info$lon)
+  lon <- if (raw) raw_coordinates(info$lon, info$lat)$lon else even_coordinates(info$lon)$values
   files <- if (is.null(info$files)) 1L else info$files
   # One spacing is named, or that of longitude and of latitude ("0.5 x 1") where
   # the two differ by more than rounding in a file explains.
@@ -280,7 +284,7 @@ dataset_facts <- function(info, cell_size) {
     # One value per day is taken as that day's maximum, whichever daily statistic the file holds.
     if (raw) c("Preparation" = paste0(
       if (hourly) "SCORCH takes the maximum of each UTC day" else "SCORCH uses each daily value as that day's maximum",
-      cell_note(lon, as.numeric(info$lat), cell_size))))
+      cell_note(info$lon, info$lat, cell_size))))
 }
 
 # What the results say about a variable that the file itself does not

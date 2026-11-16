@@ -97,6 +97,10 @@ run_scorch_analysis <- function(config, tmax = NULL, trace_date = NULL, source =
   on.exit(if (!published && earlier) {
     message("This run did not publish output; files in ", out, " belong to an earlier run.")
   }, add = TRUE)
+  # A results folder that Windows could not fill stops the run here, not
+  # after the analysis.
+  unwritable <- output_path_problem(out)
+  if (!is.null(unwritable)) fail(unwritable)
   step <- function(...) message(format(Sys.time(), "%H:%M:%S "), sprintf(...))
   bundled <- system.file("extdata", "north_america_tmax.nc", package = "scoRch.simulator")
   input_mode <- if (is.null(tmax) && identical(cfg$input$file, bundled)) {
@@ -227,6 +231,113 @@ print.scorch_result <- function(x, ...) {
   invisible(x)
 }
 
+# What a run makes beside its results and removes again: the folder in which
+# it builds the new files, the folder that keeps the files they replace, and
+# each plot while it is drawn. scratch_name() adds SCRATCH_CHARS characters.
+SCRATCH_PREFIX <- c(stage = ".scorch-stage-", saved = ".scorch-saved-", plot = ".scorch-plot-")
+SCRATCH_CHARS <- 8L
+
+# The path of a name that is free in the folder `where`: the prefix, eight
+# characters and the extension. A name from tempfile() varies in length with
+# the process number, and on Windows one character of a path can decide
+# whether a run can write its results (output_path_problem()). For the same
+# reason nothing is written before a name in the working folder ("./"), and
+# no second separator after the top folder of a drive. Like tempfile(), this
+# leaves R's random numbers alone.
+scratch_name <- function(prefix, where, ext = "") {
+  repeat {
+    drawn <- basename(tempfile(""))
+    drawn <- substring(drawn, max(1L, nchar(drawn) - SCRATCH_CHARS + 1L))
+    name <- paste0(prefix, strrep("0", SCRATCH_CHARS - nchar(drawn)), drawn, ext)
+    path <- if (identical(where, ".")) name else file.path(sub("/+$", "", where), name)
+    if (!file.exists(path)) return(path)
+  }
+}
+
+# The longest path Windows takes while long paths are switched off, and the
+# length Windows gives a path: it counts 16-bit units, so a character beyond
+# the first 65536 (many emoji) counts twice.
+WINDOWS_PATH_MAX <- 259L
+path_length <- function(path) {
+  codes <- utf8ToInt(enc2utf8(path))
+  # Text that is not valid has no count of characters: every byte counts.
+  if (anyNA(codes)) return(nchar(path, type = "bytes"))
+  length(codes) + sum(codes > 65535L)
+}
+
+# The switch of Windows for paths of 260 characters and more, as the registry
+# holds it; NULL where there is none.
+long_paths_switch <- function() {
+  # utils has readRegistry() on Windows only, so it is fetched by name. It
+  # reads every value of the key and warns about those of a type it does not
+  # know, which are not the one asked for.
+  suppressWarnings(tryCatch(get("readRegistry", envir = asNamespace("utils"))(
+    "SYSTEM\\CurrentControlSet\\Control\\FileSystem", "HLM")[["LongPathsEnabled"]], error = function(e) NULL))
+}
+
+# Whether this R session can make a folder whose path has more than 260
+# characters. What it made on the way is removed again.
+long_path_works <- function() {
+  top <- scratch_name(".scorch-long-", tempdir())
+  on.exit(unlink(top, recursive = TRUE), add = TRUE)
+  deep <- file.path(top, strrep("a", 120L), strrep("b", 120L))
+  isTRUE(tryCatch(dir.create(deep, recursive = TRUE, showWarnings = FALSE), error = function(e) FALSE)) &&
+    dir.exists(deep)
+}
+
+# Whether paths of 260 characters and more can be used: the switch of Windows
+# is on, R is new enough to follow it (4.3), and so is the program that runs
+# R. R's own programs are; one that embeds R need not be (the session of
+# RStudio 2025.05 is not), so with the switch on a long path is tried.
+long_paths_enabled <- function() {
+  if (getRversion() < "4.3.0") return(FALSE)
+  value <- long_paths_switch()
+  is.numeric(value) && length(value) == 1L && !is.na(value) && value == 1 && long_path_works()
+}
+
+# A path as Windows receives it, which is the text it measures: after the
+# working folder when the path is relative, and with every "." and ".." and
+# doubled separator that is written in it. A link or a short name counts as it
+# is written, not as the folder it stands for.
+handed_path <- function(path) {
+  path <- path.expand(path)
+  here <- getwd()
+  if (is.null(here) || grepl("^([A-Za-z]:[/\\\\]|[/\\\\]{2})", path)) return(path)
+  here <- sub("[/\\\\]+$", "", here)
+  # Windows puts the current drive before a path that starts at its top.
+  if (grepl("^[/\\\\]", path)) return(paste0(if (grepl("^[A-Za-z]:", here)) substr(here, 1L, 2L), path))
+  file.path(here, path)
+}
+
+# Without long paths a run can fail after its whole analysis: it writes paths
+# much longer than that of its results folder `out`, in the staging folder
+# beside it the longest workbook and each plot while it is drawn. NULL when
+# all of them fit, otherwise one sentence for the user, with which a run
+# stops before it reads any data.
+output_path_problem <- function(out, windows = .Platform$OS.type == "windows") {
+  if (!windows || long_paths_enabled()) return(NULL)
+  # The staging folder is named as prepare_run_output() names it.
+  results <- handed_path(out)
+  stage <- handed_path(scratch_name(SCRATCH_PREFIX[["stage"]], dirname(out)))
+  beside <- max(nchar(SCRATCH_PREFIX[c("stage", "saved")])) + SCRATCH_CHARS
+  plot <- nchar(SCRATCH_PREFIX[["plot"]]) + SCRATCH_CHARS + nchar(".png")
+  inside <- max(nchar(c(managed_output_files(), file.path(output_folders(), strrep("x", plot)))))
+  # What is left for a folder that holds the files of a run, and the two that
+  # do: the results folder, and the staging folder in the folder around it.
+  room <- WINDOWS_PATH_MAX - 1L - inside
+  own <- path_length(results)
+  around <- path_length(stage) - path_length(basename(stage)) - 1L
+  if (max(own, around + 1L + beside) <= room) return(NULL)
+  # With a name no longer than that of the staging folder, the limit lies
+  # with the folder around the results, whatever the results folder is called.
+  outside <- around + 1L + beside >= own
+  sprintf(paste("The results folder %s %d characters, but Windows on this computer can write the files of a run",
+                "only when that path has at most %d characters; choose a results folder with a shorter path than %s"),
+          if (outside) "lies in a folder whose path has" else "has a path of",
+          if (outside) around else own, if (outside) room - beside - 1L else room,
+          gsub("\\", "/", results, fixed = TRUE))
+}
+
 # Build each run away from the published output. Package-generated files are
 # moved into place only after they have all been written.
 prepare_run_output <- function(out) {
@@ -234,7 +345,7 @@ prepare_run_output <- function(out) {
   if (!dir.exists(parent) && !dir.create(parent, recursive = TRUE, showWarnings = FALSE)) {
     fail("Could not create the parent of the output directory: ", parent)
   }
-  stage <- tempfile(pattern = ".scorch-stage-", tmpdir = parent)
+  stage <- scratch_name(SCRATCH_PREFIX[["stage"]], parent)
   if (!dir.create(stage, showWarnings = FALSE)) fail("Could not create the temporary output directory: ", stage)
   for (folder in output_folders()) {
     if (!dir.create(file.path(stage, folder), recursive = TRUE, showWarnings = FALSE)) {
@@ -249,7 +360,7 @@ publish_run_output <- function(stage, out) {
   if (!dir.exists(out) && !dir.create(out, recursive = TRUE, showWarnings = FALSE)) {
     fail("Could not create the output directory: ", out)
   }
-  backup <- tempfile(pattern = ".scorch-backup-", tmpdir = dirname(out))
+  backup <- scratch_name(SCRATCH_PREFIX[["saved"]], dirname(out))
   if (!dir.create(backup, showWarnings = FALSE)) fail("Could not prepare a backup of existing output: ", backup)
   managed <- unique(c(managed_output_files(), managed_event_files(out), managed_event_files(stage)))
   old_moved <- new_moved <- character()

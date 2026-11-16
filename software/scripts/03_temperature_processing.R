@@ -23,7 +23,11 @@
 #'    `cell_size = NULL` analyses the ERA5 grid itself.
 #'
 #' Longitudes from 0 to 360 are converted to -180 to 180 when the region stays
-#' contiguous, and latitudes may run north to south. Several files (for
+#' contiguous, and latitudes may run north to south. Coordinates stored in
+#' single precision (32-bit floating point) are evenly spaced only up to their
+#' rounding, such as 130.100006 for 130.1; where that rounding alone would
+#' stop the reading, they are read as the evenly spaced values between the
+#' first and the last of them. Several files (for
 #' example one per year or month) are combined by date; each must contain
 #' whole days on the same grid, and no date may appear in two files. The
 #' warm-season months and date limits are applied before the files are
@@ -37,8 +41,10 @@
 #' (`scale_factor`, `add_offset`) and missing values (`_FillValue`,
 #' `missing_value`) are decoded.
 #'
-#' @param files Paths of one or several NetCDF files, or of a folder whose
-#'   `.nc` files are all read.
+#' @param files Paths of one or several NetCDF files, or of a folder. All
+#'   `.nc` files of a folder are read; a folder without `.nc` files gives its
+#'   `.nc4` files, and a folder without either gives the files that the
+#'   folders directly inside it hold (for example one folder per year).
 #' @param variable,lon,lat,time Names of the temperature variable and of the
 #'   longitude, latitude and time dimensions. `"auto"` finds `t2m` (or
 #'   `2m_temperature`), `longitude` (or `lon`), `latitude` (or `lat`) and
@@ -78,7 +84,12 @@ read_era5 <- function(files, variable = "auto", lon = "auto", lat = "auto", time
   if (!is.null(cell_size)) check_number(cell_size, "cell_size", lower = 1e-9)
   parts <- list()
   for (file in files) {
-    part <- read_era5_file(file, variable, lon, lat, time, units, months, start, end, cell_size)
+    # The spacing of the coordinates is measured in every file that is averaged
+    # to cells, and otherwise in the first file only, whose grid the others
+    # must match. Single-precision coordinates are made even where it is
+    # measured, and in the other files when they were in the first.
+    part <- read_era5_file(file, variable, lon, lat, time, units, months, start, end, cell_size,
+                           even = !is.null(cell_size) || !length(parts) || any(parts[[1]]$slack > 0))
     if (is.null(part)) next
     if (length(parts)) {
       first <- parts[[1]]
@@ -184,10 +195,34 @@ input_files <- function(files) {
   if (length(missing)) fail("The input file does not exist: ", missing[1])
   unlist(lapply(files, function(path) {
     if (!dir.exists(path)) return(path)
-    inside <- sort(list.files(path, pattern = "\\.nc$", full.names = TRUE, ignore.case = TRUE))
-    if (!length(inside)) fail("The input folder contains no .nc files: ", path)
-    inside
+    folder_netcdf(path)
   }), use.names = FALSE)
+}
+
+# The NetCDF files of one folder: its own .nc files; a folder without any
+# gives its own .nc4 files; a folder without either gives the files that the
+# folders directly inside it hold by the same rule (for example one folder
+# per year), these folders in sorted order. Nothing deeper is looked at.
+folder_netcdf <- function(path) {
+  inside <- sort(list.files(path, pattern = "\\.nc$", full.names = TRUE, ignore.case = TRUE))
+  if (length(inside)) return(inside)
+  own <- function(folder) {
+    for (pattern in c("\\.nc$", "\\.nc4$")) {
+      found <- sort(list.files(folder, pattern = pattern, full.names = TRUE, ignore.case = TRUE))
+      found <- found[!dir.exists(found)]
+      if (length(found)) return(found)
+    }
+    character()
+  }
+  inside <- own(path)
+  if (!length(inside)) {
+    entries <- sort(list.files(path, full.names = TRUE))
+    inside <- unlist(lapply(entries[dir.exists(entries)], own), use.names = FALSE)
+  }
+  if (!length(inside)) {
+    fail("The input folder contains no NetCDF (.nc or .nc4) files, and neither do the folders directly inside it: ", path)
+  }
+  inside
 }
 
 # The first of the candidate names found in `available`, or the given name.
@@ -209,8 +244,10 @@ pick_name <- function(name, candidates, available, what, file) {
 
 # One file: daily maxima (degrees Celsius) of the selected days, as an array
 # date x latitude x longitude with ascending coordinates; NULL when the file
-# holds no selected day.
-read_era5_file <- function(file, variable, lon, lat, time, units, months, start, end, cell_size) {
+# holds no selected day. `even` allows coordinates that are evenly spaced only
+# to the rounding of single precision to be made even (raw_coordinates());
+# `slack` in the result is how far these may then lie from the true ones.
+read_era5_file <- function(file, variable, lon, lat, time, units, months, start, end, cell_size, even = TRUE) {
   nc <- ncdf4::nc_open(file)
   on.exit(ncdf4::nc_close(nc))
   variable <- pick_name(variable, c("t2m", "2m_temperature"), names(nc$var), "temperature variable", file)
@@ -269,12 +306,9 @@ read_era5_file <- function(file, variable, lon, lat, time, units, months, start,
 
   # Coordinates: longitudes in -180..180 when the region stays contiguous,
   # then ascending order in both directions.
-  lon_values <- as.numeric(nc$dim[[lon]]$vals)
-  lat_values <- as.numeric(nc$dim[[lat]]$vals)
-  lon_order <- wrap_longitudes(lon_values)
-  lon_values <- lon_order$lon
-  lat_order <- order(lat_values)
-  lat_values <- lat_values[lat_order]
+  axes <- raw_coordinates(nc$dim[[lon]]$vals, nc$dim[[lat]]$vals, cell_size, even)
+  lon_values <- axes$lon
+  lat_values <- axes$lat
 
   # Read whole days in blocks of consecutive time steps (about 40 MB each)
   # and keep the maximum of each day.
@@ -299,7 +333,7 @@ read_era5_file <- function(file, variable, lon, lat, time, units, months, start,
     values <- ncdf4::ncvar_get(nc, variable, start = ifelse(dim_names == time, from, 1),
                                count = ifelse(dim_names == time, n_steps, -1), collapse_degen = FALSE)
     values <- merge_extra_dimensions(values, dim_names, c(time, lat, lon))
-    rows <- matrix(values[, lat_order, lon_order$index, drop = FALSE], nrow = n_steps)
+    rows <- matrix(values[, axes$lat_order, axes$lon_order, drop = FALSE], nrow = n_steps)
     for (d in block) {
       at <- seq.int(first_step[d], last_step[d]) - from + 1
       out[d, , ] <- do.call(pmax, c(lapply(at, function(i) rows[i, ]), na.rm = TRUE))
@@ -308,12 +342,50 @@ read_era5_file <- function(file, variable, lon, lat, time, units, months, start,
   if (unit == "K") out <- out - 273.15
 
   if (!is.null(cell_size)) {
-    cells <- average_to_cells(out, lon_values, lat_values, cell_size, file)
+    cells <- average_to_cells(out, lon_values, lat_values, cell_size, file, axes$slack)
     out <- cells$values
     lon_values <- cells$lon
     lat_values <- cells$lat
   }
-  list(file = file, dates = days, lon = lon_values, lat = lat_values, values = out, per_day = per_day)
+  list(file = file, dates = days, lon = lon_values, lat = lat_values, values = out, per_day = per_day,
+       slack = axes$slack)
+}
+
+# The longitudes and latitudes of raw input as the reader uses them, from the
+# values in the order of the file: longitudes in -180..180 when the region
+# stays contiguous, then ascending order in both directions (`lon_order` and
+# `lat_order` put the stored values in that order). An axis that the reader
+# accepts in this form stays as it is stored: its spacing is measured by
+# grid_step() and, when the values are averaged to cells of `cell_size`
+# degrees, by cell_axis(). An axis that it refuses, and whose coordinates are
+# evenly spaced to the rounding of single precision, becomes the even grid
+# between its first and last stored value (even_coordinates()). The rounding
+# belongs to the stored values (359.9 has more of it than -0.1), so they are
+# made even first and then converted and sorted. `slack` is how far, in
+# degrees, the longitudes and the latitudes may then lie from the true ones,
+# 0 for an axis used as stored. `even = FALSE` keeps both as stored.
+raw_coordinates <- function(lon, lat, cell_size = NULL, even = TRUE) {
+  lon_values <- as.numeric(lon)
+  lat_values <- as.numeric(lat)
+  lon_order <- wrap_longitudes(lon_values)
+  lat_order <- order(lat_values)
+  slack <- c(longitude = 0, latitude = 0)
+  if (even) {
+    accepted <- function(values, name) {
+      !inherits(tryCatch(if (is.null(cell_size)) grid_step(values, name) else cell_axis(values, name, cell_size, ""),
+                         error = identity), "error")
+    }
+    lon_even <- even_coordinates(lon_values, accepted(lon_order$lon, "longitude"))
+    lat_even <- even_coordinates(lat_values, accepted(lat_values[lat_order], "latitude"))
+    if (lon_even$slack > 0) lon_order <- wrap_longitudes(lon_even$values, lon_even$slack)
+    if (lat_even$slack > 0) {
+      lat_values <- lat_even$values
+      lat_order <- order(lat_values)
+    }
+    slack <- c(longitude = lon_even$slack, latitude = lat_even$slack)
+  }
+  list(lon = lon_order$lon, lat = lat_values[lat_order], lon_order = lon_order$index, lat_order = lat_order,
+       slack = slack)
 }
 
 # Order a block as time x latitude x longitude, merging an expver dimension
@@ -331,13 +403,17 @@ merge_extra_dimensions <- function(block, dim_names, keep) {
 }
 
 # Longitudes converted from 0..360 to -180..180 and sorted, when the result
-# is still evenly spaced (a region that does not cross 180 degrees).
-wrap_longitudes <- function(lon) {
+# is still evenly spaced (a region that does not cross 180 degrees). `slack`
+# is how far, in degrees, a longitude may lie from its true value
+# (even_coordinates()): the point that belongs at 180 degrees is counted as
+# -180 also when it lies that much below 180.
+wrap_longitudes <- function(lon, slack = 0) {
   if (all(lon <= 180)) {
     index <- order(lon)
     return(list(lon = lon[index], index = index))
   }
   wrapped <- ((lon + 180) %% 360) - 180
+  if (slack > 0) wrapped <- ((lon + 180 + slack) %% 360) - 180 - slack
   index <- order(wrapped)
   steps <- diff(wrapped[index])
   if (length(steps) && (any(steps == 0) || max(abs(steps - steps[1])) > 1e-4 * abs(steps[1]))) {
@@ -347,26 +423,36 @@ wrap_longitudes <- function(lon) {
   list(lon = wrapped[index], index = index)
 }
 
+# The cells of `size` degrees along one axis of ascending coordinates: the
+# cell [k * size, (k + 1) * size) of every point (`cell`), the cells that have
+# all their points (`ids`), the centres of these and the number of points in a
+# whole cell (`per_cell`). `slack` is how far, in degrees, a coordinate may
+# lie from its true value (even_coordinates()): a point that belongs on the
+# edge of a cell must not fall below it, and the spacing measured from such
+# coordinates divides the cell size only that nearly.
+cell_axis <- function(coordinate, name, size, file, slack = 0) {
+  step <- abs(grid_step(coordinate, name))
+  n <- size / step
+  near <- max(1e-6, min(0.01, n * slack / diff(range(coordinate))))
+  if (n < 1 - near || abs(n - round(n)) > near) {
+    fail(sprintf("The ERA5 %s spacing (%g degrees) in %s does not divide era5_cell_size_deg (%g).",
+                 name, step, file, size))
+  }
+  cell <- floor(coordinate / size + max(1e-6, slack / size))
+  complete <- as.numeric(names(which(table(cell) == round(n))))
+  if (!length(complete)) {
+    fail(sprintf("The ERA5 grid in %s is too small for one %g-degree cell.", file, size))
+  }
+  list(cell = cell, ids = complete, centre = (complete + 0.5) * size, per_cell = round(n))
+}
+
 # Average daily values (date x latitude x longitude, ascending coordinates) to
 # cells of `size` degrees: a point belongs to the cell [k * size, (k + 1) *
 # size) that contains it, and only cells with all their points are kept.
-average_to_cells <- function(values, lon, lat, size, file) {
-  group <- function(coordinate, name) {
-    step <- abs(grid_step(coordinate, name))
-    n <- size / step
-    if (n < 1 - 1e-6 || abs(n - round(n)) > 1e-6) {
-      fail(sprintf("The ERA5 %s spacing (%g degrees) in %s does not divide era5_cell_size_deg (%g).",
-                   name, step, file, size))
-    }
-    cell <- floor(coordinate / size + 1e-6)
-    complete <- as.numeric(names(which(table(cell) == round(n))))
-    if (!length(complete)) {
-      fail(sprintf("The ERA5 grid in %s is too small for one %g-degree cell.", file, size))
-    }
-    list(cell = cell, ids = complete, centre = (complete + 0.5) * size)
-  }
-  by_lon <- group(lon, "longitude")
-  by_lat <- group(lat, "latitude")
+# `slack` is that of the longitudes and of the latitudes (cell_axis()).
+average_to_cells <- function(values, lon, lat, size, file, slack = c(longitude = 0, latitude = 0)) {
+  by_lon <- cell_axis(lon, "longitude", size, file, slack[["longitude"]])
+  by_lat <- cell_axis(lat, "latitude", size, file, slack[["latitude"]])
   out <- array(NA_real_, c(dim(values)[1], length(by_lat$ids), length(by_lon$ids)))
   for (i in seq_along(by_lat$ids)) {
     rows <- which(by_lat$cell == by_lat$ids[i])
