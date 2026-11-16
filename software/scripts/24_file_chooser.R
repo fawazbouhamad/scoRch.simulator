@@ -45,9 +45,18 @@ chooser_places <- function(known = shell_folders()) {
   home <- if (windows && nzchar(Sys.getenv("USERPROFILE"))) Sys.getenv("USERPROFILE") else path.expand("~")
   roots <- c(home, if (windows) Sys.getenv(c("OneDrive", "OneDriveConsumer", "OneDriveCommercial")))
   roots <- unique(roots[nzchar(roots)])
+  # A folder on a server is not asked for while the window starts: a server
+  # that does not answer would keep the window blank for most of a minute. It
+  # is listed, and the dialog says so if it cannot be opened when it is clicked.
+  present <- function(paths) {
+    found <- !is.na(paths)
+    near <- found & !on_server(paths)
+    found[near] <- dir.exists(paths[near])
+    found
+  }
   first <- function(name) {
     found <- c(known[name], file.path(roots, name))
-    found <- found[!is.na(found) & dir.exists(found)]
+    found <- found[present(found)]
     if (length(found)) found[[1L]] else NA_character_
   }
   places <- c(Downloads = first("Downloads"), Desktop = first("Desktop"), Documents = first("Documents"),
@@ -57,9 +66,17 @@ chooser_places <- function(known = shell_folders()) {
     letters <- letters[dir.exists(letters)]
     stats::setNames(letters, sub("/$", "", letters))
   } else c(Computer = "/")
-  places <- c(places[!is.na(places) & dir.exists(places)], drives)
-  stats::setNames(normalizePath(places, winslash = "/", mustWork = FALSE), names(places))
+  places <- c(places[present(places)], drives)
+  far <- on_server(places)
+  places[!far] <- normalizePath(places[!far], winslash = "/", mustWork = FALSE)
+  # Written as R writes an open folder on a Windows server, two backslashes
+  # and then slashes, so that the place is marked while it is open.
+  if (windows) places[far] <- paste0("\\\\", substring(gsub("\\", "/", places[far], fixed = TRUE), 3L))
+  places
 }
+
+# Whether a path is on a server: it begins with two slashes or backslashes.
+on_server <- function(path) grepl("^[/\\\\]{2}", path)
 
 # Names that Windows keeps in the profile and on the drive for old programs.
 # They are junctions that cannot be opened, and Explorer never shows them.
@@ -163,6 +180,39 @@ holds_files <- function(folder, ending) {
   FALSE
 }
 
+# Which of these folders hold NetCDF files: the positions of the first four,
+# to name three and to know of more. There can be thousands of folders, or a
+# slow drive: the first 200 are looked into, each up to its first file, and
+# for no longer than a second.
+netcdf_subfolders <- function(folders, most = 200L, seconds = 1) {
+  found <- integer()
+  started <- proc.time()[["elapsed"]]
+  for (i in seq_len(min(length(folders), most))) {
+    if (holds_files(folders[i], "[.]nc$")) found <- c(found, i)
+    if (length(found) > 3L || proc.time()[["elapsed"]] - started > seconds) break
+  }
+  found
+}
+
+# The answer to a folder whose NetCDF files are in the folders inside it.
+# SCORCH reads the files of one folder, and a ZIP file with all its folders.
+in_subfolders <- function(names) {
+  one <- length(names) == 1L
+  listed <- paste0(paste(utils::head(names, 3L), collapse = ", "), if (length(names) > 3L) " and others")
+  paste0("This folder has no NetCDF (.nc) files of its own. They are in its subfolder", if (!one) "s", ": ", listed, ". ",
+         if (one) "Open it and click Use this folder." else
+           paste("Open one of them and click Use this folder. To analyze them together, put the subfolders",
+                 "into one ZIP file, or the files into one folder, each under its own name."))
+}
+
+# Whether two texts are the same but for the blanks at their ends, which the
+# page leaves out of the text it sends. Text that is not valid cannot be
+# trimmed and equals nothing.
+same_trimmed <- function(text, other) {
+  if (!all(validEnc(c(text, other)))) return(FALSE)
+  identical(trimws(text, whitespace = "[\\h\\v]"), trimws(other, whitespace = "[\\h\\v]"))
+}
+
 chooser_body <- function(now, places) {
   tags <- shiny::tags
   kind <- CHOOSER_KINDS[[now$kind]]
@@ -249,7 +299,9 @@ scorch_chooser <- function(input, output, session, selected) {
     asked <- normalizePath(folder, winslash = "/", mustWork = FALSE)
     folder <- nearest_folder(asked)
     if (is.na(folder)) {
-      folder <- c(unname(places[dir.exists(places)]), normalizePath(path.expand("~"), winslash = "/", mustWork = FALSE))[1L]
+      # A place on this computer: one on a server may not answer for most of a minute.
+      near <- places[!on_server(places)]
+      folder <- c(unname(near[dir.exists(near)]), normalizePath(path.expand("~"), winslash = "/", mustWork = FALSE))[1L]
     }
     if (!identical(folder, asked)) {
       # The folder that is gone is named once: what was asked for may have named it already.
@@ -276,6 +328,9 @@ scorch_chooser <- function(input, output, session, selected) {
   use_folder <- function(here, path) {
     if (here$kind == "config") return()
     path <- unquoted(path)
+    # The open folder itself, also when its name ends in a blank that the text
+    # no longer has: Linux and macOS allow such names.
+    if (same_trimmed(path, here$folder)) path <- ""
     target <- if (nzchar(path)) guided_path(path, here$folder) else here$folder
     named <- if (nzchar(path)) path else target
     # A file of the open folder, as highlighted in the list, stands for that folder.
@@ -287,16 +342,29 @@ scorch_chooser <- function(input, output, session, selected) {
       fail(if (file.exists(target)) "That is a file, not a folder: " else "That folder could not be found: ", named)
     }
     if (here$kind == "data") {
-      # The open folder was counted when it was listed; it is not read again.
-      found <- if (identical(target, here$folder)) here$netcdf > 0L else holds_files(target, "[.]nc$")
+      # The open folder was counted when it was listed and is not read again.
+      # Files can have arrived since then: a count of none is looked into once more.
+      found <- (identical(target, here$folder) && here$netcdf > 0L) || holds_files(target, "[.]nc$")
       if (!found) {
-        return(show(here$kind, target, if (holds_files(target, "[.]nc4$")) {
+        nc4 <- holds_files(target, "[.]nc4$")
+        show(here$kind, target, if (nc4) {
           paste("This folder has no NetCDF (.nc) files, only .nc4 files. SCORCH reads .nc files from folders.",
                 "A single .nc4 file can be opened directly: select it and click Open.")
         } else {
           paste("This folder has no NetCDF (.nc) files. Open the folder that holds your",
                 "ERA5 files, or select one file and click Open.")
-        }))
+        })
+        # The files may be one level down, as with downloads unpacked into a
+        # folder each. The folders are in the list that was just made, so the
+        # folder is not read a second time to find them.
+        shown <- now()
+        inside <- shown$rows[shown$rows$folder, ]
+        within <- if (!nc4 && identical(shown$folder, target)) inside$name[netcdf_subfolders(inside$path)]
+        if (length(within)) {
+          shown$problem[1L] <- in_subfolders(within)
+          now(shown)
+        }
+        return()
       }
     }
     finish(target)
@@ -309,7 +377,13 @@ scorch_chooser <- function(input, output, session, selected) {
     here <- now()
     action <- input$chooser_action
     if (is.null(here) || !is.list(action) || !is.character(action$do) || length(action$do) != 1L) return()
-    path <- if (is.character(action$path) && length(action$path) == 1L && !is.na(action$path)) trimws(action$path) else ""
+    text <- is.character(action$path) && length(action$path) == 1L && !is.na(action$path)
+    # Text cut in the middle of a character, such as half an emoji, can be
+    # neither trimmed nor looked up, and an error here would close the window.
+    if (text && !validEnc(action$path)) {
+      return(show(here$kind, here$folder, "That text holds characters that cannot be read. Type the path again."))
+    }
+    path <- if (text) trimws(action$path) else ""
     tryCatch(switch(action$do,
       up = {
         # Nothing is above a drive or a network share. A folder that has
@@ -342,7 +416,9 @@ scorch_chooser <- function(input, output, session, selected) {
   })
   function(kind, folder = NULL) {
     if (is.null(folder) || !dir.exists(folder)) folder <- if (exists(kind, envir = last)) get(kind, envir = last) else NULL
-    if (is.null(folder) || !dir.exists(folder)) folder <- unname(places[1L])
+    # Without a folder to return to, the first place on this computer. A place
+    # on a server is opened when it is clicked, not before.
+    if (is.null(folder) || !dir.exists(folder)) folder <- unname(places[!on_server(places)][1L])
     show(kind, folder)
     shiny::showModal(chooser_dialog(kind), session = session)
   }

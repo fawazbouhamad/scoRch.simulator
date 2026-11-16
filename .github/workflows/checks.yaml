@@ -90,8 +90,9 @@ jobs:
           rm -f "$SCORCH_UI_URL_FILE"
           zip -q -j "$SCORCH_UI_PROJECT/temperatures.zip" "$SCORCH_UI_DATA"
           # The small files the browser test opens first (a file that holds July
-          # and August only, a daily minimum, undeclared missing values). They
-          # need ncdf4 alone, so they are written before anything is installed.
+          # and August only, a daily minimum, undeclared missing values, numbers
+          # without units, raw ERA5 points on one row of cells). They need ncdf4
+          # alone, so they are written before anything is installed.
           Rscript software/tests/browser/fixtures.R "$SCORCH_UI_DATA" "$SCORCH_UI_FIXTURES"
           test -f "$SCORCH_UI_FIXTURES/july_august.nc"
           npm install --prefix "$RUNNER_TEMP/scorch-browser" --no-audit --no-fund playwright-core@1.55.0
@@ -188,6 +189,25 @@ jobs:
                     any(grepl(".libPaths(c(", said, fixed = TRUE)),
                     identical(searched, .libPaths()),
                     identical(utils::packageDescription("scoRch.simulator", lib.loc = lib)[["Config/scoRch/source"]], "local"))
+        shell: Rscript {0}
+      - name: What an interrupted installation left behind is cleared by the next call
+        run: |
+          source("software/setup/install.R")
+          version <- unname(read.dcf("software/setup/DESCRIPTION", "Version")[1L, 1L])
+          # What R leaves when an update is cut off: its lock for this package
+          # with the copy it had set aside, and an empty package folder. R then
+          # refuses every later installation. The copy is the one installed above.
+          lib <- tempfile("scorch-library-")
+          lock <- file.path(lib, "00LOCK-scoRch.simulator")
+          dir.create(file.path(lock, "00new"), recursive = TRUE)
+          stopifnot(file.copy(system.file(package = "scoRch.simulator"), lock, recursive = TRUE),
+                    dir.create(file.path(lib, "scoRch.simulator")))
+          said <- utils::capture.output(install_scorch(path = ".", lib = lib, open = FALSE), type = "message")
+          writeLines(said)
+          stopifnot(any(grepl(sprintf("An earlier installation of scoRch.simulator was interrupted; version %s, which it had set aside, was put back", version), said, fixed = TRUE)),
+                    any(grepl(sprintf("Reinstalled scoRch.simulator %s.", version), said, fixed = TRUE)),
+                    !file.exists(lock),
+                    identical(as.character(utils::packageVersion("scoRch.simulator", lib.loc = lib)), version))
         shell: Rscript {0}
       - uses: actions/upload-artifact@v4
         if: always()

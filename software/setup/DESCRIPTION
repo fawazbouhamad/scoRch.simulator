@@ -32,7 +32,7 @@ Imports:
     zip (>= 2.3.0)
 Suggests:
     jsonlite,
-    testthat (>= 3.0.0),
+    testthat (>= 3.1.7),
     withr
 Config/testthat/edition: 3
 URL: https://github.com/fawazbouhamad/scoRch.simulator

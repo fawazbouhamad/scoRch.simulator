@@ -2,14 +2,26 @@
 # a valid input to the standard scripted command.
 guided_path <- function(path, relative_to = getwd()) {
   path <- path.expand(path)
+  # A drive letter alone ("D:") is the top of that drive.
+  alone <- grepl("^[A-Za-z]:$", path)
+  path[alone] <- paste0(path[alone], "/")
   absolute <- grepl("^([A-Za-z]:[/\\\\]|[/\\\\])", path)
   path[!absolute] <- file.path(relative_to, path[!absolute])
   normalizePath(path, winslash = "/", mustWork = FALSE)
 }
 
 load_guided_config <- function(file) {
-  doc <- yaml::read_yaml(file, eval.expr = FALSE)
+  # The parser's own message begins with the whole path of the file.
+  doc <- tryCatch(yaml::read_yaml(file, eval.expr = FALSE), error = function(e) {
+    fail("This file could not be read as YAML (",
+         sub(paste0("(", file, ") "), "", conditionMessage(e), fixed = TRUE), ").")
+  })
   if (is.null(doc)) doc <- list()
+  # Any text is YAML of a kind: one sentence, a list of words. A configuration
+  # is a document of named sections.
+  if (!is.list(doc) || (length(doc) && is.null(names(doc)))) {
+    fail("This file does not hold SCORCH settings. A configuration has named sections such as 'period' and 'heatwaves'.")
+  }
   if (is.list(doc) && is.list(doc$input) && is.character(doc$input$file))
     doc$input$file <- guided_path(doc$input$file, dirname(file))
   if (is.list(doc) && (is.null(doc$output) || is.list(doc$output))) {
@@ -83,10 +95,20 @@ period_summary <- function(dates, months, available) {
 input_controls <- function(input, base, answers = list()) {
   for (key in c("format", "variable", "longitude", "latitude", "time", "units")) {
     value <- input[[paste0("input_", key)]]
+    # Text cut in the middle of a character cannot be trimmed or looked up;
+    # with its broken part replaced it fails like any other wrong name.
+    if (is.character(value) && !all(validEnc(value))) value <- iconv(value, "UTF-8", "UTF-8", sub = "?")
     if (!is.null(value)) base[[key]] <- if (nzchar(trimws(value))) trimws(value) else "auto"
   }
   for (key in names(answers)) if (identical(base[[key]], "auto")) base[[key]] <- answers[[key]]
   base
+}
+
+# The answers that still decide something. A field of the window that was
+# filled in since replaces the answer given for the same thing.
+answers_in_effect <- function(input, base, answers) {
+  fields <- input_controls(input, base)
+  answers[vapply(names(answers), function(key) identical(fields[[key]], "auto"), logical(1))]
 }
 
 guided_settings <- function(base, form, path, info, dest, answers = list()) {
@@ -100,8 +122,12 @@ guided_settings <- function(base, form, path, info, dest, answers = list()) {
     if (identical(cfg$input[[key]], "auto") && length(info[[key]]) == 1L && !info[[key]] %in% expected[[key]])
       cfg$input[[key]] <- info[[key]]
   }
-  if (isTRUE(form$native_grid)) cfg$input["era5_cell_size_deg"] <- list(NULL)
-  else cfg$input$era5_cell_size_deg <- form$cell_size
+  # The two fields of the ERA5 grid are on screen for raw data only. What raw
+  # data left in them is not read for other data, where nothing could repair it.
+  if (info$format == "era5") {
+    if (isTRUE(form$native_grid)) cfg$input["era5_cell_size_deg"] <- list(NULL)
+    else cfg$input$era5_cell_size_deg <- form$cell_size
+  }
   cfg$input["processed_file"] <- list(if (info$format == "era5" && isTRUE(form$save_tmax))
     file.path(dest, "prepared_tmax.nc"))
   a <- as.integer(form$month_from)
@@ -147,6 +173,7 @@ guided_settings <- function(base, form, path, info, dest, answers = list()) {
 check_cell_size <- function(info, size) {
   file <- if (length(info$file)) basename(info$file[[1L]]) else "the selected data"
   axes <- list(longitude = wrap_longitudes(as.numeric(info$lon))$lon, latitude = sort(as.numeric(info$lat)))
+  complete <- c(longitude = 0L, latitude = 0L)
   for (name in names(axes)) {
     step <- abs(grid_step(axes[[name]], name))
     n <- size / step
@@ -154,8 +181,18 @@ check_cell_size <- function(info, size) {
       fail_advanced(sprintf("The ERA5 %s spacing (%g degrees) in %s does not divide '%s' (%g).",
                             name, step, file, SETTING_LABELS[["era5_cell_size_deg"]], size))
     }
-    if (!any(table(floor(axes[[name]] / size + 1e-6)) == round(n))) {
+    complete[[name]] <- sum(table(floor(axes[[name]] / size + 1e-6)) == round(n))
+    if (!complete[[name]]) {
       fail_advanced(sprintf("The ERA5 grid in %s is too small for one %g-degree cell.", file, size))
+    }
+  }
+  # The reader then needs two cells along each axis, to measure their spacing
+  # (tmax_from_array()). What it says there does not name this setting.
+  for (name in names(axes)) {
+    if (complete[[name]] < 2L) {
+      fail_advanced(sprintf(paste("The ERA5 grid in %s gives fewer than two %g-degree cells along its %s.",
+                                  "Choose a smaller '%s', or tick 'Keep the input grid resolution'."),
+                            file, size, name, SETTING_LABELS[["era5_cell_size_deg"]]))
     }
   }
   invisible(NULL)

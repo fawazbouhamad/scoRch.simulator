@@ -1,19 +1,31 @@
 # A small NetCDF file of gridded values for the input tests. `values` is
 # time x latitude x longitude, or a named list of such arrays, one variable
 # each. Units "" leave a variable or coordinate without a units attribute.
-# `attributes` are named by variable or by coordinate.
+# `attributes` are named by variable or by coordinate. `coordinates = "float"`
+# stores the longitudes and latitudes in single precision, as many files do.
 write_grid <- function(path, values, time, lon, lat, units = "degC", time_units = "days since 2000-01-01",
                        dims = c("lon", "lat", "time"), dim_units = c("degrees_east", "degrees_north"),
-                       attributes = list()) {
+                       attributes = list(), coordinates = "double") {
   if (!is.list(values)) values <- list(tmax = values)
   units <- rep_len(units, length(values))
-  axes <- list(ncdf4::ncdim_def(dims[1], dim_units[1], lon), ncdf4::ncdim_def(dims[2], dim_units[2], lat),
-               ncdf4::ncdim_def(dims[3], time_units, time))
+  # ncdf4 writes the values of a dimension in double precision. In single
+  # precision they are a variable with the name of a dimension without values.
+  single <- identical(coordinates, "float")
+  axis <- function(i, values) {
+    if (single) ncdf4::ncdim_def(dims[i], "", seq_along(values), create_dimvar = FALSE)
+    else ncdf4::ncdim_def(dims[i], dim_units[i], values)
+  }
+  axes <- list(axis(1, lon), axis(2, lat), ncdf4::ncdim_def(dims[3], time_units, time))
   variables <- Map(function(name, unit) ncdf4::ncvar_def(name, unit, axes, missval = NA, prec = "double"),
                    names(values), units)
-  nc <- ncdf4::nc_create(path, unname(variables))
+  stored <- if (single) lapply(1:2, function(i) ncdf4::ncvar_def(dims[i], dim_units[i], axes[i], prec = "float"))
+  nc <- ncdf4::nc_create(path, c(unname(variables), stored))
   on.exit(ncdf4::nc_close(nc), add = TRUE)
   for (name in names(values)) ncdf4::ncvar_put(nc, variables[[name]], aperm(values[[name]], c(3, 2, 1)))
+  if (single) {
+    ncdf4::ncvar_put(nc, stored[[1]], lon)
+    ncdf4::ncvar_put(nc, stored[[2]], lat)
+  }
   for (name in names(attributes)) {
     for (key in names(attributes[[name]])) ncdf4::ncatt_put(nc, name, key, attributes[[name]][[key]])
   }

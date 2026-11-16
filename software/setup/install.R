@@ -97,10 +97,29 @@ install_scorch <- function(path = NULL, ref = "v1.3.0", lib = NULL, upgrade = "n
   }
   loaded <- function() if (pkg %in% loadedNamespaces()) unname(getNamespaceVersion(pkg)) else NA_character_
   finish <- function(done) {
-    message(done, "\nYou do not need to run the installation block again. From now on, open SCORCH with:\n  ", reopen, aside)
-    if (isTRUE(open) && interactive()) {
-      return(invisible(getExportedValue(loadNamespace(pkg, lib.loc = target), "run_scorch")()))
+    opens <- isTRUE(open) && interactive()
+    # The package reaches the others with `::`, so one that is damaged, or too
+    # old for another, shows only when the window uses it. Loading each here
+    # finds it before the window opens.
+    for (name in if (opens) c(asks(utils::packageDescription(pkg, lib.loc = target, fields = "Imports"))$name, pkg)) {
+      failed <- tryCatch({ loadNamespace(name, lib.loc = if (identical(name, pkg)) target); NULL }, error = identity)
+      if (is.null(failed)) next
+      # R names the package at fault in quotes. Anything else it quotes (a file,
+      # an object) is not an installed package; the one being loaded is named then.
+      reason <- conditionMessage(failed)
+      named <- sub("^[^'\u2018]*['\u2018]([A-Za-z][A-Za-z0-9.]*)['\u2019].*$", "\\1", reason)
+      # A library file R could not load lies in the folder of the package it belongs to.
+      inside <- regmatches(reason, regexpr("[A-Za-z][A-Za-z0-9.]*(?=/libs/)", reason, perl = TRUE))
+      if (length(inside)) named <- inside
+      if (!inherits(failed, "packageNotFoundError") && !nzchar(system.file(package = named))) named <- name
+      stop(pkg, " is installed, but the SCORCH window cannot open: ",
+           if (identical(named, pkg)) "it" else paste0("the package ", named, ", which it needs,"), " cannot be loaded.",
+           "\nR reported: ", reason, "\n", restart, ", ",
+           if (identical(named, pkg)) "then run the installation block with install_scorch(force = TRUE) as its last line."
+           else paste0("run install.packages(\"", named, "\"), ", again), call. = FALSE)
     }
+    message(done, "\nYou do not need to run the installation block again. From now on, open SCORCH with:\n  ", reopen, aside)
+    if (opens) return(invisible(getExportedValue(loadNamespace(pkg, lib.loc = target), "run_scorch")()))
     invisible(NULL)
   }
 
@@ -145,16 +164,19 @@ install_scorch <- function(path = NULL, ref = "v1.3.0", lib = NULL, upgrade = "n
   why <- function() paste0(
     "R's messages above, and any warnings below, give the reason.", outdated(),
     if (identical(unname(Sys.info()["sysname"]), "Linux")) paste0(
-      "\nOn Linux the usual cause is a missing system library. ncdf4 needs netCDF: install libnetcdf-dev ",
-      "(Debian, Ubuntu) or netcdf-devel (Fedora), ", again),
+      "\nOn Linux the usual cause is a missing system library. ncdf4 needs netCDF and fs needs libuv: install ",
+      "libnetcdf-dev and libuv1-dev (Debian, Ubuntu) or netcdf-devel and libuv-devel (Fedora), ", again),
     "\nIf they report a failed download, check the internet connection, ", again)
   # Install what is missing or too old, and stop with the reason when something
   # still lacks. `tried`: R has just attempted the missing ones in its usual way.
   provide <- function(needs, tried = FALSE, reported = NULL) {
     added <- character()
+    warned <- character()
     fetch <- function(names, ...) {
       added <<- union(added, names)
-      tryCatch(utils::install.packages(names, lib = target, ...),
+      # R's warnings are shown as always; they are only read here as well.
+      tryCatch(withCallingHandlers(utils::install.packages(names, lib = target, ...),
+                                   warning = function(w) warned <<- c(warned, conditionMessage(w))),
                error = function(e) reported <<- c(reported, conditionMessage(e)))
     }
     lacking <- short(needs)
@@ -173,15 +195,55 @@ install_scorch <- function(path = NULL, ref = "v1.3.0", lib = NULL, upgrade = "n
     }
     said <- if (length(reported)) paste0("\nR reported: ", paste(unique(reported), collapse = "; "))
     if (anyNA(lacking$have)) {
-      stop(pkg, " was not changed. These packages it needs could not be installed: ",
-           paste(lacking$name[is.na(lacking$have)], collapse = ", "), ".", said, "\n", why(), call. = FALSE)
+      absent <- lacking$name[is.na(lacking$have)]
+      # R removes its own locks when an installation ends. One that is still
+      # there was left by an installation that was cut off (or belongs to
+      # another R session that is installing now).
+      left <- file.path(target, c("00LOCK", paste0("00LOCK-", absent)))
+      left <- left[dir.exists(left)]
+      # R cannot replace a package whose files an R session has open: one this
+      # session has loaded and that is still partly on disk, or one R said it
+      # could not remove. Trying again in this session cannot help then.
+      in_use <- any(absent %in% loadedNamespaces() & dir.exists(file.path(target, absent))) ||
+        any(grepl("cannot remove prior installation", c(reported, warned), fixed = TRUE))
+      stop(pkg, " was not changed. These packages it needs could not be installed: ", paste(absent, collapse = ", "), ".",
+           said, "\n",
+           if (length(left)) paste0("An earlier installation into this library was cut off and left a lock behind; ",
+                                    "R installs nothing there while it exists:\n  ", paste(left, collapse = "\n  "),
+                                    "\nClose every other R session, delete ",
+                                    if (length(left) > 1L) "these folders" else "this folder", ", ", again)
+           else if (in_use) paste0(restart, ", ", again, " R cannot replace a package while an R session is using it; ",
+                                   "close any other R session too.")
+           else why(), call. = FALSE)
     }
     if (nrow(lacking)) {
       stop(pkg, " was not changed. It needs newer versions of: ",
            paste(sprintf("%s (at least %s, installed %s)", lacking$name, lacking$least, lacking$have), collapse = ", "),
-           ".", said, outdated(), "\n", restart, ", update them with install.packages(), ", again, call. = FALSE)
+           ".", said, outdated(), "\n", restart, ", ", again, call. = FALSE)
     }
     added
+  }
+
+  # An installation that was cut off (R was closed, the computer went down, the
+  # step was stopped) leaves R's lock for this package behind, and R then
+  # refuses every later installation. The copy R had set aside goes back when
+  # no version is in place. Only this package's own lock is looked at.
+  lock <- file.path(target, paste0("00LOCK-", pkg))
+  if (file.exists(lock)) {
+    kept <- file.path(lock, pkg)
+    restore <- is.na(on_disk()[["Version"]]) && file.exists(file.path(kept, "DESCRIPTION"))
+    if (restore) unlink(file.path(target, pkg), recursive = TRUE)
+    # The lock goes only once the copy it holds is back in place.
+    if (!restore || suppressWarnings(file.rename(kept, file.path(target, pkg))) ||
+        all(file.copy(kept, target, recursive = TRUE, copy.date = TRUE))) unlink(lock, recursive = TRUE)
+    if (file.exists(lock)) {
+      stop("An earlier installation of ", pkg, " was interrupted, and what it left behind could not be removed:\n  ", lock,
+           "\n", restart, ", close every other R session, ", again, " If this message returns, delete that folder first.",
+           call. = FALSE)
+    }
+    message("An earlier installation of ", pkg, " was interrupted; ",
+            if (restore) paste0("version ", on_disk()[["Version"]], ", which it had set aside, was put back and "),
+            "its leftovers were removed.")
   }
 
   before <- on_disk()
@@ -218,7 +280,13 @@ install_scorch <- function(path = NULL, ref = "v1.3.0", lib = NULL, upgrade = "n
            if (is.character(fetched)) paste0(": ", fetched), ".\nCheck the internet connection and that ", ref,
            " exists at https://github.com/fawazbouhamad/scoRch.simulator, ", again, call. = FALSE)
     }
-    entries <- utils::unzip(archive, list = TRUE)$Name
+    # A download can report success and still be cut short, or be a web page
+    # that a network put in its place.
+    entries <- tryCatch(utils::unzip(archive, list = TRUE)$Name, error = function(e) NULL)
+    if (is.null(entries)) {
+      stop(pkg, " ", ref, " did not arrive complete, so nothing was changed.\nCheck the internet connection, ", again,
+           call. = FALSE)
+    }
     if (any(grepl("(^/|^[A-Za-z]:|(^|/)\\.\\.(/|$)|\\\\)", entries))) {
       stop("The source archive contains an invalid path.", call. = FALSE)
     }

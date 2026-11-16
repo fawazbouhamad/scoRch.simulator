@@ -36,6 +36,12 @@ listing_with <- function(...) {
   listing
 }
 
+# Any function of the package with stand-ins for functions that it calls.
+with_stand_ins <- function(fun, ...) {
+  environment(fun) <- list2env(list(...), parent = environment(fun))
+  fun
+}
+
 # A new folder for one test, written as the dialog writes folders.
 test_folder <- function(env = parent.frame()) {
   normalizePath(withr::local_tempdir(.local_envir = env), winslash = "/")
@@ -147,6 +153,81 @@ test_that("a folder of .nc4 files is explained, and one .nc4 file opens", {
     expect_match(dialog()$problem, "A single .nc4 file can be opened directly", fixed = TRUE)
     act("go", file.path(merra, "MERRA2_400.20010601.nc4"))
     expect_identical(taken(), list(kind = "data", path = file.path(merra, "MERRA2_400.20010601.nc4")))
+  })
+})
+
+test_that("a folder whose NetCDF files are in its subfolders is answered with what works", {
+  root <- test_folder()
+  # Downloads unpacked into a folder each, all under the one file name.
+  yearly <- file.path(root, "yearly downloads")
+  years <- file.path(yearly, 2001:2005)
+  for (year in years) {
+    dir.create(year, recursive = TRUE)
+    file.create(file.path(year, "data_stream-oper_stepType-instant.nc"))
+  }
+  # A folder without NetCDF files of its own is not named, whatever lies deeper in it.
+  notes <- file.path(yearly, "1999 notes")
+  dir.create(file.path(notes, "deeper"), recursive = TRUE)
+  file.create(file.path(notes, "readme.txt"), file.path(notes, "deeper", "old.nc"))
+
+  # The first four are found, to name three and to know of more.
+  expect_identical(netcdf_subfolders(c(notes, years), seconds = Inf), 2:5)
+  # No more folders than asked are looked into, and none once the time is up.
+  expect_identical(netcdf_subfolders(c(notes, years), most = 3L, seconds = Inf), 2:3)
+  expect_identical(netcdf_subfolders(c(notes, years), seconds = -1), integer())
+  expect_identical(netcdf_subfolders(years, seconds = -1), 1L)
+  expect_identical(netcdf_subfolders(character()), integer())
+  expect_identical(in_subfolders(c("a b", "c")), paste(
+    "This folder has no NetCDF (.nc) files of its own. They are in its subfolders: a b, c. Open one of them and click",
+    "Use this folder. To analyze them together, put the subfolders into one ZIP file, or the files into one folder,",
+    "each under its own name."))
+
+  open_one <- "Open one of them and click Use this folder."
+  together <- paste("To analyze them together, put the subfolders into one ZIP file,",
+                    "or the files into one folder, each under its own name.")
+  # The dialog of this test notes the folders it lists and looks into subfolders for as long
+  # as that takes on a busy computer: the limit of a second is tried above.
+  listed <- character()
+  counting <- with_stand_ins(scorch_chooser, chooser_listing = function(folder, kind, limit = 2000L) {
+    listed <<- c(listed, folder)
+    chooser_listing(folder, kind, limit)
+  }, netcdf_subfolders = function(folders) netcdf_subfolders(folders, seconds = Inf))
+  shiny::testServer(chooser_server(counting), {
+    # Highlighted or typed while the folder above is open, and as the open folder itself.
+    for (from in c(root, yearly)) {
+      open("data", from)
+      before <- length(listed)
+      act("use", yearly)
+      expect_null(taken())
+      expect_identical(dialog()$folder, yearly)
+      expect_identical(dialog()$problem, paste(
+        "This folder has no NetCDF (.nc) files of its own. They are in its subfolders: 2001, 2002, 2003 and others.",
+        open_one, together))
+      # The folder is read once, for the list that is shown with the answer.
+      expect_identical(listed[seq_along(listed) > before], yearly)
+    }
+    expect_match(output$chooser$html, "They are in its subfolders: 2001, 2002, 2003 and others.", fixed = TRUE)
+    # What the answer says works: one of the named folders is taken.
+    act("use", years[1L])
+    expect_identical(taken(), list(kind = "data", path = years[1L]))
+
+    # Three or fewer are all named.
+    unlink(years[4:5], recursive = TRUE)
+    open("data", root)
+    act("use", yearly)
+    expect_identical(dialog()$problem, paste(
+      "This folder has no NetCDF (.nc) files of its own. They are in its subfolders: 2001, 2002, 2003.", open_one, together))
+    # With one such folder there is nothing to put together.
+    unlink(years[2:3], recursive = TRUE)
+    act("use", yearly)
+    expect_identical(dialog()$problem, paste("This folder has no NetCDF (.nc) files of its own.",
+                                             "They are in its subfolder: 2001. Open it and click Use this folder."))
+    # Subfolders are looked into, not what they hold in folders of their own.
+    unlink(years[1L], recursive = TRUE)
+    act("use", yearly)
+    expect_null(taken())
+    expect_identical(dialog()$folder, yearly)
+    expect_match(dialog()$problem, "This folder has no NetCDF (.nc) files. Open the folder", fixed = TRUE)
   })
 })
 
@@ -278,6 +359,37 @@ test_that("a listing that fails, or a name that is not valid text, does not stop
   })
 })
 
+test_that("text that is not valid UTF-8 is answered in the dialog and does not close the window", {
+  root <- test_folder()
+  dir.create(file.path(root, "sub"))
+  # Half an emoji as a browser sends it, and a letter of Latin-1 in text called UTF-8.
+  half <- rawToChar(as.raw(c(0x78, 0xed, 0xb0, 0x80, 0x79)))
+  latin <- rawToChar(as.raw(c(0x63, 0x61, 0x66, 0xe9)))
+  Encoding(half) <- "UTF-8"
+  Encoding(latin) <- "UTF-8"
+  expect_false(any(validEnc(c(half, latin))))
+  shiny::testServer(chooser_server(), {
+    for (text in c(half, latin)) for (do in c("up", "go", "use", "mkdir")) {
+      kind <- if (do == "mkdir") "output" else "data"
+      open(kind, root)
+      act(do, text)
+      label <- paste(do, "in the dialog for", kind)
+      expect_false(session$isClosed(), label = label)
+      expect_null(taken(), label = label)
+      # Up takes no text: the page sends none with it, and what it does with one is left open.
+      if (do == "up") next
+      expect_identical(dialog()$folder, root, label = label)
+      expect_identical(dialog()$problem, "That text holds characters that cannot be read. Type the path again.", label = label)
+    }
+    expect_match(output$chooser$html, "That text holds characters that cannot be read.", fixed = TRUE)
+    # Nothing was made under such a name, and the dialog goes on as before.
+    expect_identical(list.files(root), "sub")
+    act("go", "sub")
+    expect_identical(dialog()$folder, file.path(root, "sub"))
+    expect_null(dialog()$problem)
+  })
+})
+
 test_that("a large folder is counted whole, and only the listed rows are looked up", {
   root <- test_folder()
   for (name in c("b folder", "A folder", "looks like a file.nc")) dir.create(file.path(root, name))
@@ -337,6 +449,93 @@ test_that("Use this folder does not read a listed folder a second time", {
   expect_identical(listed, c(era5, era5))
 })
 
+test_that("Use this folder takes a folder whose NetCDF files arrived after it was listed", {
+  root <- test_folder()
+  filling <- file.path(root, "download in progress")
+  empty <- file.path(root, "stays empty")
+  for (folder in c(filling, empty)) dir.create(folder)
+  arrived <- file.path(filling, "era5_t2m_2001.nc")
+  shiny::testServer(chooser_server(), {
+    # With the folder written in the field, and with no text at all.
+    for (path in list(filling, NULL)) {
+      unlink(arrived)
+      open("data", filling)
+      expect_identical(dialog()$netcdf, 0L)
+      # The download ends while the dialog still shows the folder as it was.
+      file.create(arrived)
+      act("use", path)
+      expect_identical(taken(), list(kind = "data", path = filling))
+      expect_null(dialog())
+    }
+    # A folder that is still empty is refused as before.
+    open("data", empty)
+    act("use", empty)
+    expect_null(taken())
+    expect_identical(dialog()$folder, empty)
+    expect_match(dialog()$problem, "This folder has no NetCDF (.nc) files. Open the folder", fixed = TRUE)
+  })
+})
+
+test_that("text that is the open folder but for the blanks at its ends means that folder", {
+  expect_true(same_trimmed("/data/era5", "/data/era5 "))
+  expect_true(same_trimmed("/data/era5", "/data/era5"))
+  expect_true(same_trimmed(" /data/era5\t", "/data/era5  "))
+  # The page also leaves out blanks that are not the space of the keyboard.
+  expect_true(same_trimmed("/data/era5", paste0("/data/era5", intToUtf8(160L))))
+  expect_true(same_trimmed("/data/era5", paste0("/data/era5", intToUtf8(12288L))))
+  expect_false(same_trimmed("/data/era5", "/data/era5 2019"))
+  expect_false(same_trimmed("/data/era", "/data/era5 "))
+  expect_false(same_trimmed("", "/data/era5 "))
+  # Text that is not valid cannot be trimmed: it equals nothing, and raises no error.
+  odd <- rawToChar(as.raw(c(0x2f, 0x63, 0x61, 0x66, 0xe9)))
+  Encoding(odd) <- "UTF-8"
+  expect_false(same_trimmed(odd, paste0(odd, " ")))
+  expect_false(same_trimmed("/data/era5", paste0(odd, " ")))
+
+  # Every system can hold a name that ends in a no-break space, which the page trims as well.
+  skip_if_not(isTRUE(l10n_info()[["UTF-8"]]), "names beyond ASCII need a UTF-8 session")
+  root <- test_folder()
+  ending <- file.path(root, paste0("era5", intToUtf8(160L)))
+  twin <- file.path(root, "era5")
+  other <- file.path(root, "other")
+  for (folder in c(ending, other)) {
+    dir.create(folder)
+    file.create(file.path(folder, "2001.nc"))
+  }
+  shiny::testServer(chooser_server(), {
+    for (kind in c("data", "output")) {
+      open(kind, ending)
+      expect_identical(dialog()$folder, ending)
+      # What the page sends for the open folder: its path without the blank.
+      act("use", twin)
+      expect_identical(taken(), list(kind = kind, path = ending))
+    }
+    # Another folder written in the field is still that folder.
+    open("data", ending)
+    act("use", other)
+    expect_identical(taken(), list(kind = "data", path = other))
+  })
+})
+
+test_that("an open folder whose name ends in a space is taken with Use this folder", {
+  # Windows cannot hold such a name; Linux and macOS can.
+  skip_on_os("windows")
+  root <- test_folder()
+  ending <- file.path(root, "era5 ")
+  dir.create(ending)
+  file.create(file.path(ending, "2001.nc"))
+  shiny::testServer(chooser_server(), {
+    for (kind in c("data", "output")) {
+      open(kind, ending)
+      expect_identical(dialog()$folder, ending)
+      # The page and R trim the text of the path field: the space does not arrive.
+      act("use", trimws(ending))
+      expect_identical(taken(), list(kind = kind, path = ending))
+      expect_null(dialog())
+    }
+  })
+})
+
 test_that("Documents, Desktop and Downloads are where Windows says they are", {
   root <- test_folder()
   withr::local_envvar(SCORCH_TEST_PROFILE = root)
@@ -366,6 +565,62 @@ test_that("Documents, Desktop and Downloads are where Windows says they are", {
   } else {
     expect_length(known, 0L)
   }
+})
+
+test_that("a place on a server is listed without asking the server, and opened only when it is clicked", {
+  root <- test_folder()
+  desktop <- file.path(root, "Desktop")
+  dir.create(desktop)
+  windows <- .Platform$OS.type == "windows"
+  # Stand-ins that note every path the file system is asked for.
+  asked <- character()
+  noting <- function(ask) function(paths, ...) {
+    asked <<- c(asked, paths)
+    ask(paths, ...)
+  }
+  places_of <- with_stand_ins(chooser_places, dir.exists = noting(base::dir.exists),
+                              normalizePath = noting(base::normalizePath))
+  guessed <- chooser_places(known = character())
+  # A folder that Windows keeps on a file server, as its registry writes it and with slashes.
+  for (remote in c("\\\\fileserver.invalid\\home\\me\\Documents", "//fileserver.invalid/home/me/Documents")) {
+    expect_true(on_server(remote))
+    asked <- character()
+    places <- places_of(known = c(Desktop = desktop, Documents = remote))
+    # The folders of this computer are asked for; the server, which may not answer, is not.
+    expect_true(desktop %in% asked)
+    expect_false(any(on_server(asked)))
+    expect_identical(places[["Desktop"]], desktop)
+    # Listed as R writes an open folder on a server, so that the place is marked while it is open.
+    expect_identical(places[["Documents"]], if (windows) "\\\\fileserver.invalid/home/me/Documents" else remote)
+    expect_identical(places[!names(places) %in% c("Desktop", "Documents")],
+                     guessed[!names(guessed) %in% c("Desktop", "Documents")])
+  }
+  expect_identical(on_server(c("C:/Users/me", "/home/me", "relative/path", "/", NA)), rep(FALSE, 5L))
+
+  # The dialog with its first place on a server.
+  places <- c(Downloads = "\\\\fileserver.invalid/home/me/Downloads", Home = root, Desktop = desktop)
+  dialog_of <- with_stand_ins(scorch_chooser, chooser_places = function(...) places,
+                              dir.exists = noting(base::dir.exists), normalizePath = noting(base::normalizePath))
+  # A folder that is gone with everything above it: an unplugged drive, or a share that is lost.
+  gone <- if (windows) paste0(LETTERS[-(1:2)], ":/era5/2019") else "//fileserver.invalid/data/era5/2019"
+  gone <- utils::head(gone[!dir.exists(dirname(dirname(gone)))], 1L)
+  asked <- character()
+  shiny::testServer(chooser_server(dialog_of), {
+    # Without a folder to return to, it opens in the first place on this computer.
+    open("data")
+    expect_identical(dialog()$folder, root)
+    expect_null(dialog()$problem)
+    expect_match(output$chooser$html, "data-go=\"\\\\fileserver.invalid/home/me/Downloads\"", fixed = TRUE)
+    # Such a place also stands in for a folder of which nothing is left.
+    if (length(gone)) {
+      environment(open)$show("data", gone)
+      expect_identical(dialog()$folder, root)
+      expect_match(dialog()$problem, "is no longer available. The dialog now shows a folder that still exists.", fixed = TRUE)
+    }
+    # The place on the server was asked for by neither.
+    expect_true(root %in% asked)
+    expect_false(places[["Downloads"]] %in% asked)
+  })
 })
 
 test_that("details that Windows refuses raise no warnings, and the user's own folders stay listed", {

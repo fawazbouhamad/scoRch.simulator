@@ -31,8 +31,10 @@ analyzed until you click **Run analysis**. Outside RStudio the window opens in
 your web browser; R prints its address, which works only on this computer and
 only with the key that R adds to it.
 
-On Linux, R builds these packages from source and needs the netCDF system
-library first: `libnetcdf-dev` on Debian and Ubuntu, `netcdf-devel` on Fedora.
+On Linux, R builds these packages from source. Besides R's own build tools
+(`r-base-dev` on Debian and Ubuntu), it needs two system libraries first, netCDF
+and libuv: `libnetcdf-dev` and `libuv1-dev` on Debian and Ubuntu, `netcdf-devel`
+and `libuv-devel` on Fedora.
 
 **Every later visit** needs one line. The package stays installed.
 
@@ -43,7 +45,8 @@ scoRch.simulator::run_scorch()
 You never have to reinstall to open the window again. Pasting the block a second
 time downloads nothing and only opens the window. An update replaces the version
 this R session has loaded, so no restart is needed. If the Console does ask for
-one, choose **Session > Restart R** once and run the line above; do not reinstall.
+one, choose **Session > Restart R** once and then do what its message names:
+usually the line above, and the block again only when the message says so.
 To move to a newer release, paste the block from that release's README.
 
 ## The SCORCH window
@@ -69,30 +72,40 @@ reduced motion.
 
 **2. Check the settings that need a decision.** SCORCH reads the variable,
 coordinates, time axis and units from the file and shows the dataset name, its
-date coverage, the months to analyze and the results folder.
+date coverage, the months to analyze and the results folder. **Run analysis**
+stays in view at the lower edge of the window while you check them.
 
 - **Months** apply in every selected year. June through August of a file holding
   1996–2025 means those three months in each of the 30 years, and the window says
-  so, with the number of days. **Limit the analysis dates** narrows the years.
+  so, with the number of days. **Limit the analysis dates** sets the first and
+  the last date to analyze.
 - **Temperature** is always shown in °C. A file in Kelvin is converted once, when
   it is read.
 - **A question** appears only when the file leaves something open, for example
   missing units, two possible temperature variables, or a temperature that the
-  file does not call a daily maximum. Your answer is saved with the run.
+  file does not call a daily maximum. Your answer is saved with the run, and the
+  results of a completed run name a variable that you confirmed.
 - **Results folder** shows the new folder for this run. **Choose or create folder**
   picks another location. Every run gets the next number, starting at
   `output/SCORCH_run_001` under your R working directory.
 - **Advanced settings** are collapsed. They hold the heatwave definition,
   clustering and ellipse settings, bootstrap repetitions and random seeds, the
-  spatial model predictors, ERA5 preprocessing and the names SCORCH read from the
-  file. **Reuse a saved configuration** fills the settings from the `config.yaml`
-  of an earlier run and keeps the dataset you selected.
+  spatial model predictors, ERA5 preprocessing (for raw ERA5 input) and how the
+  file is read: its format, units, and variable and coordinate names. These stay
+  on automatic detection unless you change them; the variable SCORCH found is
+  named on the dataset card. **Reuse a saved configuration** fills the settings
+  from the `config.yaml` of an earlier run and keeps the dataset you selected.
+  Its advanced settings and results folder stay in use when you change the data
+  afterwards. The months, the date limit and how the file is read start again
+  with other data; reuse the file to apply its months and dates again.
 
 **3. Run and read the result.** Click **Run analysis** and follow the progress.
-When it finishes, the window shows the dataset and settings, the number of events
-of each of the four types, and the full results path. The map now shows the
-events of your run. **Open summary**, **Open results folder** and **Set up another
-run** are below the summary. Each run folder holds `Summary.txt`, the effective
+When it finishes, the window shows the number of events of each of the four types
+and the full results path, with **Open summary**, **Open results folder** and
+**Set up another run** directly below them. The dataset, the results of each
+stage and the settings are listed underneath, and the map now shows the events
+of your run. A reload of the window shows these results again, until you click
+**Set up another run**. Each run folder holds `Summary.txt`, the effective
 `config.yaml`, the catalogs, model workbooks and figures. The configuration
 refers to the original input, including an original ZIP. To keep the result in R,
 start with `result <- scoRch.simulator::run_scorch()`.
@@ -359,7 +372,8 @@ summary comparison. Full-study checks require the separate study input.
 Assemble a package with `Rscript software/setup/install.R .package`, then use
 `devtools::check(".package")`. The test suite compares runs bit for bit and must
 run against an installed build, as `R CMD check` does, not against
-`devtools::load_all()`. The installer defaults to stable `v1.3.0`;
+`devtools::load_all()` or under `covr`, where the bit-for-bit comparisons are
+skipped. The installer defaults to stable `v1.3.0`;
 developers can request `install_scorch(ref = "main")`. `force = TRUE` reinstalls
 a release that is already installed and `open = FALSE` installs without opening
 the window. Dependency upgrades are disabled unless requested. A copy installed

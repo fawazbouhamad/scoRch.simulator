@@ -59,3 +59,27 @@ holes[1L, 1L, ] <- 1e20
 holes[3L, 2L, ] <- 1e20
 write_daily("undeclared_missing.nc", "tmax", "degC", holes, small_lon, small_lat, june, "2001-06-01",
             list(standard_name = "air_temperature", cell_methods = "time: maximum"), missing = NULL)
+
+# 4. Daily maxima without units whose first day reaches 66. Degrees Celsius
+# would fit, and so would Fahrenheit: the window must ask for the units and
+# suggest neither answer.
+write_daily("no_units_66.nc", "tmax", "", array(55 + (seq_len(4L * 3L * 30L) %% 12), c(4L, 3L, 30L)),
+            small_lon, small_lat, june, "2001-06-01", list(cell_methods = "time: maximum"))
+
+# 5. Hourly 2 m temperature in Kelvin, as ERA5 delivers it, on quarter-degree
+# points that fill one row of one-degree cells (8 by 4 points, north to
+# south). The window must refuse the one-degree output grid before Run,
+# because the reader needs two cells along each axis, and accept the grid of
+# the file as it is.
+row_lon <- seq(20, 21.75, by = 0.25)
+row_lat <- seq(10.75, 10, by = -0.25)
+hours <- 0:47
+axes <- list(ncdf4::ncdim_def("longitude", "degrees_east", row_lon), ncdf4::ncdim_def("latitude", "degrees_north", row_lat),
+             ncdf4::ncdim_def("valid_time", "hours since 2001-07-01 00:00:00", hours, calendar = "standard"))
+defined <- ncdf4::ncvar_def("t2m", "K", axes, missval = 1e30, prec = "double")
+file <- file.path(folder, "era5_one_row.nc")
+nc <- ncdf4::nc_create(file, defined)
+ncdf4::ncvar_put(nc, defined, array(295 + (seq_len(8L * 4L * 48L) %% 11), c(8L, 4L, 48L)))
+ncdf4::ncatt_put(nc, "t2m", "long_name", "2 metre temperature")
+ncdf4::nc_close(nc)
+cat(sprintf("Wrote %s (t2m, %d hours, %d by %d points)\n", file, length(hours), length(row_lon), length(row_lat)))

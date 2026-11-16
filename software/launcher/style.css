@@ -70,6 +70,7 @@ ul.problem { list-style: none; padding-left: 10px; margin: 0; }
 .dataset .path { margin-top: 4px; }
 .question { border-color: #e2a53a; box-shadow: inset 4px 0 0 #f0a52b; }
 .question .radio label { font-size: 15px; }
+#answer_problem .problem { margin-bottom: 10px; }
 .fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 20px; }
 .scorch .form-group { width: 100% !important; margin-bottom: 12px; }
 .scorch details { border-top: 1px solid var(--line); padding: 10px 0 2px; margin-top: 10px; }
@@ -77,6 +78,26 @@ ul.problem { list-style: none; padding-left: 10px; margin: 0; }
 .scorch details[open] > summary { margin-bottom: 8px; }
 .review { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
 .review > div:first-child { flex: 1 1 380px; }
+/* Review and run stays at the lower edge of the window, so that Run analysis and what the card
+   says about a refusal or a failed start are in view however long the settings above it are.
+   The card keeps to two fifths of the window's height: 38 px of that are its padding and border.
+   A longer message scrolls inside itself, below the heading and the summary of the run. */
+.card.review { position: sticky; bottom: 0; z-index: 3; box-shadow: 0 -6px 14px rgba(28, 35, 48, .1); }
+.review > :not(#run_button) { display: flex; flex-direction: column; max-height: max(6em, calc(40vh - 38px)); overflow-y: auto; }
+.review > :not(#run_button) > * { flex: none; }
+.review > :not(#run_button) > .problem { flex: 0 1 auto; min-height: 1.5em; overflow-y: auto; }
+/* A pinned card cannot leave the panel that holds it, and the settings cards have a panel of their
+   own below the dataset card. Where Shiny marks that panel as shown, it hands its cards on to the
+   settings screen, so that the card is in view from the dataset card on, in a short window too. */
+.scorch [data-display-if].shiny-conditional--shown:has(> .card.review) { display: contents; }
+/* A field reached with Tab is scrolled clear of the pinned card, not left behind it: the card
+   is about 110 px high with its button beside the text and 190 px with the button below it. */
+html { scroll-padding-bottom: 136px; }
+/* In a narrow window the button stands below the text and takes 60 px more of the card. */
+@media (max-width: 700px) {
+  .review > :not(#run_button) { max-height: max(6em, calc(40vh - 98px)); }
+  html { scroll-padding-bottom: 216px; }
+}
 
 /* Months: analyzed, in the file, not in the file. */
 .period { margin: 2px 0 12px; }
@@ -128,6 +149,12 @@ svg.map { width: 100%; height: auto; max-height: 470px; border-radius: 6px; disp
 .map .cell { stroke: #fff; stroke-width: .55; } .map .cell.outside { fill: #b6b1a6; opacity: .8; }
 /* One screen pixel at every map size, drawn sharp so that it keeps its full colour. */
 .map .footprint { fill: none; stroke: var(--edge); stroke-width: 1px; stroke-linecap: square; vector-effect: non-scaling-stroke; shape-rendering: crispEdges; }
+/* Zoomed out below 100 %, that pixel is less than a screen pixel and would be painted pale: the line
+   is given the width that fills a whole screen pixel again. */
+@media (max-resolution: 0.99dppx) { .map .footprint { stroke-width: 1.5px; } }
+@media (max-resolution: 0.66dppx) { .map .footprint { stroke-width: 2px; } }
+@media (max-resolution: 0.49dppx) { .map .footprint { stroke-width: 3px; } }
+@media (max-resolution: 0.32dppx) { .map .footprint { stroke-width: 4px; } }
 .map .ellipse-halo { fill: none; stroke: #fff; stroke-width: 5; opacity: .85; }
 .map .ellipse, .map .axis { fill: none; stroke: var(--ink); stroke-linecap: round; }
 .map .ellipse { stroke-width: 2.1; } .map .axis.major { stroke-width: 1.9; } .map .axis.minor { stroke-width: 1.2; }
@@ -231,4 +258,9 @@ body.scorch-busy .scorch > :not(.masthead) { opacity: .5; pointer-events: none; 
   .chooser-row[aria-selected="true"] { forced-color-adjust: none; background: Highlight; color: HighlightText; }
   .chooser-row[aria-selected="true"] span { color: HighlightText; }
   .chooser-actions { background: Canvas; }
+  /* A refused field loses its red border and shadow here: a dashed line marks it. */
+  .scorch [aria-invalid="true"] { outline: 2px dashed CanvasText; outline-offset: 2px; }
+  /* The pinned Review and run card loses its shadow: a heavier upper edge sets it off from the
+     cards that pass beneath it. */
+  .card.review { border-top: 3px solid CanvasText; }
 }

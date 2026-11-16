@@ -207,6 +207,9 @@ settings_ui <- function(cfg) {
 # Thousands separators for counts shown to people.
 count_label <- function(n) format(n, big.mark = ",", trim = TRUE, scientific = FALSE)
 
+# A count with its noun: "1 ellipse", "2,100 ellipses".
+count_noun <- function(n, noun) paste(count_label(n), if (n == 1L) noun else paste0(noun, "s"))
+
 # "June-August in every selected year (1996-2025)" or "June-August 2012".
 period_text <- function(period) {
   if (period$n_years == 1L) paste(period$months, period$years)
@@ -232,7 +235,17 @@ cell_note <- function(lon, lat, size) {
 
 # What SCORCH found in the selected data, as label and value pairs.
 dataset_facts <- function(info, cell_size) {
-  degrees <- function(values) abs(diff(sort(values))[1L])
+  # Coordinates stored in single precision miss the grid they describe from the
+  # eighth digit on (22.8999996185303 for 22.9), so the card names seven.
+  tidy <- function(values) signif(as.numeric(values), 7)
+  # The spacing of the rounded coordinates, or of the stored ones where a fine
+  # grid needs more digits and rounding would make it uneven.
+  degrees <- function(values) {
+    steps <- diff(sort(tidy(values)))
+    even <- all(steps > 0) && all(abs(steps - steps[1L]) <= 1e-6 * steps[1L])
+    if (!even) steps <- diff(sort(as.numeric(values)))
+    steps[1L]
+  }
   raw <- info$format == "era5"
   hourly <- raw && any(info$per_day > 1L)
   # A variable accepted without evidence that it is the daily maximum is not called one.
@@ -241,6 +254,10 @@ dataset_facts <- function(info, cell_size) {
   # The reader moves 0-360 longitudes of raw input to -180..180; a prepared file keeps its own.
   lon <- if (raw) wrap_longitudes(as.numeric(info$lon))$lon else as.numeric(info$lon)
   files <- if (is.null(info$files)) 1L else info$files
+  # One spacing is named, or that of longitude and of latitude ("0.5 x 1") where
+  # the two differ by more than rounding in a file explains.
+  spacing <- c(degrees(lon), degrees(info$lat))
+  if (anyNA(spacing) || abs(spacing[1L] - spacing[2L]) <= 1e-3 * max(spacing)) spacing <- spacing[1L]
   c("Contains" = paste0(
       if (hourly) sprintf("%s, %s values per day", if (unsure) "Sub-daily temperature" else "Raw 2 m temperature",
                           paste(info$per_day, collapse = " or "))
@@ -251,18 +268,29 @@ dataset_facts <- function(info, cell_size) {
       if (files > 1L) sprintf(", in %d NetCDF files", files)),
     "Date coverage" = sprintf("%s to %s: %s days, %s", min(info$dates), max(info$dates), count_label(length(info$dates)),
                               if (length(months) == 12L) "every month of the year" else month_runs(months)),
-    "Grid" = sprintf("%d by %d %s at %g\u00b0, %s to %s and %s to %s", length(info$lon), length(info$lat),
-                     if (raw) "points" else "cells",
-                     degrees(info$lon), format_degrees(min(lon), c("E", "W")), format_degrees(max(lon), c("E", "W")),
-                     format_degrees(min(info$lat), c("N", "S")), format_degrees(max(info$lat), c("N", "S"))),
+    "Grid" = sprintf("%d by %d %s at %s, %s to %s and %s to %s", length(info$lon), length(info$lat),
+                     if (raw) "points" else "cells", paste0(sprintf("%.7g", spacing), "\u00b0", collapse = " x "),
+                     format_degrees(tidy(min(lon)), c("E", "W")), format_degrees(tidy(max(lon)), c("E", "W")),
+                     format_degrees(tidy(min(info$lat)), c("N", "S")), format_degrees(tidy(max(info$lat)), c("N", "S"))),
     "Temperature" = paste0(
       if (all(info$units == "K")) "Kelvin in the file. SCORCH converts it to \u00b0C once, when it reads the data."
       else "\u00b0C in the file, used as it is.",
       if (!anyNA(info$sample_c)) sprintf(" The first time step ranges from %.1f to %.1f \u00b0C.",
                                           info$sample_c[1L], info$sample_c[2L])),
+    # One value per day is taken as that day's maximum, whichever daily statistic the file holds.
     if (raw) c("Preparation" = paste0(
-      if (hourly) "SCORCH takes the maximum of each UTC day" else "Daily values are used as they are",
+      if (hourly) "SCORCH takes the maximum of each UTC day" else "SCORCH uses each daily value as that day's maximum",
       cell_note(lon, as.numeric(info$lat), cell_size))))
+}
+
+# What the results say about a variable that the file itself does not
+# identify as the temperature SCORCH analyzes: the user chose it, in the
+# question about the file, in a field or with a configuration.
+temperature_note <- function(info) {
+  if (!any(info$identified %in% FALSE)) return(NULL)
+  sprintf("Variable %s, as you chose. The file does not identify it as %s", paste(info$variable, collapse = ", "),
+          if (info$format == "era5" && any(info$per_day > 1L)) "2 m air temperature; its highest value of each day was used."
+          else "daily maximum temperature.")
 }
 
 dataset_card <- function(title, path, info, bundled, note = NULL, answers = NULL, cell_size = 1) {
@@ -300,6 +328,8 @@ question_card <- function(question) {
                                    else question$recommended),
     if (!is.null(question$recommended) && !is.na(question$recommended))
       tags$p(class = "fine", "The suggested answer comes from the numbers in the file."),
+    # Filled when the button is clicked before an answer is chosen.
+    shiny::uiOutput("answer_problem"),
     shiny::actionButton("answer_apply", "Use this answer", class = "btn-primary"))
 }
 
@@ -315,7 +345,7 @@ period_note <- function(period) {
     tags$p(class = "period-line",
       tags$strong(if (one_year) paste0(period$months, " ", period$years, ":")
                   else paste(period$months, "in every selected year:")),
-      if (one_year) sprintf("%s days.", count_label(period$n_days))
+      if (one_year) paste0(count_noun(period$n_days, "day"), ".")
       else sprintf("%d years (%s), %s days.", period$n_years, period$years, count_label(period$n_days))),
     if (nzchar(period$unused)) tags$p(class = "fine", sprintf("This file also holds %s. Those months are not analyzed.", period$unused)),
     if (nzchar(period$absent)) tags$p(class = "fine", sprintf("This file has no data for %s.", period$absent)))
@@ -342,9 +372,9 @@ completion_ui <- function(finished) {
               c(stopped = "Analysis stopped", complete = "Analysis complete",
                 warnings = "Analysis complete with warnings")[[status]]),
       if (stopped) tags$p(class = "problem", role = "alert", finished$problem)
-      else tags$p(class = "lead", sprintf("%s compound events from %s ellipses on %s regionally extensive days.",
-        count_label(nrow(result$events$events)), count_label(nrow(result$ellipses)),
-        count_label(nrow(result$regional$selected_days)))),
+      else tags$p(class = "lead", sprintf("%s from %s on %s.",
+        count_noun(nrow(result$events$events), "compound event"), count_noun(nrow(result$ellipses), "ellipse"),
+        count_noun(nrow(result$regional$selected_days), "regionally extensive day"))),
       if (!stopped) tags$ol(class = "type-counts", lapply(1:4, function(type) {
         n <- sum(result$events$events$event_type == type)
         tags$li(style = paste0("--type:", TYPE_COLOURS[type]),
@@ -363,15 +393,18 @@ completion_ui <- function(finished) {
         if (!stopped) "The catalogs, model workbooks and figures are in the same folder."))),
     if (!stopped) tags$section(class = "card summary",
       tags$h2("What was analyzed"),
-      pairs(c(paste("Dataset:", finished$dataset), readme_input(result, result$config)[-1L],
+      pairs(c(paste("Dataset:", finished$dataset),
+              # Summary.txt describes daily maximum temperature; a variable that the user chose is named here.
+              if (!is.null(finished$temperature)) paste("Temperature:", finished$temperature),
+              readme_input(result, result$config)[-1L],
               if (!is.null(finished$period)) sprintf("Months analyzed: %s", period_text(finished$period)),
               sprintf("Finished in: %s", if (result$elapsed_minutes < 2) sprintf("%.0f seconds", result$elapsed_minutes * 60)
                                           else sprintf("%.1f minutes", result$elapsed_minutes)))),
       tags$h3("Results by stage"),
       pairs(c(sprintf("Local heatwaves: %s", count_label(nrow(result$heatwaves$events))),
-              sprintf("Regionally extensive days: %s of %s days (at least %s heatwave cells)",
-                      count_label(nrow(result$regional$selected_days)), count_label(nrow(result$regional$daily)),
-                      count_label(result$regional$threshold_cells)),
+              sprintf("Regionally extensive days: %s of %s (at least %s)",
+                      count_label(nrow(result$regional$selected_days)), count_noun(nrow(result$regional$daily), "day"),
+                      count_noun(result$regional$threshold_cells, "heatwave cell")),
               sprintf("Clusters and ellipses: %s", count_label(nrow(result$ellipses))),
               sprintf("Compound events: %s", count_label(nrow(result$events$events))))),
       tags$h3("Settings"),

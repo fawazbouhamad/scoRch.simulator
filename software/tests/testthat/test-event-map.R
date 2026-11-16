@@ -41,6 +41,9 @@ test_that("the event map shows the cells, clusters and ellipses of the run", {
   expect_equal(vapply(overview$events, `[[`, 1, "id"), events$compound_event_id)
   expect_identical(vapply(overview$events, function(e) paste(e$counts, collapse = "-"), ""), events$daily_cluster_counts)
   expect_equal(unclass(overview$extent), c(min(window$lon) - 0.5, max(window$lon) + 0.5, min(window$lat) - 0.5, max(window$lat) + 0.5))
+  # A grid with exact coordinates is sent the step the reader found, and where it starts.
+  expect_identical(overview$grid, list(lon = min(window$lon), lat = min(window$lat), lon_step = tmax$grid$lon_step,
+                                       lat_step = tmax$grid$lat_step, columns = 12L, rows = 10L))
   expect_true(all(diff(unclass(overview$breaks)) > 0))
   expect_true(min(overview$breaks) <= min(cell_tmax) && max(overview$breaks) >= max(cell_tmax))
   # A wider range keeps its classes, here ten of one degree. The map script blends the heat ramp
@@ -92,6 +95,32 @@ test_that("the event map shows the cells, clusters and ellipses of the run", {
       }
     }
   }
+})
+
+test_that("the map names the cells of a grid whose coordinates are stored in single precision", {
+  # A 0.1-degree grid as many files hold it. The first difference of its longitudes is 0.09999847,
+  # and first + column * that step would print 121.7001 for 121.7 some thirty columns on.
+  single <- function(x) readBin(writeBin(x, raw(), size = 4L), "numeric", size = 4L, n = length(x))
+  full <- read_tmax(system.file("extdata", "north_america_tmax.nc", package = "scoRch.simulator"),
+                    months = 6:7, start = "2012-06-01", end = "2012-07-31")
+  columns <- length(full$grid$lon)
+  rows <- length(full$grid$lat)
+  lon <- (-1250 + seq_len(columns) - 1) / 10
+  lat <- (300 + seq_len(rows) - 1) / 10
+  # The example's cells run west to east within each latitude row.
+  celsius <- aperm(array(full$tmax, c(length(full$dates), columns, rows)), c(1, 3, 2))
+  tmax <- tmax_from_array(celsius, full$dates, single(lon), single(lat), months = 6:7)
+  result <- scoRch.simulator:::event_stages(tmax, scoRch.simulator:::read_config(input_required = FALSE))
+  expect_gt(nrow(result$events$events), 0L)
+  grid <- scoRch.simulator:::event_overview(result, scoRch.simulator:::cluster_cell_tmax(result, tmax),
+                                            "Events", "single precision")$grid
+  expect_identical(c(grid$columns, grid$rows), c(columns, rows))
+  # The map script prints first + column * step to four decimals.
+  printed <- function(first, step, n) round((first + (seq_len(n) - 1) * step) * 1e4) / 1e4
+  expect_identical(printed(grid$lon, grid$lon_step, columns), lon)
+  expect_identical(printed(grid$lat, grid$lat_step, rows), lat)
+  # The step the reader keeps, the first difference, would misname more than half of the columns.
+  expect_gt(sum(printed(grid$lon, tmax$grid$lon_step, columns) != lon), columns / 2)
 })
 
 test_that("the bundled demonstration is what the package computes from the example", {

@@ -100,9 +100,14 @@ event_overview <- function(result, cell_tmax, title, source, demonstration = FAL
   events <- result$events$events
   days <- result$events$event_days
   extent <- map_extent(result)
+  # The map prints the coordinate of a cell as first + column * step. The step
+  # is therefore the mean over the whole axis: the first difference of
+  # coordinates stored in single precision is off in the sixth digit, which
+  # would show 121.7001 for 121.7 some thirty columns on.
+  mean_step <- function(values) (values[length(values)] - values[1]) / (length(values) - 1)
   list(
     title = title, source = source, demonstration = demonstration,
-    grid = list(lon = grid$lon[1], lat = grid$lat[1], lon_step = grid$lon_step, lat_step = grid$lat_step,
+    grid = list(lon = grid$lon[1], lat = grid$lat[1], lon_step = mean_step(grid$lon), lat_step = mean_step(grid$lat),
                 columns = length(grid$lon), rows = length(grid$lat)),
     extent = I(extent), basemap = basemap_layers(extent),
     domain_cells = nrow(result$input$cells), threshold_cells = result$regional$threshold_cells,

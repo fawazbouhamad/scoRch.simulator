@@ -7,7 +7,8 @@
 //                       test; it holds temperatures.zip (the bundled example in a ZIP)
 //   SCORCH_UI_DATA      the bundled example as a prepared NetCDF file
 //   SCORCH_UI_FIXTURES  optional: the folder written by fixtures.R (a file that holds
-//                       July and August only, a daily minimum, undeclared missing values)
+//                       July and August only, a daily minimum, undeclared missing values,
+//                       numbers without units, raw ERA5 points on one row of cells)
 //   SCORCH_UI_SHOTS     optional: a folder for screenshots
 //   CHROME_BIN          the browser to drive
 const { chromium } = require("playwright-core");
@@ -24,7 +25,8 @@ async function run() {
   const dir = real(process.env.SCORCH_UI_PROJECT);
   const nc = real(process.env.SCORCH_UI_DATA);
   const fixtures = process.env.SCORCH_UI_FIXTURES ? real(process.env.SCORCH_UI_FIXTURES) : null;
-  for (const name of fixtures ? ["july_august.nc", "daily_minimum.nc", "undeclared_missing.nc"] : []) {
+  for (const name of fixtures ? ["july_august.nc", "daily_minimum.nc", "undeclared_missing.nc", "no_units_66.nc",
+                                 "era5_one_row.nc"] : []) {
     assert.ok(fs.existsSync(path.join(fixtures, name)), name + " is not in SCORCH_UI_FIXTURES; fixtures.R writes it");
   }
   const browser = await chromium.launch({ executablePath: process.env.CHROME_BIN, headless: true });
@@ -111,6 +113,10 @@ async function run() {
     }
     assert.match(await demo.locator(".legend").innerText(), /daily maximum temperature \(°C\)/);
     assert.equal(await demo.locator(".map-day").innerText(), "Day 1 of 7");
+    // The demonstration is drawn 720 units wide, and its longitudes read as the example holds them.
+    assert.equal(await demo.locator(".map-wrap svg.map").getAttribute("viewBox"), "0 0 720 250.0");
+    assert.deepEqual(await demo.locator(".map-wrap .graticule text").allTextContents(),
+                     ["120°W", "105°W", "90°W", "75°W", "60°W", "30°N", "45°N"]);
     assert.equal(await demo.locator(".stills .still").count(), 7);
     assert.equal(await demo.locator(".play").isVisible(), false);
     await demo.locator(".stills .still").nth(2).click();
@@ -144,6 +150,15 @@ async function run() {
     await demo.getByRole("slider", { name: "Day of the event" }).fill("4");
     assert.equal(await demo.locator(".map-day").innerText(), "Day 4 of 7");
     await demo.getByRole("slider", { name: "Day of the event" }).fill("5");
+    assert.equal(await demo.locator(".map-day").innerText(), "Day 5 of 7");
+    // "Next day" disables itself on the last day: the keyboard goes on to "Previous day", not to the page.
+    await demo.getByRole("button", { name: "Next day" }).focus();
+    await page.keyboard.press("Enter");
+    await page.keyboard.press("Enter");
+    assert.equal(await demo.locator(".map-day").innerText(), "Day 7 of 7");
+    assert.equal(await page.evaluate(() => document.activeElement.getAttribute("aria-label")), "Previous day");
+    await page.keyboard.press("Enter");
+    await page.keyboard.press("Enter");
     assert.equal(await demo.locator(".map-day").innerText(), "Day 5 of 7");
     assert.match(await demo.locator(".rule").innerText(), /one cluster on every day.*Type 3: Temporally Clustered/s);
     assert.ok(await demo.locator(".map .cell").count() > 0);
@@ -191,8 +206,14 @@ async function run() {
     // its leaving does not close the window; a reload keeps the window too.
     const turnedAway = await page.evaluate(() => new Promise(resolve => {
       const socket = new WebSocket(location.origin.replace(/^http/, "ws") + "/websocket/");
-      socket.onopen = () => socket.send(JSON.stringify({ method: "init", data: { ".clientdata_url_search": "" } }));
-      socket.onclose = () => resolve(true);
+      // Turned away means that the socket did open and that R then closed it: a socket that
+      // never opened also ends with a close, and proves nothing about the window.
+      let opened = false;
+      socket.onopen = () => {
+        opened = true;
+        socket.send(JSON.stringify({ method: "init", data: { ".clientdata_url_search": "" } }));
+      };
+      socket.onclose = () => resolve(opened);
       setTimeout(() => resolve(false), 5000);
     }));
     assert.equal(turnedAway, true);
@@ -235,7 +256,12 @@ async function run() {
       assert.match(await asked.innerText(), /does not identify it as daily maximum temperature/);
       assert.doesNotMatch(await asked.innerText(), /suggested answer/);
       assert.equal(await page.locator("#start:visible").count(), 0);
+      // "Use this answer" before an answer is chosen says what is missing; choosing one takes that away.
+      assert.equal(await asked.getByRole("alert").count(), 0);
+      await button("Use this answer").click();
+      await shows(asked.getByRole("alert"), "Choose an answer first.");
       await asked.locator("input[type=radio]").check();
+      await until(() => !document.querySelector("#question [role=alert]"));
       await button("Use this answer").click();
       await page.locator("#start:visible").waitFor();
       await shows(selection, "Daily temperature (variable tasmin, not identified as daily maximum temperature)");
@@ -251,15 +277,59 @@ async function run() {
       assert.equal(await page.locator("#question .question").count(), 0);
       await button("Change data").click();
       await hero.waitFor();
+
+      // Unlabelled numbers above 60 may be degrees Celsius or Fahrenheit: the units are asked
+      // and neither answer is suggested.
+      await openData(path.join(fixtures, "no_units_66.nc"));
+      await shows(asked.locator("h2"), "Which units are these temperatures in?");
+      assert.equal(await asked.locator("input[type=radio]").count(), 2);
+      assert.equal(await asked.locator("input[type=radio]:checked").count(), 0);
+      assert.doesNotMatch(await asked.innerText(), /suggested answer/);
+      assert.equal(await page.locator("#start:visible").count(), 0);
+      await button("Change data").click();
+      await hero.waitFor();
+
+      // Raw hourly ERA5 whose points fill one row of one-degree cells: the reader needs two cells
+      // along each axis, so the selection is refused before Run, with the setting to change.
+      await openData(path.join(fixtures, "era5_one_row.nc"));
+      await shows(selection, "8 by 4 points at 0.25°, 20°E to 21.75°E and 10°N to 10.75°N");
+      await shows(selection, "SCORCH takes the maximum of each UTC day and averages complete blocks to 1° cells.");
+      await shows(page.locator("#review").getByRole("alert"),
+                  "The ERA5 grid in era5_one_row.nc gives fewer than two 1-degree cells along its latitude. " +
+                  "Choose a smaller 'Output grid size (degrees)', or tick 'Keep the input grid resolution'.");
+      await page.locator("#run_button button[disabled]").waitFor();
+      // The grid of the file itself can be analyzed.
+      await page.getByLabel("Keep the input grid resolution").check();
+      await page.locator("#start:visible").waitFor();
+      await shows(selection, "SCORCH takes the maximum of each UTC day and keeps this grid.");
+      // An emptied grid size is refused for raw data, where its field is on screen. It stays empty
+      // from here on: for the example and the prepared files below that field is not shown and
+      // must stop nothing.
+      await page.getByLabel("Keep the input grid resolution").uncheck();
+      await page.getByLabel("Output grid size (degrees)").fill("");
+      await page.getByLabel("Output grid size (degrees)").press("Tab");
+      await shows(page.locator("#review").getByRole("alert"), "'Output grid size (degrees)' must be one number");
+      await page.locator("#run_button button[disabled]").waitFor();
+      // The section opened itself for these messages; closed again, it is as the steps below expect it.
+      await page.getByText("Advanced settings", { exact: true }).click();
+      await until(() => !document.querySelector("details.advanced").open);
+      await button("Change data").click();
+      await hero.waitFor();
     } else {
       await cancelDialog();
-      console.log("SCORCH_UI_FIXTURES is not set: the part-year file, the daily minimum and the " +
-                  "undeclared missing values were not tried.");
+      console.log("SCORCH_UI_FIXTURES is not set: the part-year file, the daily minimum, the undeclared " +
+                  "missing values, the numbers without units and the raw ERA5 file were not tried.");
     }
 
     // 5. The included example goes straight to its settings and says what it is.
     await button("Use included example").click();
     await page.locator("#start:visible").waitFor();
+    // Run analysis is in view when the settings appear, without scrolling: its card stays at the
+    // lower edge of the window (the button used to lie under that edge).
+    await page.evaluate(() => window.scrollTo(0, 0));
+    const runButton = await page.locator("#start").boundingBox();
+    assert.ok(runButton.y >= 0 && runButton.y + runButton.height <= page.viewportSize().height,
+              "Run analysis is in view when the settings appear");
     assert.match(await selection.innerText(), /included example/i);
     assert.match(await selection.innerText(), /North America example/);
     assert.match(await selection.innerText(), /1996-04-01 to 2025-09-30: 5,490 days, April–September/);
@@ -267,6 +337,12 @@ async function run() {
     await shows(page.locator("#period_note"), "April–September in every selected year: 30 years (1996–2025), 5,490 days.");
     assert.equal(await page.locator("details.advanced").getAttribute("open"), null);
     assert.equal(await page.getByLabel("Bootstrap repetitions").isVisible(), false);
+    // How the file is read stays on automatic detection; the variable that was found is named on
+    // the dataset card, not in those fields.
+    for (const id of ["input_format", "input_units", "input_variable", "input_time", "input_longitude", "input_latitude"]) {
+      assert.equal(await page.locator("#" + id).inputValue(), "auto", id);
+    }
+    assert.match(await selection.innerText(), /\(variable tmax\)/);
     assert.match(await page.locator("#destination").innerText(), /output[\\/]SCORCH_run_001$/);
     await shot("settings", { fullPage: true });
 
@@ -293,10 +369,49 @@ async function run() {
       }
     }
     await page.setViewportSize({ width: 1060, height: 860 });
+    // On Windows a drive letter typed without a slash is the top of that drive.
+    const drive = path.parse(dir).root.slice(0, 2);
+    if (process.platform === "win32" && /^[A-Za-z]:$/.test(drive)) {
+      await chooser.locator("#chooser_path").fill(drive);
+      await chooser.locator("#chooser_path").press("Enter");
+      await until(top => document.querySelector(".chooser").dataset.folder === top, drive.toUpperCase() + "/");
+      assert.equal(await chooser.getByRole("alert").count(), 0);
+    }
     // A folder without NetCDF files cannot be used as data.
     await goTo(dir, "temperatures.zip");
     await button("Use this folder").click();
     await shows(chooser.getByRole("alert"), "no NetCDF");
+    // Where the files are one level down, the answer names the subfolders that hold them.
+    const yearly = path.join(dir, "yearly");
+    for (const year of ["2001", "2002"]) {
+      fs.mkdirSync(path.join(yearly, year), { recursive: true });
+      fs.writeFileSync(path.join(yearly, year, "data.nc"), "");
+    }
+    await goTo(yearly, "2001");
+    await button("Use this folder").click();
+    await shows(chooser.getByRole("alert"),
+                "They are in its subfolders: 2001, 2002. Open one of them and click Use this folder.");
+    // Text that ends in half a character, as a cut emoji does, is answered in the dialog; it used
+    // to end the session. The field is given that text directly: the typing of this test would repair it.
+    const halved = await chooser.locator("#chooser_path").evaluate(field => {
+      field.value = "results " + String.fromCharCode(0xDE00);
+      return field.value.charCodeAt(field.value.length - 1);
+    });
+    assert.equal(halved, 0xDE00);
+    await chooser.locator("#chooser_path").press("Enter");
+    await shows(chooser.getByRole("alert"), "That text holds characters that cannot be read. Type the path again.");
+    assert.equal(await connected(), true);
+    // A file that arrived after its folder was listed: "Use this folder" takes the folder at the first click.
+    const arriving = path.join(dir, "arriving");
+    fs.mkdirSync(arriving);
+    await goTo(arriving);
+    fs.copyFileSync(nc, path.join(arriving, "arrived.nc"));
+    await button("Use this folder").click();
+    await shows(selection, "arrived.nc");
+    await button("Change data").click();
+    await hero.waitFor();
+    await button("Choose your own data").click();
+    await chooser.waitFor();
     // A folder that disappears while the dialog shows it: a message, and the window stays.
     const unplugged = path.join(dir, "unplugged");
     fs.mkdirSync(unplugged);
@@ -340,6 +455,22 @@ async function run() {
     await chooser.locator("#chooser_path").fill(path.join(dir, "no such folder"));
     await button("Use this folder").click();
     await shows(chooser.getByRole("alert"), "That folder could not be found");
+    // An open folder whose name ends in a blank is taken too. The page sends its text without the
+    // blanks at its ends, and that text alone names no folder. The blank is a no-break space, the
+    // one that Windows keeps at the end of a name, and the step is for Windows, where R reads such
+    // a name in every session; elsewhere that depends on the locale of the R session, and the
+    // package tests try names that end in a blank there.
+    if (process.platform === "win32") {
+      const ending = path.join(dir, "ends in a blank" + String.fromCharCode(160));
+      fs.mkdirSync(ending);
+      await chooser.locator("#chooser_path").fill(ending);
+      await chooser.locator("#chooser_path").press("Enter");
+      await until(name => document.querySelector(".chooser").dataset.folder.endsWith(name), path.basename(ending));
+      await button("Use this folder").click();
+      await shows(page.locator("#destination"), /ends in a blank\s[\\/]SCORCH_run_001$/);
+      await button("Choose or create folder").click();
+      await chooser.waitFor();
+    }
     // ...and an existing one becomes the destination, not the folder that happens to be open.
     const typed = path.join(dir, "typed folder");
     fs.mkdirSync(typed);
@@ -352,6 +483,8 @@ async function run() {
     // The dialog is closed and opened again on the same folder: R then sends no new list, so the
     // list that is there is the one that must hold the keyboard.
     await cancelDialog();
+    // The dialog gone, the keyboard is back on the button that opened it.
+    await until(() => document.activeElement && document.activeElement.id === "browse_output");
     const opened = page.evaluate(() => new Promise((done, fail) => {
       window.jQuery(document).one("shown.bs.modal", () => done());
       setTimeout(() => fail(new Error("the dialog did not finish opening")), 10000);
@@ -360,6 +493,33 @@ async function run() {
     await button("Choose or create folder").click();
     await opened;
     await until(() => document.activeElement && document.activeElement.id === "chooser_list");
+    await goTo(dir);
+    // Backspace goes up from every folder, also from one that lists nothing.
+    fs.mkdirSync(path.join(dir, "nothing in it"));
+    await goTo(path.join(dir, "nothing in it"));
+    await shows(chooser.locator(".chooser-empty"), "This folder has no subfolders.");
+    await page.locator("#chooser_list").focus();
+    await page.keyboard.press("Backspace");
+    await chooser.locator(".chooser-crumb[aria-current]").filter({ hasText: path.basename(dir) }).waitFor();
+    // A name typed for a new folder is not dropped by "Use this folder": the folder is made and
+    // opened, as Create does, and the dialog stays for the next click.
+    await button("New folder").click();
+    await page.getByLabel("Name of the new folder").fill("made on the way");
+    await button("Use this folder").click();
+    await chooser.locator(".chooser-crumb[aria-current]").filter({ hasText: "made on the way" }).waitFor();
+    assert.equal(fs.existsSync(path.join(dir, "made on the way")), true);
+    assert.equal(await page.locator("#shiny-modal").count(), 1);
+    await goTo(dir);
+    // A folder highlighted after a name was typed is the choice: "Use this folder" takes that
+    // folder and makes none of the typed name.
+    await button("New folder").click();
+    await page.getByLabel("Name of the new folder").fill("left behind");
+    await chooser.locator(".chooser-row").filter({ hasText: "made on the way" }).first().click();
+    await button("Use this folder").click();
+    await shows(page.locator("#destination"), /[\\/]made on the way[\\/]SCORCH_run_001$/);
+    assert.equal(fs.existsSync(path.join(dir, "left behind")), false);
+    await button("Choose or create folder").click();
+    await chooser.waitFor();
     await goTo(dir);
     await button("New folder").click();
     await page.getByLabel("Name of the new folder").fill("reviewer results");
@@ -392,6 +552,10 @@ async function run() {
     await page.locator("#run_button button[disabled]").waitFor();
     assert.equal(await page.locator("#start").count(), 0);
     await until(() => document.getElementById("clustering_eps_values").getAttribute("aria-invalid") === "true");
+    // Under a contrast theme, which drops the red border, the refused field keeps a mark.
+    await page.emulateMedia({ forcedColors: "active" });
+    assert.equal(await distances.evaluate(field => getComputedStyle(field).outlineStyle), "dashed");
+    await page.emulateMedia({ forcedColors: "none" });
     assert.equal(await page.locator("details.advanced [aria-invalid]").count(), 1);
     await distances.fill(candidates);
     await distances.press("Tab");
@@ -427,6 +591,13 @@ async function run() {
     assert.deepEqual((await completion.locator(".type-counts li strong").allInnerTexts()).map(Number), [0, 3, 0, 0]);
     assert.deepEqual(await completion.locator(".actions").getByRole("button").allInnerTexts(),
                      ["Open summary", "Open results folder", "Set up another run"]);
+    // The three buttons follow the event counts and the results path in the card of the outcome;
+    // what was analyzed is listed below them.
+    const top = async where => (await where.first().boundingBox()).y;
+    assert.equal(await completion.locator("section.card.outcome .actions button").count(), 3);
+    assert.ok(await top(completion.locator(".outcome .type-counts")) < await top(completion.locator(".outcome .path")));
+    assert.ok(await top(completion.locator(".outcome .path")) < await top(page.locator("#open_summary")));
+    assert.ok(await top(page.locator("#again")) < await top(completion.locator("section.card.summary h2")));
     // Apart from the ten bootstrap repetitions asked for above, the run records the study's settings.
     const summary = await completion.locator(".summary").innerText();
     for (const expected of [path.basename(nc), "92 dates from 2012-06-01 to 2012-08-31", "June–August 2012",
@@ -447,6 +618,9 @@ async function run() {
     assert.match(saved, /bootstrap_repetitions: 10/);
     // Whole numbers are saved as a scripted run saves them, so the two kinds of run compare equal.
     assert.match(saved, /min_samples_values:\r?\n\s*- 4\r?\n/);
+    // The grid size that the raw ERA5 file left empty is not read for a prepared file: the saved
+    // settings keep the one-degree cells of the configuration in use.
+    assert.match(saved, /era5_cell_size_deg: 1(\.0)?\r?\n/);
 
     // The map now shows the events of this run, not the demonstration, and the keyboard
     // continues at the heading of the results.
@@ -459,7 +633,10 @@ async function run() {
     assert.match(await mine.locator(".explorer-head").innerText(), new RegExp(path.basename(nc).replace(/[.]/g, "\\.")));
     assert.match(await mine.locator(".type-cards").innerText(), /3 events over 3 days/);
     assert.equal(await mine.locator(".type-card[disabled]").count(), 3);
-    // Types without events keep their definitions readable, and no two temperature classes share a colour.
+    // Types without events keep their definitions readable, and the temperature classes of this
+    // run each have a colour of their own. The run has fewer classes than the ramp has colours
+    // (eight), so this guards the legend of such a run only: the blending that keeps nine or more
+    // classes apart is not tried here.
     assert.equal(await mine.locator(".type-card[disabled]").first().evaluate(card => getComputedStyle(card).opacity), "1");
     const classes = await mine.locator(".heat-scale li").evaluateAll(items => items.map(item => getComputedStyle(item).backgroundColor));
     assert.equal(new Set(classes).size, classes.length);
@@ -481,8 +658,26 @@ async function run() {
     await chooser.locator(".chooser-row").filter({ hasText: "config.yaml" }).first().dblclick();
     await shows(page.locator("#review"), "92 selected dates");
     assert.equal(await page.getByLabel("First month each year").inputValue(), "6");
-    await shows(page.locator("#loaded"), "Settings loaded from config.yaml stay in use when you change the data, " +
-                                         "including the advanced settings and the results folder.");
+    await shows(page.locator("#loaded"), "Settings loaded from config.yaml: the advanced settings and the results folder " +
+                                         "stay in use when you change the data. The months, the date limit and " +
+                                         "'How the file is read' start again with other data; reuse the file to apply " +
+                                         "its months and dates again.");
+    // The same file reused brings its values back. A month and the repetitions are changed by hand,
+    // then the file is loaded a second time: it holds the settings already in use, and the form
+    // must show them again all the same.
+    await page.getByLabel("First month each year").selectOption("5");
+    await page.getByText("Advanced settings", { exact: true }).click();
+    await page.getByLabel("Bootstrap repetitions").fill("12");
+    await page.getByLabel("Bootstrap repetitions").press("Tab");
+    await shows(page.locator("#review"), "123 selected dates");
+    await button("Reuse a saved configuration").click();
+    await chooser.waitFor();
+    await goTo(run, "config.yaml");
+    await chooser.locator(".chooser-row").filter({ hasText: "config.yaml" }).first().dblclick();
+    await shows(page.locator("#review"), "92 selected dates");
+    assert.equal(await page.getByLabel("First month each year").inputValue(), "6");
+    assert.equal(await page.getByLabel("Bootstrap repetitions").inputValue(), "10");
+    assert.equal(await page.getByLabel("Limit the analysis dates").isChecked(), true);
     await button("Change data").click();
     await hero.waitFor();
     await button("Choose your own data").click();
@@ -493,7 +688,8 @@ async function run() {
     await shows(selection, "temperatures.zip");
     // Other data: the loaded settings stay in use and the note still says so. The months are the
     // configuration's, the record is the whole of the new data until it is limited again.
-    await shows(page.locator("#loaded"), "Settings loaded from config.yaml stay in use when you change the data");
+    await shows(page.locator("#loaded"), "Settings loaded from config.yaml: the advanced settings and the results folder " +
+                                         "stay in use when you change the data.");
     await until(() => !document.getElementById("limit_dates").checked);
     assert.equal(await page.getByLabel("First month each year").inputValue(), "6");
     assert.equal(await page.getByLabel("Last month each year").inputValue(), "8");
@@ -516,6 +712,38 @@ async function run() {
       .filter(line => /^ {2}Stage \d|^ {11}Type \d/.test(line));
     assert.deepEqual(events(next), events(run));
     assert.ok(events(run).length >= 9);
+
+    // 12. A reload of the window keeps the finished run on screen: its outcome, its folder and its map.
+    await page.reload();
+    await until(() => window.Shiny?.shinyapp?.isConnected());
+    await shows(completion.locator(".outcome"), "Analysis complete");
+    assert.equal(real((await completion.locator(".outcome .path").innerText()).trim()), real(next));
+    assert.deepEqual((await completion.locator(".type-counts li strong").allInnerTexts()).map(Number), [0, 3, 0, 0]);
+    assert.deepEqual(await completion.locator(".actions").getByRole("button").allInnerTexts(),
+                     ["Open summary", "Open results folder", "Set up another run"]);
+    await mine.locator("svg.map").first().waitFor();
+    assert.equal(await mine.locator(".event-pick option").count(), 3);
+
+    // 13. A run that stops says why, and the keyboard continues at its heading as after a finished run.
+    if (fixtures) {
+      // "Set up another run" lets go of the run that the reload kept: the window is at its opening
+      // screen, and another reload stays there.
+      await button("Set up another run").click();
+      await hero.waitFor();
+      await page.reload();
+      await until(() => window.Shiny?.shinyapp?.isConnected());
+      await hero.waitFor();
+      assert.equal(await page.locator("#completion .outcome").count(), 0);
+      await openData(path.join(fixtures, "daily_minimum.nc"));
+      await page.locator("#question input[type=radio]").check();
+      await button("Use this answer").click();
+      await page.locator("#start:visible").waitFor();
+      await button("Run analysis").click();
+      await shows(completion.locator(".outcome"), "Analysis stopped");
+      await shows(completion.locator(".outcome").getByRole("alert"), "The regional threshold is zero");
+      await until(() => document.activeElement && document.activeElement.id === "results-title");
+      assert.equal(await page.locator("#explorer-run").count(), 0);
+    }
     assert.deepEqual(errors, []);
     await button("Close").click();
     console.log("Address key, opening screen, demonstration map, " +

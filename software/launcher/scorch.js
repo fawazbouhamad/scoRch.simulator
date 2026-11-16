@@ -99,8 +99,12 @@
       this.events = list(data.events);
       this.types = list(data.types);
       this.ext = list(data.extent);
-      this.scale = 720 / (this.ext[1] - this.ext[0]);
-      this.width = 720;
+      // The picture is 720 units wide and at most 520 high, the height the window
+      // gives it at that scale. A taller region is drawn narrower, not smaller, so
+      // that its labels, ellipses and centroids keep their size.
+      const across = this.ext[1] - this.ext[0];
+      this.scale = Math.min(720 / across, 520 / (this.ext[3] - this.ext[2]));
+      this.width = Math.round(across * this.scale * 10) / 10;
       this.height = (this.ext[3] - this.ext[2]) * this.scale;
       this.breaks = list(data.breaks);
       this.colours = heat(this.breaks.length - 1);
@@ -196,13 +200,20 @@
       const all = (shapes, close) => list(shapes).map(shape => this.line(list(shape), close)).join('');
       const clip = this.baseId + '-clip';
       const lines = s('g', { class: 'graticule' });
-      const span = this.ext[1] - this.ext[0];
+      // The lines are spaced for the scale of the picture: by the degrees that 720 units
+      // span, which a region drawn narrower than that does not fill.
+      const span = Math.max(this.ext[1] - this.ext[0], (this.ext[3] - this.ext[2]) * 720 / 520);
       const step = [1, 2, 5, 10, 15, 20, 30, 45].find(value => span / value <= 7) || 60;
       for (let lon = Math.ceil(this.ext[0] / step) * step; lon < this.ext[1]; lon += step) {
         if (lon <= this.ext[0]) continue;
-        const east = ((lon + 180) % 360 + 360) % 360 - 180;
+        // A longitude is printed as the run holds it, 255°E in a file that counts from 0 to 360:
+        // the dataset card, Summary.txt and the catalogs name the same cell the same way.
+        const label = Math.abs(lon) + '°' + (lon < 0 ? 'W' : lon > 0 ? 'E' : '');
+        // A label that would run past the right edge stands to the left of its line.
+        const tight = this.x(lon) + 3 + label.length * 7.6 > this.width;
         lines.append(s('path', { d: 'M' + this.x(lon).toFixed(1) + ' 0V' + this.height.toFixed(1) }),
-          s('text', { x: this.x(lon) + 3, y: this.height - 4, text: Math.abs(east) + '°' + (east < 0 ? 'W' : east > 0 ? 'E' : '') }));
+          s('text', tight ? { x: this.x(lon) - 3, y: this.height - 4, 'text-anchor': 'end', text: label }
+                          : { x: this.x(lon) + 3, y: this.height - 4, text: label }));
       }
       for (let lat = Math.ceil(this.ext[2] / step) * step; lat < this.ext[3]; lat += step) {
         if (lat <= this.ext[2]) continue;
@@ -280,9 +291,14 @@
       // One outline around all heatwave cells of the day. The coolest classes
       // are almost the colour of the land; the outline shows where they end.
       if (edge) group.append(s('path', { class: 'footprint', d: edge }));
+      // A small picture of a region drawn narrower than 720 units shows fewer units in
+      // the same room: its ellipse lines, 11 and 5 units in style.css, are thinned to
+      // the weight they have in a picture of full width.
+      const thin = small && this.width < 720 ? this.width / 720 : 0;
       for (const ellipse of list(frame.ellipses)) {
         const outline = this.line(list(ellipse.outline), true);
-        group.append(s('path', { class: 'ellipse-halo', d: outline }), s('path', { class: 'ellipse', d: outline }));
+        group.append(s('path', { class: 'ellipse-halo', d: outline, style: thin ? 'stroke-width:' + (11 * thin).toFixed(2) : null }),
+          s('path', { class: 'ellipse', d: outline, style: thin ? 'stroke-width:' + (5 * thin).toFixed(2) : null }));
         if (small) continue;
         const centre = list(ellipse.centroid);
         group.append(
@@ -400,8 +416,13 @@
       this.slider.max = Math.max(total, 1);
       this.slider.value = this.day + 1;
       this.slider.hidden = this.previous.hidden = this.next.hidden = single;
+      // A button that disables itself on the first or last day would drop the
+      // keyboard to the top of the page: the other button takes it over.
+      const held = document.activeElement;
       this.previous.disabled = this.day <= 0;
       this.next.disabled = this.day >= total - 1;
+      if (held === this.next && this.next.disabled && !this.previous.disabled) this.previous.focus();
+      if (held === this.previous && this.previous.disabled && !this.next.disabled) this.next.focus();
       this.playButton.hidden = single || this.still;
       this.playButton.textContent = this.timer ? '❚❚ Pause' : this.day >= total - 1 && total > 1 ? '▶ Play again' : '▶ Play';
       this.playButton.setAttribute('aria-label', this.timer ? 'Pause' : 'Play the days of this event');
@@ -476,7 +497,8 @@
       if (k === undefined) { this.tip.hidden = true; return; }
       // A step such as 0.1 degrees is not exact in binary: print 35.3, not 35.300000000000004.
       const tidy = value => Math.round(value * 1e4) / 1e4;
-      const east = tidy(((grid.lon + column * grid.lon_step + 180) % 360 + 360) % 360 - 180);
+      // The longitude as the run holds it, like the labels of the map.
+      const east = tidy(grid.lon + column * grid.lon_step);
       const north = tidy(grid.lat + row * grid.lat_step);
       // The cluster number is the one in the catalogs (dbscan_label), which count from 0.
       const label = list(frame.cluster)[k];
@@ -514,10 +536,6 @@
     }
     explorers.run = new Explorer(root, id => window.Shiny.setInputValue('explorer_event', { id, at: Date.now() }, { priority: 'event' }));
     explorers.run.load(data);
-    // The results have replaced the settings: the keyboard and a screen
-    // reader continue from their heading, not from the top of the page.
-    const title = document.getElementById('results-title');
-    if (title) title.focus();
   }
 
   // The file dialog. R lists the folders; this part selects and opens rows.
@@ -561,9 +579,17 @@
     else if (what === 'mkdir') act('mkdir', document.getElementById('chooser_name').value);
     else if (what === 'go') act('go', document.getElementById('chooser_path').value);
     // "Use this folder" means the folder named in the path field: the open
-    // folder, a highlighted row, or a path typed or pasted there.
-    else if (what === 'use') act('use', document.getElementById('chooser_path').value.trim());
-    else act(what);
+    // folder, a highlighted row, or a path typed or pasted there. A name still
+    // waiting in the New folder row is not dropped: that folder is made and
+    // opened first, as Create would do, and the next click uses it. A folder
+    // that was highlighted or typed after the name is the choice, not the name.
+    else if (what === 'use') {
+      const row = document.querySelector('.chooser-new');
+      const name = row && !row.hidden ? document.getElementById('chooser_name').value.trim() : '';
+      const field = document.getElementById('chooser_path').value.trim();
+      const open = document.querySelector('.chooser');
+      if (name && !picked() && open && field === open.dataset.folder) act('mkdir', name); else act('use', field);
+    } else act(what);
   });
   document.addEventListener('dblclick', event => {
     const row = event.target.closest('.chooser-row');
@@ -574,6 +600,8 @@
     if (target.id === 'chooser_path' && event.key === 'Enter') { event.preventDefault(); return act('go', target.value); }
     if (target.id === 'chooser_name' && event.key === 'Enter') { event.preventDefault(); return act('mkdir', target.value); }
     if (!target.classList || !target.classList.contains('chooser-list')) return;
+    // Backspace goes up from every folder, also from one that lists nothing.
+    if (event.key === 'Backspace') { event.preventDefault(); return act('up'); }
     const rows = Array.from(target.querySelectorAll('.chooser-row'));
     if (!rows.length) return;
     const at = rows.indexOf(picked());
@@ -584,9 +612,6 @@
     } else if (event.key === 'Enter' && at >= 0) {
       event.preventDefault();
       act('go', rows[at].dataset.path);
-    } else if (event.key === 'Backspace') {
-      event.preventDefault();
-      act('up');
     } else if (event.key.length === 1 && !event.ctrlKey && !event.metaKey && !event.altKey) {
       const letter = event.key.toLowerCase();
       const next = rows.slice(at + 1).concat(rows.slice(0, at + 1))
@@ -640,6 +665,18 @@
       if (said && said !== reported) section.open = true;
       reported = said;
     });
+    // A result has replaced the settings, whether the run finished or stopped:
+    // the keyboard and a screen reader continue from its heading, not from the
+    // top of the page. The heading is on the page a moment after its value arrives.
+    window.jQuery(document).on('shiny:value', event => {
+      if (event.name !== 'completion' || !event.value) return;
+      const wait = attempt => {
+        const title = document.getElementById('results-title');
+        if (title && title.offsetParent !== null) title.focus();
+        else if (attempt < 60) window.setTimeout(() => wait(attempt + 1), 50);
+      };
+      window.setTimeout(() => wait(0), 0);
+    });
     // Bootstrap puts the keyboard on the dialog itself when it has faded in,
     // after the list above was focused. Hand it on to the list, where the
     // arrow keys choose a row, or back to the field the person was typing in.
@@ -652,6 +689,20 @@
       const typing = taken && taken.tagName === 'INPUT' && taken.isConnected && taken.closest('.chooser');
       if (typing) taken.focus(); else if (rows) rows.focus();
       taken = null;
+    });
+    // When the dialog has gone, the keyboard returns to the button that opened
+    // it, if that button is still on the screen, and not to the top of the page.
+    let opener = null;
+    document.addEventListener('click', event => {
+      const button = event.target.closest && event.target.closest('#browse_file, #load_config, #browse_output');
+      if (button) opener = button;
+    }, true);
+    window.jQuery(document).on('hidden.bs.modal', '#shiny-modal', () => {
+      const button = opener;
+      opener = null;
+      window.setTimeout(() => {
+        if (button && button.isConnected && button.getClientRects().length && !document.getElementById('shiny-modal')) button.focus();
+      }, 0);
     });
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', mountDemonstration);

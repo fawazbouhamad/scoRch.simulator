@@ -92,7 +92,9 @@ run_scorch_analysis <- function(config, tmax = NULL, trace_date = NULL, source =
   cfg <- read_config(config, input_required = is.null(tmax))
   out <- cfg$output$directory
   published <- FALSE
-  on.exit(if (!published && dir.exists(out)) {
+  # Only a folder that held a summary before this run began has results of an earlier one.
+  earlier <- file.exists(file.path(out, "Summary.txt"))
+  on.exit(if (!published && earlier) {
     message("This run did not publish output; files in ", out, " belong to an earlier run.")
   }, add = TRUE)
   step <- function(...) message(format(Sys.time(), "%H:%M:%S "), sprintf(...))

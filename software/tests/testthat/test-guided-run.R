@@ -136,6 +136,18 @@ test_that("a guided run never takes over an older run folder", {
                    file.path(slashed, "no such folder", "SCORCH_run_001"))
 })
 
+test_that("a drive letter typed without a slash is the top of that drive", {
+  # "D:" in the file dialog names the drive, as "D:/" does, not a folder "D:" inside the one that is open.
+  for (drive in c("C:", "d:", "Q:")) {
+    expect_identical(guided_path(drive, "elsewhere"), guided_path(paste0(drive, "/"), "elsewhere"), info = drive)
+    expect_false(grepl("elsewhere", guided_path(drive, "elsewhere"), fixed = TRUE), info = drive)
+  }
+  expect_identical(guided_path(c("C:", "notes"), "elsewhere"),
+                   c(guided_path("C:/", "elsewhere"), guided_path("notes", "elsewhere")))
+  # A name that only begins like a drive is still looked for in that folder.
+  expect_match(guided_path("C:data", "elsewhere"), "elsewhere", fixed = TRUE)
+})
+
 test_that("selected months are described for every selected year", {
   dates <- seq(as.Date("1996-01-01"), as.Date("2025-12-31"), by = "day")
   month <- as.integer(format(dates, "%m"))
@@ -189,7 +201,8 @@ test_that("the file dialog lists folders first and only what it can open", {
   expect_identical(chooser_listing(file.path(root, "era5 files"), "data")$netcdf, 2L)
   expect_identical(chooser_listing(root, "data", limit = 2L)$hidden, 3L)
   places <- chooser_places()
-  expect_true(all(dir.exists(places)))
+  # A place on a server is listed without being asked for, so it is not asked for here either.
+  expect_true(all(dir.exists(places[!on_server(places)])))
   expect_true("Working folder" %in% names(places))
   parents <- path_parents(normalizePath(root, winslash = "/"))
   expect_identical(unname(parents[length(parents)]), normalizePath(root, winslash = "/"))
@@ -287,6 +300,21 @@ test_that("a guided run reports all four types and keeps every run in its own fo
   for (label in c("Open summary", "Open results folder", "Set up another run")) expect_match(page, label, fixed = TRUE)
   events <- first$result$events$events
   expect_match(page, sprintf("%d compound events from %d ellipses", nrow(events), nrow(first$result$ellipses)), fixed = TRUE)
+  # A count of one is named in the singular.
+  lone <- first
+  lone$result$events$events <- events[1L, , drop = FALSE]
+  lone$result$ellipses <- first$result$ellipses[1L, , drop = FALSE]
+  lone$result$regional$selected_days <- first$result$regional$selected_days[1L, , drop = FALSE]
+  expect_match(as.character(completion_ui(c(lone, list(dataset = "prepared.nc")))),
+               ">1 compound event from 1 ellipse on 1 regionally extensive day.<", fixed = TRUE)
+  expect_identical(c(count_noun(0L, "ellipse"), count_noun(1L, "ellipse"), count_noun(2100L, "ellipse")),
+                   c("0 ellipses", "1 ellipse", "2,100 ellipses"))
+  # A variable that the file did not identify is named under "What was analyzed"; one that it did identify is not.
+  expect_false(grepl("<dt>Temperature</dt>", page, fixed = TRUE))
+  chosen <- "Variable tasmin, as you chose. The file does not identify it as daily maximum temperature."
+  noted <- as.character(completion_ui(c(first, list(dataset = "prepared.nc", period = settings$period, temperature = chosen))))
+  expect_match(gsub("[[:space:]]+", " ", noted),
+               sprintf("<dt>Dataset</dt> <dd>prepared.nc</dd> <dt>Temperature</dt> <dd>%s</dd>", chosen), fixed = TRUE)
 
   # The saved settings replay through the scripted command (compared at the end of this test).
   replay <- yaml::read_yaml(file.path(first$folder, "config.yaml"))
@@ -316,27 +344,98 @@ test_that("a guided run reports all four types and keeps every run in its own fo
   }
 })
 
+test_that("a run that stops speaks of an earlier run only where one left its summary", {
+  folder <- withr::local_tempdir()
+  nc <- system.file("extdata", "north_america_tmax.nc", package = "scoRch.simulator")
+  base <- read_config(input_required = FALSE)
+  # June 2012 of the included example has no regionally extensive day: the run stops before it publishes.
+  form <- window_inputs(base, month_from = "6", month_to = "6", limit_dates = TRUE,
+                        dates = as.Date(c("2012-01-01", "2012-12-31")), native_grid = FALSE, cell_size = 1)
+  parent <- file.path(folder, "results")
+  settings <- guided_settings(base, form, NULL, detect_input(nc), file.path(parent, "SCORCH_run_001"))
+  source <- open_temperature_source(nc)
+  withr::defer(close_temperature_source(source))
+  heard <- function(code) {
+    said <- character()
+    value <- withCallingHandlers(suppressWarnings(code), message = function(m) {
+      said <<- c(said, conditionMessage(m))
+      invokeRestart("muffleMessage")
+    })
+    list(value = value, said = said)
+  }
+  # The folder was made for this very run and holds what the run wrote: nothing in it is from an earlier one.
+  run <- heard(execute_guided_run(settings, parent, source))
+  expect_match(run$value$problem, "regional threshold is zero")
+  expect_setequal(list.files(run$value$folder), c("config.yaml", "Summary.txt"))
+  expect_true(any(grepl("Stage 2", run$said, fixed = TRUE)))
+  expect_false(any(grepl("earlier run", run$said, fixed = TRUE)))
+  # The scripted command sent to the same folder finds the summary of that run there, and says whose the files are.
+  again <- heard(tryCatch(run_scorch(file.path(run$value$folder, "config.yaml")), error = conditionMessage))
+  expect_match(again$value, "regional threshold is zero")
+  expect_true(any(grepl("did not publish output; files in .* belong to an earlier run", again$said)))
+  # A folder that exists and holds no summary has no earlier run in it.
+  replay <- yaml::read_yaml(file.path(run$value$folder, "config.yaml"))
+  replay$output$directory <- file.path(folder, "empty")
+  dir.create(replay$output$directory)
+  yaml::write_yaml(replay, file.path(folder, "empty.yaml"), precision = 17)
+  fresh <- heard(tryCatch(run_scorch(file.path(folder, "empty.yaml")), error = conditionMessage))
+  expect_match(fresh$value, "regional threshold is zero")
+  expect_false(any(grepl("earlier run", fresh$said, fixed = TRUE)))
+})
+
 test_that("Run analysis on the included example completes and its saved settings replay", {
   local_figure_test_dpi()
-  project <- withr::local_tempdir()
+  # R's temporary folder can be a Windows short name ("RUNNER~1"), which a
+  # path keeps only until its folder exists. Start from the long name.
+  project <- normalizePath(withr::local_tempdir(), winslash = "/")
   withr::local_dir(project)
   seen <- new.env()
-  shiny::testServer(scorch_server, {
+  # The sessions of one window share `kept`, as the launcher arranges it.
+  kept <- new.env()
+  window <- scorch_server
+  formals(window)$kept <- kept
+  shiny::testServer(window, {
     session$setInputs(use_example = 1)
     quick <- base()
     quick$power_law$bootstrap_repetitions <- 10
     do.call(session$setInputs, window_inputs(quick, month_from = "6", month_to = "8", limit_dates = TRUE,
       dates = as.Date(c("2012-01-01", "2012-12-31")), native_grid = FALSE, cell_size = 1))
     expect_null(plan()$config$input$file)
-    suppressWarnings(suppressMessages(session$setInputs(start = 1)))
+    # A results folder that cannot be created: nothing starts, and the Review card says so beside the button.
+    writeLines("a file where the results folder would be", "output")
+    session$setInputs(start = 1)
+    expect_null(state$finished)
+    expect_match(output$review$html, "Could not create the results folder", fixed = TRUE)
+    # The start that works takes the message away.
+    file.remove("output")
+    suppressWarnings(suppressMessages(session$setInputs(start = 2)))
     expect_null(state$error)
+    expect_null(state$failed)
     seen$done <- state$finished
   })
   done <- seen$done
+  # The file identifies its variable as daily maximum temperature, so the results add nothing about it.
+  expect_null(done$temperature)
+  # A reload of the window opens a new session, which starts from the finished run: its summary and its map.
+  reloaded <- shiny::MockShinySession$new()
+  sent <- character()
+  reloaded$sendCustomMessage <- function(type, message) sent <<- c(sent, type)
+  shiny::testServer(window, {
+    session$flushReact()
+    expect_null(state$source)
+    expect_identical(state$finished$folder, done$folder)
+    expect_match(output$completion$html, "Analysis complete", fixed = TRUE)
+    expect_match(output$completion$html, done$folder, fixed = TRUE)
+    expect_true("scorch-events" %in% sent)
+    # "Set up another run" forgets it. No data are open in this session, so the opening screen follows.
+    session$setInputs(again = 1)
+    expect_null(state$finished)
+    expect_null(kept$finished)
+  }, session = reloaded)
   expect_null(done$problem)
   expect_identical(done$dataset, "North America example")
   expect_identical(done$result$input$mode, "Bundled North America example")
-  expect_identical(done$folder, file.path(guided_path("output"), "SCORCH_run_001"))
+  expect_identical(normalizePath(done$folder, winslash = "/"), file.path(guided_path("output"), "SCORCH_run_001"))
   expect_match(as.character(completion_ui(done)), "Analysis complete")
   # The saved settings name no file, so they replay on any computer.
   saved <- yaml::read_yaml(file.path(done$folder, "config.yaml"))
@@ -416,13 +515,27 @@ test_that("a refused setting is named as the window labels it, and marked when i
   }
   numbers <- c("heatwaves_threshold_percentile", "regional_days_percentile", "heatwaves_min_duration_days",
                "heatwaves_min_exceeding_days", "ellipses_scale_factor", "power_law_bootstrap_repetitions",
-               "power_law_seed_daily_maxima", "power_law_seed_event_maxima", "lgcp_raster_km", "lgcp_window_margin_km",
-               "cell_size")
+               "power_law_seed_daily_maxima", "power_law_seed_event_maxima", "lgcp_raster_km", "lgcp_window_margin_km")
   for (id in numbers) {
     # An emptied number field reaches R as a missing value.
     said <- refused(outcome(stats::setNames(list(NA), id)), id)
     expect_match(said, "(it is empty)", fixed = TRUE)
     expect_false(grepl("NA", said, fixed = TRUE), info = said)
+  }
+  # The two fields of the ERA5 grid are on screen for raw data, and are read for raw data only.
+  raw <- list(format = "era5", file = "grid.nc", lon = seq(20, 23, by = 0.25), lat = seq(10, 13, by = 0.25),
+              dates = info$dates, per_day = 24L, variable = "t2m", units = "K")
+  expect_false(inherits(outcome(given = raw), "error"))
+  expect_match(refused(outcome(list(cell_size = NA), given = raw), "cell_size"), "(it is empty)", fixed = TRUE)
+  expect_match(refused(outcome(list(cell_size = 0), given = raw), "cell_size"), "(it is '0')", fixed = TRUE)
+  expect_null(outcome(list(native_grid = TRUE, cell_size = NA), given = raw)$config$input$era5_cell_size_deg)
+  expect_identical(outcome(list(cell_size = 0.5), given = raw)$config$input$era5_cell_size_deg, 0.5)
+  # What raw data left in them cannot stop prepared data or the included example, where nothing on
+  # screen could repair it. The saved settings keep the grid size of the configuration.
+  for (left in list(list(cell_size = NA), list(cell_size = 0), list(cell_size = 0.3), list(native_grid = TRUE))) {
+    kept <- outcome(left)
+    expect_false(inherits(kept, "error"), info = paste(names(left), left))
+    expect_identical(kept$config$input$era5_cell_size_deg, base$input$era5_cell_size_deg)
   }
   expect_match(refused(outcome(list(heatwaves_threshold_percentile = 150)), "heatwaves_threshold_percentile"),
                "between 0 and 100 (it is '150')", fixed = TRUE)
@@ -467,27 +580,61 @@ test_that("raw input that cannot be averaged to the chosen cells stops before Ru
                 latitude = raw(seq(20, 23, by = 0.25), seq(13, 10, by = -0.3)),
                 coarse = raw(seq(20, 30, by = 2.5), seq(10, 20, by = 2.5)),
                 small = raw(c(20.25, 20.5, 20.75), seq(10, 13, by = 0.25)),
-                wrapped = raw(seq(250, 253, by = 0.25), seq(13, 10, by = -0.25)))
+                wrapped = raw(seq(250, 253, by = 0.25), seq(13, 10, by = -0.25)),
+                # Quarter-degree points that fill one row, one column, and two by two one-degree cells.
+                row = raw(seq(20, 21.75, by = 0.25), seq(10, 10.75, by = 0.25)),
+                column = raw(seq(20, 20.75, by = 0.25), seq(10, 11.75, by = 0.25)),
+                square = raw(seq(20, 21.75, by = 0.25), seq(10, 11.75, by = 0.25)),
+                # One column of cells, and latitudes that cannot be averaged at all.
+                mixed = raw(seq(20, 20.75, by = 0.25), seq(10, 13, by = 0.3)))
   refusals <- 0L
+  lone <- 0L
   for (name in names(grids)) {
     for (size in c(1, 0.5, 0.75, 1.5)) {
       info <- grids[[name]]
       lon <- wrap_longitudes(info$lon)$lon
       lat <- sort(info$lat)
-      reader <- tryCatch(average_to_cells(array(0, c(1L, length(lat), length(lon))), lon, lat, size, "grid.nc"),
-                         error = identity)
+      # The reader averages the points to cells and then measures the spacing of those cells.
+      reader <- tryCatch({
+        cells <- average_to_cells(array(0, c(1L, length(lat), length(lon))), lon, lat, size, "grid.nc")
+        tmax_from_array(array(20, c(2L, length(cells$lat), length(cells$lon))), days[1:2], cells$lon, cells$lat)
+      }, error = identity)
       window <- tryCatch(check_cell_size(info, size), error = identity)
       # The window stops exactly where the reader would, and says the same with the label of the field.
       expect_identical(inherits(window, "error"), inherits(reader, "error"), info = paste(name, size))
       if (!inherits(reader, "error") || !inherits(window, "error")) next
       refusals <- refusals + 1L
       expect_s3_class(window, "advanced_setting")
-      expect_identical(sub("'Output grid size (degrees)'", "era5_cell_size_deg", conditionMessage(window), fixed = TRUE),
-                       conditionMessage(reader), info = paste(name, size))
+      said <- sub("'Output grid size (degrees)'", "era5_cell_size_deg", conditionMessage(window), fixed = TRUE)
+      # One cell alone along an axis is made by the reader and refused later, in words about
+      # coordinate values. The window names the setting and the two ways out instead.
+      axis <- regmatches(conditionMessage(reader), regexec("^At least two (longitude|latitude) values are needed",
+                                                           conditionMessage(reader)))[[1L]][2L]
+      if (is.na(axis)) {
+        expect_identical(said, conditionMessage(reader), info = paste(name, size))
+      } else {
+        lone <- lone + 1L
+        expect_identical(said, sprintf(paste("The ERA5 grid in grid.nc gives fewer than two %g-degree cells along its %s.",
+                                             "Choose a smaller era5_cell_size_deg, or tick 'Keep the input grid resolution'."), size, axis),
+                         info = paste(name, size))
+      }
     }
   }
   expect_gte(refusals, 8L)
+  expect_gte(lone, 6L)
   form <- window_inputs(base, month_from = "7", month_to = "7", native_grid = FALSE, cell_size = 1)
+  # A region one cell tall is refused before Run, not after it; smaller cells or its own grid are accepted.
+  flat <- tryCatch(guided_settings(base, form, "grid.nc", grids$row, "run"), error = identity)
+  expect_s3_class(flat, "advanced_setting")
+  expect_identical(conditionMessage(flat),
+                   paste("The ERA5 grid in grid.nc gives fewer than two 1-degree cells along its latitude.",
+                         "Choose a smaller 'Output grid size (degrees)', or tick 'Keep the input grid resolution'."))
+  expect_length(guided_settings(base, form, "grid.nc", grids$square, "run")$dates, 10L)
+  for (way in list(list(cell_size = 0.5), list(native_grid = TRUE))) {
+    other <- form
+    other[names(way)] <- way
+    expect_length(guided_settings(base, other, "grid.nc", grids$row, "run")$dates, 10L)
+  }
   stopped <- tryCatch(guided_settings(base, form, "grid.nc", grids$third, "run"), error = identity)
   expect_s3_class(stopped, "advanced_setting")
   expect_identical(conditionMessage(stopped),
@@ -512,7 +659,6 @@ test_that("the dataset card describes the grid and the temperature that the run 
   whole <- facts()[["Preparation"]]
   expect_identical(whole, paste("SCORCH takes the maximum of each UTC day. Each point becomes one 1\u00b0 cell,",
                                 "labelled by its centre: 20.5\u00b0E to 24.5\u00b0E and 10.5\u00b0N to 14.5\u00b0N."))
-  expect_match(facts(list(per_day = 1L))[["Preparation"]], "^Daily values are used as they are[.] Each point becomes one")
   quarter <- facts(list(lon = seq(20, 23, by = 0.25), lat = seq(10, 13, by = 0.25)))
   expect_identical(quarter[["Preparation"]],
                    "SCORCH takes the maximum of each UTC day and averages complete blocks to 1\u00b0 cells.")
@@ -520,12 +666,52 @@ test_that("the dataset card describes the grid and the temperature that the run 
                fixed = TRUE)
   expect_identical(facts(cell_size = NULL)[["Preparation"]], "SCORCH takes the maximum of each UTC day and keeps this grid.")
   expect_identical(facts(cell_size = NA)[["Preparation"]], "SCORCH takes the maximum of each UTC day.")
+  # One value per day is used as that day's maximum, whichever daily statistic the file holds. The
+  # card says so, in a sentence, with each way the cells are made.
+  daily <- function(changed = list(), ...) facts(c(list(per_day = 1L), changed), ...)[["Preparation"]]
+  begins <- "SCORCH uses each daily value as that day's maximum"
+  expect_identical(daily(), paste0(begins, sub("SCORCH takes the maximum of each UTC day", "", whole, fixed = TRUE)))
+  expect_identical(daily(list(lon = seq(20, 23, by = 0.25), lat = seq(10, 13, by = 0.25))),
+                   paste(begins, "and averages complete blocks to 1\u00b0 cells."))
+  expect_identical(daily(list(lon = seq(20, 23, by = 0.3))),
+                   paste0(begins, ". This grid cannot be averaged to 1\u00b0 cells."))
+  expect_identical(daily(cell_size = NULL), paste(begins, "and keeps this grid."))
+  expect_identical(daily(cell_size = NA), paste0(begins, "."))
+  expect_identical(daily(list(variable = "tasmin", identified = FALSE), cell_size = NULL),
+                   paste(begins, "and keeps this grid."))
 
   # Longitudes from 0 to 360: the reader of raw input moves them to -180..180, a prepared file keeps its own.
   expect_match(facts(list(lon = 250:254))[["Grid"]], "110\u00b0W to 106\u00b0W", fixed = TRUE)
   prepared <- facts(list(format = "daily_tmax", variable = "tmax", units = "degC", per_day = 1L, lon = 250.5:254.5))
   expect_match(prepared[["Grid"]], "5 by 5 cells at 1\u00b0, 250.5\u00b0E to 254.5\u00b0E", fixed = TRUE)
   expect_false("Preparation" %in% names(prepared))
+
+  # Coordinates stored in single precision are named as the grid they describe, in the range and in
+  # the spacing, without the noise that begins at their eighth digit.
+  single <- function(values) readBin(writeBin(values, raw(), size = 4L), "numeric", n = length(values), size = 4L)
+  expect_identical(format(single(22.9), digits = 15), "22.8999996185303")
+  expect_identical(facts(list(lon = single(seq(20, 22.9, by = 0.1)), lat = single(seq(10, 12.9, by = 0.1))))[["Grid"]],
+                   "30 by 30 points at 0.1\u00b0, 20\u00b0E to 22.9\u00b0E and 10\u00b0N to 12.9\u00b0N")
+  grid_of <- function(lon, lat) {
+    facts(list(format = "daily_tmax", variable = "tmax", units = "degC", per_day = 1L, lon = lon, lat = lat))[["Grid"]]
+  }
+  expect_identical(grid_of(single(seq(-70.35, -69.45, by = 0.1)), single(seq(-33.25, -32.35, by = 0.1))),
+                   "10 by 10 cells at 0.1\u00b0, 70.35\u00b0W to 69.45\u00b0W and 33.25\u00b0S to 32.35\u00b0S")
+  # Nor does moving raw longitudes from 0-360 leave the trace of a subtraction (9.89999999999998).
+  expect_identical(facts(list(lon = seq(350.1, 350.9, by = 0.1), lat = seq(10, 10.4, by = 0.1)))[["Grid"]],
+                   "9 by 5 points at 0.1\u00b0, 9.9\u00b0W to 9.1\u00b0W and 10\u00b0N to 10.4\u00b0N")
+  # Both spacings are named when longitudes and latitudes are not equally far apart.
+  expect_identical(grid_of(seq(20.25, 23.75, by = 0.5), 10:13 + 0.5),
+                   "8 by 4 cells at 0.5\u00b0 x 1\u00b0, 20.25\u00b0E to 23.75\u00b0E and 10.5\u00b0N to 13.5\u00b0N")
+  expect_match(facts(list(lon = seq(20, 24, by = 0.25), lat = seq(10, 14, by = 0.5)))[["Grid"]],
+               "17 by 9 points at 0.25\u00b0 x 0.5\u00b0, 20\u00b0E to 24\u00b0E", fixed = TRUE)
+  # A fine grid whose coordinates need more than seven digits keeps its one spacing: rounding them
+  # for the card makes it neither uneven nor two-sized.
+  expect_identical(grid_of(-125 + (1:12) / 24 - 1 / 48, 40 + (1:12) / 24 - 1 / 48),
+                   paste("12 by 12 cells at 0.04166667\u00b0, 124.9792\u00b0W to 124.5208\u00b0W",
+                         "and 40.02083\u00b0N to 40.47917\u00b0N"))
+  expect_match(grid_of(250 + (0:9) / 32, 30 + (0:9) / 32), "10 by 10 cells at 0.03125\u00b0, 250\u00b0E to 250.28",
+               fixed = TRUE)
 
   # A variable that was accepted without being identified is not called the daily maximum.
   expect_identical(prepared[["Contains"]], "Prepared daily maximum temperature (variable tmax)")
@@ -541,6 +727,18 @@ test_that("the dataset card describes the grid and the temperature that the run 
   for (line in c(daily, hourly, several)) {
     expect_false(grepl("2 m|maximum", sub("not identified as daily maximum temperature", "", line, fixed = TRUE)), info = line)
   }
+
+  # The results of a run name such a variable, and add nothing about one that the file identifies.
+  noted <- function(...) temperature_note(list(...))
+  expect_null(noted(format = "daily_tmax", variable = "tmax", per_day = 1L, identified = TRUE))
+  expect_null(noted(format = "era5", variable = "t2m", per_day = 24L))
+  expect_identical(noted(format = "daily_tmax", variable = "tasmin", per_day = 1L, identified = FALSE),
+                   "Variable tasmin, as you chose. The file does not identify it as daily maximum temperature.")
+  expect_identical(noted(format = "era5", variable = "tasmin", per_day = 1L, identified = FALSE),
+                   "Variable tasmin, as you chose. The file does not identify it as daily maximum temperature.")
+  expect_identical(noted(format = "era5", variable = "d2m", per_day = 24L, identified = FALSE),
+                   paste("Variable d2m, as you chose. The file does not identify it as 2 m air temperature;",
+                         "its highest value of each day was used."))
 })
 
 test_that("the address of a window holds a secret that leaves the session's random numbers alone", {
@@ -558,10 +756,26 @@ test_that("the address of a window holds a secret that leaves the session's rand
   token <- launch_token()
   expect_identical(stats::runif(3), expected)
   expect_false(identical(token, from_seed))
+  # Two tokens drawn after the same seed share no more characters than chance gives.
+  set.seed(42)
+  again <- launch_token()
+  expect_lt(sum(strsplit(token, "")[[1L]] == strsplit(again, "")[[1L]]), 8L)
   # A session without a seed is left without one.
   rm(".Random.seed", envir = globalenv())
   expect_match(launch_token(), "^[A-Za-z0-9]{32}$")
   expect_false(exists(".Random.seed", envir = globalenv()))
+})
+
+test_that("text cut in the middle of a character in a name field is a wrong name, not the end of the session", {
+  # "tmax" followed by half of a four-byte character, as text cut inside an emoji is.
+  broken <- rawToChar(as.raw(c(0x74, 0x6d, 0x61, 0x78, 0xf0, 0x9f)))
+  Encoding(broken) <- "UTF-8"
+  base <- read_config(input_required = FALSE)$input
+  controls <- input_controls(list(input_variable = broken), base)
+  expect_true(validEnc(controls$variable))
+  expect_match(controls$variable, "^tmax")
+  expect_false(identical(controls$variable, "tmax"))
+  expect_identical(input_controls(list(input_variable = "  tasmax "), base)$variable, "tasmax")
 })
 
 test_that("only a client that holds the token of the window gets its page or a session", {
@@ -704,7 +918,8 @@ test_that("a loaded configuration keeps its dates, and its note stays when the d
     expect_identical(state$loaded, "config.yaml")
     expect_identical(base()$period$warm_season_months, 6:8)
     expect_match(gsub("[[:space:]]+", " ", output$loaded$html),
-                 "Settings loaded from <strong>config.yaml</strong> stay in use when you change the data", fixed = TRUE)
+                 paste("Settings loaded from <strong>config.yaml</strong>: the advanced settings and the results folder",
+                       "stay in use when you change the data. The months, the date limit and"), fixed = TRUE)
     # The page sets the fields that describe a file back to detection, as it is told to for new data.
     session$setInputs(input_format = "auto", input_units = "auto", input_variable = "auto", input_time = "auto",
                       input_longitude = "auto", input_latitude = "auto")
@@ -762,6 +977,12 @@ test_that("an emptied advanced field is reported in the Review card and above th
                                              native_grid = FALSE, cell_size = 1))
     expect_false(inherits(plan(), "error"))
     expect_match(output$run_button$html, 'id="start"', fixed = TRUE)
+    # The grid size of raw ERA5 data has no field on screen for the example. Emptied while raw data
+    # were open, it stops nothing here.
+    session$setInputs(cell_size = NA)
+    expect_false(inherits(plan(), "error"))
+    expect_match(output$run_button$html, 'id="start"', fixed = TRUE)
+    session$setInputs(cell_size = 1)
     # "Candidate distances" emptied: a message beside a disabled button, not an empty card.
     session$setInputs(clustering_eps_values = "")
     expect_s3_class(plan(), "advanced_setting")
@@ -778,5 +999,265 @@ test_that("an emptied advanced field is reported in the Review card and above th
     expect_false(grepl("no observations", paste(unlist(output$advanced_problem), collapse = " "), fixed = TRUE))
     session$setInputs(limit_dates = FALSE)
     expect_length(plan()$dates, 92L * 30L)
+  })
+})
+
+test_that("every load of a configuration rebuilds the form, and dates picked by hand outlast a change of how the file is read", {
+  project <- withr::local_tempdir()
+  withr::local_dir(project)
+  yaml::write_yaml(list(period = list(warm_season_months = 6:8, start_date = "2012-01-01", end_date = "2012-12-31"),
+                        power_law = list(bootstrap_repetitions = 10)), "saved.yaml")
+  yaml::write_yaml(list(period = list(warm_season_months = 7:8)), "other.yaml")
+  # How often the form and its date fields are built: the page shows new values only when they are.
+  built <- c(form = 0L, dates = 0L)
+  form <- settings_ui
+  testthat::local_mocked_bindings(settings_ui = function(cfg) {
+    built[["form"]] <<- built[["form"]] + 1L
+    form(cfg)
+  }, .package = "scoRch.simulator")
+  date_range <- shiny::dateRangeInput
+  testthat::local_mocked_bindings(dateRangeInput = function(...) {
+    built[["dates"]] <<- built[["dates"]] + 1L
+    date_range(...)
+  }, .package = "shiny")
+  shiny::testServer(scorch_server, {
+    # What the page reports once it has built the form from the configuration in use.
+    page_reports <- function(...) do.call(session$setInputs, window_inputs(base(), ..., native_grid = FALSE, cell_size = 1))
+    session$setInputs(use_example = 1)
+    page_reports(month_from = "4", month_to = "9", limit_dates = FALSE)
+    choose("config", file.path(project, "saved.yaml"))
+    page_reports(month_from = "6", month_to = "8", limit_dates = TRUE, dates = as.Date(c("2012-01-01", "2012-12-31")))
+    expect_length(plan()$dates, 92L)
+    # Months, dates and repetitions changed by hand ...
+    session$setInputs(month_from = "4", month_to = "9", limit_dates = FALSE, power_law_bootstrap_repetitions = 5000)
+    expect_length(plan()$dates, 5490L)
+    # ... and the same file reused to get its values back. Its settings are the ones in use already, so
+    # only a form that is built again shows them.
+    before <- built
+    choose("config", file.path(project, "saved.yaml"))
+    session$flushReact()
+    expect_gt(built[["form"]], before[["form"]])
+    expect_gt(built[["dates"]], before[["dates"]])
+    shown <- shown_in(output$settings$html)
+    expect_identical(shown[c("month_from", "month_to", "limit_dates", "power_law_bootstrap_repetitions")],
+                     list(month_from = "6", month_to = "8", limit_dates = TRUE, power_law_bootstrap_repetitions = "10"))
+    expect_match(output$date_fields$html, "2012-01-01", fixed = TRUE)
+    page_reports(month_from = "6", month_to = "8", limit_dates = TRUE, dates = as.Date(c("2012-01-01", "2012-12-31")))
+    expect_length(plan()$dates, 92L)
+    expect_identical(plan()$config$power_law$bootstrap_repetitions, 10)
+
+    # Dates picked by hand stay when a field under "How the file is read" is set to what the file has:
+    # the same record is read again, and the date fields are not built again.
+    session$setInputs(dates = as.Date(c("2012-07-01", "2012-07-31")))
+    before <- built
+    session$setInputs(input_units = "degC")
+    expect_identical(header()$units, "degC")
+    session$setInputs(input_variable = "tmax")
+    expect_identical(built[["dates"]], before[["dates"]])
+    expect_length(plan()$dates, 31L)
+    # They start again when an error is corrected, ...
+    session$setInputs(input_variable = "no such variable")
+    expect_s3_class(header(), "error")
+    expect_null(record())
+    session$setInputs(input_variable = "auto")
+    expect_gt(built[["dates"]], before[["dates"]])
+    # ... for other data, also for the same data opened once more, ...
+    before <- built
+    session$setInputs(change_data = 1)
+    session$setInputs(use_example = 2)
+    expect_gt(built[["dates"]], before[["dates"]])
+    expect_identical(built[["form"]], before[["form"]])
+    # ... and for another configuration.
+    before <- built
+    choose("config", file.path(project, "other.yaml"))
+    session$flushReact()
+    expect_gt(built[["form"]], before[["form"]])
+    expect_gt(built[["dates"]], before[["dates"]])
+  })
+})
+
+test_that("a configuration that waits for its data reads the data chosen next as it stands", {
+  folder <- withr::local_tempdir()
+  withr::local_dir(folder)
+  days <- seq(as.Date("2001-01-01"), as.Date("2002-12-31"), by = "day")
+  file <- write_grid(file.path(folder, "moved.nc"),
+                     list(maxair = array(seq_len(length(days) * 12) %% 17, c(length(days), 3, 4))),
+                     as.numeric(days - as.Date("2000-01-01")), c(10, 11, 12, 13), c(40, 41, 42))
+  # The settings of a run that was saved on another computer: the data are not where they say.
+  yaml::write_yaml(list(input = list(file = file.path(folder, "elsewhere", "moved.nc"), variable = "maxair", units = "degC"),
+                        period = list(warm_season_months = 6:8, start_date = "2002-01-01", end_date = "2002-12-31")),
+                   "config.yaml")
+  wired <- recording_session()
+  sent <- function() unique(vapply(wired$seen$inputs, "[[", "", "id"))
+  reading <- paste0("input_", c("format", "units", "variable", "longitude", "latitude", "time"))
+  shiny::testServer(scorch_server, {
+    choose("config", file.path(folder, "config.yaml"))
+    session$flushReact()
+    expect_null(state$source)
+    expect_match(state$error, "could not be found")
+    expect_true(state$waiting)
+    expect_identical(state$loaded, "config.yaml")
+    # The page has built the form from the configuration.
+    do.call(session$setInputs, c(window_inputs(base(), month_from = "6", month_to = "8", limit_dates = TRUE,
+      dates = as.Date(c("2002-01-01", "2002-12-31")), native_grid = FALSE, cell_size = 1),
+      list(input_format = "auto", input_units = "degC", input_variable = "maxair", input_longitude = "auto",
+           input_latitude = "auto", input_time = "auto")))
+    choose("data", file)
+    session$flushReact()
+    # Nothing on the page is set back: the months, the dates and "How the file is read" are the configuration's.
+    expect_false(state$waiting)
+    expect_false(state$fresh)
+    expect_length(sent(), 0L)
+    expect_null(state$error)
+    expect_null(question())
+    expect_identical(header()$variable, "maxair")
+    expect_identical(plan()$config$period[c("start_date", "end_date")], list(start_date = "2002-01-01", end_date = "2002-12-31"))
+    expect_length(plan()$dates, 92L)
+    expect_match(output$date_fields$html, "2002-01-01", fixed = TRUE)
+    # The note is true here as well: it speaks of what happens when the data change.
+    expect_match(gsub("[[:space:]]+", " ", output$loaded$html),
+                 "start again with other data; reuse the file to apply its months and dates again.", fixed = TRUE)
+    # Other data after that start again, as they do without a configuration.
+    session$setInputs(change_data = 1)
+    choose("data", file)
+    session$flushReact()
+    expect_setequal(sent(), c(reading, "month_from", "month_to", "limit_dates"))
+    expect_identical(state$loaded, "config.yaml")
+  }, session = wired$session)
+
+  # Data that the configuration finds are opened with it, and nothing waits.
+  yaml::write_yaml(list(input = list(file = file, variable = "maxair", units = "degC")), "here.yaml")
+  shiny::testServer(scorch_server, {
+    choose("config", file.path(folder, "here.yaml"))
+    expect_false(is.null(state$source))
+    expect_false(state$waiting)
+    expect_null(state$error)
+  })
+})
+
+test_that("a file that is not a configuration is refused by name and in plain words", {
+  folder <- withr::local_tempdir()
+  withr::local_dir(folder)
+  writeLines("just a sentence", "sentence.yaml")
+  writeLines(c("- June", "- July"), "words.yaml")
+  writeLines(c("- warm_season_months: 6", "- start_date: 2012-01-01"), "unnamed.yaml")
+  writeLines(c("heatwaves:", "  threshold_percentile: 150"), "range.yaml")
+  writeLines("period: [6, 7", "broken.yaml")
+  writeLines("", "empty.yaml")
+  for (name in c("sentence.yaml", "words.yaml", "unnamed.yaml")) {
+    expect_error(load_guided_config(name), "This file does not hold SCORCH settings. A configuration has named sections",
+                 fixed = TRUE, info = name)
+  }
+  expect_error(load_guided_config("broken.yaml"), "could not be read as YAML")
+  expect_error(load_guided_config("range.yaml"), "must be one number between 0 and 100")
+  # An empty file stays a configuration that changes no setting.
+  expect_identical(load_guided_config("empty.yaml")$heatwaves, read_config(input_required = FALSE)$heatwaves)
+  shiny::testServer(scorch_server, {
+    session$setInputs(use_example = 1)
+    study <- base()
+    for (name in c("sentence.yaml", "words.yaml", "unnamed.yaml", "range.yaml", "broken.yaml")) {
+      choose("config", file.path(folder, name))
+      # The message names the file that was refused, and nothing of it is in use.
+      expect_true(startsWith(state$error, paste0(name, " was not loaded: ")), info = state$error)
+      expect_null(state$loaded)
+      expect_identical(base(), study)
+    }
+    choose("config", file.path(folder, "sentence.yaml"))
+    expect_identical(state$error, paste("sentence.yaml was not loaded: This file does not hold SCORCH settings.",
+                                        "A configuration has named sections such as 'period' and 'heatwaves'."))
+    choose("config", file.path(folder, "range.yaml"))
+    expect_identical(state$error, paste("range.yaml was not loaded: The setting 'threshold_percentile' must be one number",
+                                        "between 0 and 100 (it is '150')."))
+    session$flushReact()
+    expect_match(output$selection$html, "range.yaml was not loaded", fixed = TRUE)
+  })
+})
+
+test_that("an unidentified variable is confirmed with an answer, listed while that answer decides, and named in the results", {
+  folder <- withr::local_tempdir()
+  withr::local_dir(folder)
+  days <- seq(as.Date("2001-06-01"), as.Date("2001-08-31"), by = "day")
+  file <- write_grid(file.path(folder, "tasmin_day.nc"),
+                     list(tasmin = array(10 + seq_len(length(days) * 12) %% 9, c(length(days), 3, 4))),
+                     as.numeric(days - as.Date("2000-01-01")), c(10, 11, 12, 13), c(40, 41, 42),
+                     attributes = list(tasmin = list(standard_name = "air_temperature", cell_methods = "time: minimum")))
+  said <- function(shown) gsub("[[:space:]]+", " ", paste(unlist(shown), collapse = " "))
+  shiny::testServer(scorch_server, {
+    choose("data", file)
+    session$flushReact()
+    expect_identical(question()$id, "variable")
+    expect_match(said(output$question), 'id="answer_problem"', fixed = TRUE)
+    expect_false(grepl("Choose an answer first", said(output$answer_problem), fixed = TRUE))
+    # "Use this answer" before an answer is chosen says what is missing.
+    session$setInputs(answer_apply = 1)
+    expect_identical(question()$id, "variable")
+    expect_match(said(output$answer_problem), '<p class="problem" role="alert">Choose an answer first.</p>', fixed = TRUE)
+    # Choosing an answer takes the reminder away, and using it settles the question.
+    session$setInputs(answer = "tasmin")
+    expect_false(grepl("Choose an answer first", said(output$answer_problem), fixed = TRUE))
+    session$setInputs(answer_apply = 2)
+    expect_null(question())
+    expect_false(header()$identified)
+    expect_match(said(output$selection), "Your answer: variable = tasmin", fixed = TRUE)
+    # A reminder does not outlive the question it was about.
+    session$setInputs(answer_reset = 1)
+    session$setInputs(answer = NULL)
+    session$setInputs(answer_apply = 3)
+    expect_true(state$unanswered)
+    session$setInputs(change_data = 1)
+    expect_false(state$unanswered)
+    choose("data", file)
+    session$setInputs(answer = "tasmin", answer_apply = 4)
+    expect_null(question())
+
+    # The same thing named in the field under Advanced settings replaces the answer, which is then not listed.
+    session$setInputs(input_variable = "tasmin")
+    expect_false(grepl("Your answer", said(output$selection), fixed = TRUE))
+    expect_length(answers_in_effect(input, base()$input, state$answers), 0L)
+    session$setInputs(input_variable = "auto")
+    expect_match(said(output$selection), "Your answer: variable = tasmin", fixed = TRUE)
+    expect_identical(answers_in_effect(input, base()$input, state$answers), list(variable = "tasmin"))
+
+    # The run records which variable was analyzed. This one stops early, at clusters no day can form.
+    quick <- window_inputs(base(), month_from = "6", month_to = "8", limit_dates = FALSE, native_grid = FALSE, cell_size = 1)
+    quick$clustering_min_samples_values <- "1000"
+    do.call(session$setInputs, quick)
+    expect_length(plan()$dates, 92L)
+    suppressWarnings(suppressMessages(session$setInputs(start = 1)))
+    expect_null(state$failed)
+    expect_identical(basename(state$finished$folder), "SCORCH_run_001")
+    expect_identical(state$finished$temperature,
+                     "Variable tasmin, as you chose. The file does not identify it as daily maximum temperature.")
+  })
+})
+
+test_that("a start that fails is reported beside the Run button until another results folder is chosen", {
+  project <- withr::local_tempdir()
+  withr::local_dir(project)
+  writeLines("a file, not a folder", "blocker")
+  shiny::testServer(scorch_server, {
+    session$setInputs(use_example = 1)
+    do.call(session$setInputs, window_inputs(base(), month_from = "6", month_to = "8", limit_dates = FALSE,
+                                             native_grid = FALSE, cell_size = 1))
+    choose("output", file.path(project, "blocker", "results"))
+    session$flushReact()
+    expect_match(output$run_button$html, 'id="start"', fixed = TRUE)
+    expect_false(grepl('role="alert"', output$review$html, fixed = TRUE))
+    session$setInputs(start = 1)
+    expect_null(state$finished)
+    # The Review card holds the button that was clicked: the message is there, with the plan and the button as they were.
+    for (wanted in c("Could not create the results folder", 'role="alert"', "selected dates")) {
+      expect_match(output$review$html, wanted, fixed = TRUE)
+    }
+    expect_match(output$run_button$html, 'id="start"', fixed = TRUE)
+    # The dataset card at the top of the page does not repeat it.
+    expect_null(state$error)
+    expect_false(grepl("Could not create", output$selection$html, fixed = TRUE))
+    # Another results folder: the message said nothing about that one.
+    choose("output", file.path(project, "results"))
+    session$flushReact()
+    expect_match(output$review$html, "selected dates", fixed = TRUE)
+    expect_false(grepl("Could not create", output$review$html, fixed = TRUE))
+    expect_false(dir.exists(file.path(project, "results")))
   })
 })
