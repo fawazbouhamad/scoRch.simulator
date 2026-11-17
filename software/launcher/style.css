@@ -1,0 +1,378 @@
+/* SCORCH setup window. Blue marks what to do next; the heat ramp belongs to the science. */
+:root {
+  --ink: #1c2330; --muted: #000; --line: #e1dcd1; --paper: #f6f4ee; --card: #fff;
+  --blue: #1f5fbf; --blue-deep: #174a97; --blue-soft: #dce8fa; --alarm: #9b2c1f;
+  --heat: linear-gradient(90deg, #ffd166, #ff8c42 45%, #d93a2b 78%, #6d0f1f);
+  /* Both stand out at least 3:1 from what they sit on: the focus ring from the page and
+     from white cards, the outline of the heatwave cells from land and sea. */
+  --focus: #b85c00; --edge: #6b7280;
+  /* The red of the SCORCH name in Figure 1 of the study. */
+  --brand-red: #c00000;
+  /* Ordinary secondary text is black in the light display; outlines and placeholders keep their own greys. */
+  --ink-2: #000; --muted-line: #9aa3b2; --placeholder: #6b7280; --card-alt: #faf9f6; --well: #efece4; --hover: #f4f1ea; --link: var(--blue-deep);
+  --field-bg: #fff; --field-line: #b9bfc9; --pressed-bg: #f4f8fe; --chip-now: #fff6e6; --shadow: rgba(28, 35, 48, .1);
+  --sea: #e4edf2; --land: #f5f1e7; --land-line: #8e949d; --lake-line: #a8b3bb; --state: #cbc5b8;
+  --grat: rgba(28, 35, 48, .1); --grat-text: #5f6877; --cell-gap: #fff; --noise: #b6b1a6; --halo: #fff;
+  --tile: #f6f4ee; --tile-line: #c3bdb0; --month-off-bg: #f1ede3; --month-off: #49515e; --month-none: #9aa1ab; --month-none-line: #c8c3b7;
+  --bundled: #7a3b00; --bundled-bg: #ffe9a8; --bundled-line: #c9861a;
+  color-scheme: light;
+}
+[hidden] { display: none !important; }
+body { background: var(--paper); color: var(--ink); font: 15px/1.5 "Segoe UI", -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, system-ui, sans-serif; }
+/* The window can be made wider: the page then uses more of it, up to a comfortable line length. */
+.scorch { max-width: 1180px; margin: 0 auto; padding: 16px clamp(8px, 2vw, 20px) 28px; }
+.scorch h1, .scorch h2, .scorch h3 { color: var(--ink); font-weight: 650; margin: 0 0 8px; }
+.scorch h1 { font-size: 27px; line-height: 1.2; } .scorch h2 { font-size: 19px; }
+/* A long file name without spaces wraps where it stands instead of widening the page. */
+.scorch h2, .eyebrow, .explorer-source, .review p { overflow-wrap: anywhere; }
+.scorch h3 { font-size: 15px; margin-top: 18px; text-transform: none; }
+.scorch p { margin: 0 0 10px; } .scorch p:last-child { margin-bottom: 0; }
+.scorch code { color: inherit; background: var(--well); border-radius: 3px; padding: 1px 4px; }
+.lead { font-size: 16px; color: var(--ink-2); max-width: 760px; }
+.fine { font-size: 13px; color: var(--muted); }
+.problem { color: var(--alarm); border-left: 3px solid var(--alarm); padding-left: 10px; }
+ul.problem { list-style: none; padding-left: 10px; margin: 0; }
+.path { display: block; font: 13px/1.5 Consolas, "SFMono-Regular", Menlo, monospace; color: var(--ink);
+  background: var(--well); padding: 8px 10px; border-radius: 5px; overflow-wrap: anywhere; user-select: all; }
+.eyebrow, .badge-tag { display: inline-block; font-size: 11.5px; font-weight: 650; letter-spacing: .09em;
+  text-transform: uppercase; color: var(--muted); }
+.eyebrow.bundled, .is-demo .badge-tag { color: var(--bundled); background: var(--bundled-bg); border: 1px dashed var(--bundled-line);
+  border-radius: 4px; padding: 1px 7px; }
+.badge-tag { color: #fff; background: var(--blue); border-radius: 4px; padding: 2px 8px; }
+
+/* Masthead: SCORCH in red over its name spelled out, as at the top of Figure 1 of the study,
+   above a heat rule. The Open in browser button stands at the right; the name stays centred. */
+.masthead { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; gap: 12px;
+  padding: 2px 2px 14px; margin-bottom: 18px; position: relative; }
+.masthead::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 3px; border-radius: 2px; background: var(--heat); }
+.brand-block { grid-column: 2; text-align: center; font-family: Aptos, "Segoe UI", -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif; }
+.brand { color: var(--brand-red); font-size: clamp(30px, 4.4vw, 46px); font-weight: 700; line-height: 1.05; letter-spacing: .01em; }
+.brand-name { display: block; color: var(--ink); font-size: clamp(14px, 1.9vw, 20px); font-weight: 400; line-height: 1.3; margin-top: 2px; }
+.brand-name b { font-weight: 700; }
+.masthead-tools { grid-column: 3; justify-self: end; align-self: start; display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 6px; }
+.theme-toggle { display: inline-flex; align-items: center; gap: 7px;
+  background: var(--card); color: var(--ink); border: 1px solid var(--field-line); border-radius: 999px; padding: 5px 12px 5px 9px;
+  font-family: inherit; font-size: 13px; font-weight: 600; line-height: 1.2; cursor: pointer; white-space: nowrap; }
+.theme-toggle:hover { background: var(--hover); }
+.scorch .btn.open-browser { border-radius: 999px; padding: 5px 12px; font-size: 13px; line-height: 1.2; border-color: var(--field-line); }
+body.scorch-busy .open-browser { opacity: .5; pointer-events: none; }
+.theme-toggle:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+/* In a narrow window the Open in browser button stands above the name. */
+@media (max-width: 620px) {
+  .masthead { grid-template-columns: 1fr; } .brand-block { grid-column: 1; grid-row: 2; }
+  .masthead-tools { grid-column: 1; grid-row: 1; }
+}
+
+/* Buttons */
+.scorch .btn, .modal .btn { border-radius: 6px; font-weight: 600; white-space: normal; border-color: var(--field-line); color: var(--ink); }
+.scorch .btn-default, .modal .btn-default { background: var(--card); }
+.scorch .btn-default:hover, .modal .btn-default:hover, .scorch .btn-default:focus, .modal .btn-default:focus { background: var(--hover); color: var(--ink); }
+.scorch .btn-lg { font-size: 16px; padding: 10px 20px; }
+.scorch .btn-primary, .modal .btn-primary, .scorch .btn-primary:focus, .modal .btn-primary:focus { background: var(--blue); border-color: var(--blue-deep); color: #fff; }
+.scorch .btn-primary:hover, .modal .btn-primary:hover, .scorch .btn-primary:active { background: var(--blue-deep); border-color: var(--blue-deep); color: #fff; }
+.scorch .btn[disabled], .modal .btn[disabled] { opacity: .5; cursor: not-allowed; }
+.btn:focus-visible, summary:focus-visible, select:focus-visible, input:focus-visible, .chooser-list:focus-visible,
+.type-card:focus-visible, .day-chip:focus-visible, .still:focus-visible, .chooser-place:focus-visible, .chooser-crumb:focus-visible,
+#results-title:focus-visible {
+  outline: 3px solid var(--focus); outline-offset: 2px; }
+/* The results heading takes the keyboard when a run ends; its ring fits the words, not the card. */
+#results-title { width: fit-content; }
+/* A field whose setting was refused; the message above the Advanced section says why. */
+.scorch [aria-invalid="true"] { border-color: var(--alarm); box-shadow: inset 0 0 0 1px var(--alarm); }
+.scorch input[type="checkbox"][aria-invalid="true"]:not(:focus-visible) { outline: 2px solid var(--alarm); outline-offset: 1px; }
+.btn.link-button, .btn.link-button:hover, .btn.link-button:focus { color: var(--link); background: transparent; border-color: transparent; text-decoration: underline; padding: 4px 6px; font-weight: 600; }
+
+/* Opening screen */
+.hero { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 6px 36px; align-items: center; padding: 0 2px 14px; }
+.hero h1 { font-size: clamp(30px, 4.2vw, 38px); text-align: left; margin-bottom: 12px; } .hero .lead { font-size: 18px; font-weight: 500; line-height: 1.6; color: #000; margin-bottom: 8px; overflow-wrap: break-word; }
+.choices { display: grid; gap: 10px; } .choices .btn { width: 100%; }
+.choices p { font-size: 12.5px; line-height: 1.35; color: var(--muted); margin: 5px 2px 0; }
+#welcome_problem { grid-column: 1 / -1; }
+
+/* Cards */
+.card { background: var(--card); padding: 18px 22px; margin-bottom: 12px; border: 1px solid var(--line); border-radius: 10px; }
+.section-title, .actions { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.section-title { justify-content: space-between; align-items: flex-start; margin-bottom: 6px; }
+.section-title h2 { margin: 0; } .actions { margin: 14px 0 10px; }
+.facts { display: grid; grid-template-columns: 150px minmax(0, 1fr); gap: 5px 16px; margin: 12px 0 0; }
+.facts dt { color: var(--muted); font-weight: 600; } .facts dd { margin: 0; overflow-wrap: anywhere; }
+.dataset .path { margin-top: 4px; }
+.question { border-color: #e2a53a; box-shadow: inset 4px 0 0 #f0a52b; }
+.question .radio label { font-size: 15px; }
+#answer_problem .problem { margin-bottom: 10px; }
+.fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 20px; }
+.scorch .form-group { width: 100% !important; margin-bottom: 12px; }
+.scorch details { border-top: 1px solid var(--line); padding: 10px 0 2px; margin-top: 10px; }
+.scorch summary { cursor: pointer; color: var(--link); font-weight: 650; padding: 3px 0; }
+.scorch details[open] > summary { margin-bottom: 8px; }
+.review { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+.review > div:first-child { flex: 1 1 380px; }
+/* Review and run stays at the lower edge of the window, so that Run analysis and what the card
+   says about a refusal or a failed start are in view however long the settings above it are.
+   The card keeps to two fifths of the window's height: 38 px of that are its padding and border.
+   A longer message scrolls inside itself, below the heading and the summary of the run. */
+.card.review { position: sticky; bottom: 0; z-index: 3; box-shadow: 0 -6px 14px var(--shadow); }
+.review > :not(#run_button) { display: flex; flex-direction: column; max-height: max(6em, calc(40vh - 38px)); overflow-y: auto; }
+.review > :not(#run_button) > * { flex: none; }
+.review > :not(#run_button) > .problem { flex: 0 1 auto; min-height: 1.5em; overflow-y: auto; }
+/* A pinned card cannot leave the panel that holds it, and the settings cards have a panel of their
+   own below the dataset card. Where Shiny marks that panel as shown, it hands its cards on to the
+   settings screen, so that the card is in view from the dataset card on, in a short window too. */
+.scorch [data-display-if].shiny-conditional--shown:has(> .card.review) { display: contents; }
+/* A field reached with Tab is scrolled clear of the pinned card, not left behind it: the card
+   is about 110 px high with its button beside the text and 190 px with the button below it. */
+html { scroll-padding-bottom: 136px; }
+/* In a narrow window the button stands below the text and takes 60 px more of the card. */
+@media (max-width: 700px) {
+  .review > :not(#run_button) { max-height: max(6em, calc(40vh - 98px)); }
+  html { scroll-padding-bottom: 216px; }
+}
+
+/* Months: analyzed, in the file, not in the file. */
+.period { margin: 2px 0 12px; }
+.months { display: flex; gap: 4px; list-style: none; padding: 0; margin: 0 0 8px; }
+.months li { flex: 1 1 0; max-width: 46px; text-align: center; font-size: 12.5px; font-weight: 650; padding: 4px 0; border-radius: 4px; }
+.months .on { background: #e2572f; color: #fff; }
+.months .off { background: var(--month-off-bg); color: var(--month-off); }
+.months .none { color: var(--month-none); border: 1px dashed var(--month-none-line); padding: 3px 0; }
+.period-line { font-size: 16px; }
+
+/* Finished run */
+.outcome { border-top: 4px solid #2e7d4f; } .outcome.warnings { border-top-color: #d9a300; } .outcome.stopped { border-top-color: #b3261e; }
+.outcome h2 { margin-top: 16px; }
+.type-counts { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; list-style: none; padding: 0; margin: 14px 0 4px; }
+.type-counts li { border: 1px solid var(--line); border-top: 4px solid var(--type); border-radius: 8px; padding: 8px 12px 10px; display: grid; grid-template-columns: auto 1fr; column-gap: 7px; align-items: baseline; }
+.type-counts .type-n { grid-column: 1 / -1; font-size: 12px; font-weight: 650; letter-spacing: .06em; text-transform: uppercase; color: var(--type); font-weight: 750; }
+.type-counts strong { font-size: 28px; line-height: 1.1; } .type-counts .type-word { color: var(--muted); }
+.type-counts .type-name { grid-column: 1 / -1; font-size: 13px; }
+
+/* Event map */
+.explorer:empty { display: none; }
+.explorer { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 18px 22px 16px; margin-bottom: 12px; }
+.explorer-head h2 { margin: 6px 0 2px; font-size: 20px; } .explorer-source { color: var(--muted); font-size: 13.5px; }
+.explorer-grid { display: grid; grid-template-columns: minmax(0, 1fr) 268px; gap: 18px; align-items: start; margin-top: 12px; }
+.type-cards { display: flex; flex-direction: column; gap: 8px; }
+.type-card { text-align: left; background: var(--card); border: 1px solid var(--line); border-left: 5px solid var(--type); border-radius: 8px;
+  padding: 8px 10px 8px 11px; display: flex; flex-direction: column; gap: 4px; color: var(--ink); font: inherit; cursor: pointer; }
+.type-card:hover:not([disabled]) { border-color: var(--muted-line); border-left-color: var(--type); }
+.type-card[aria-pressed="true"] { background: var(--pressed-bg); border-color: var(--blue); border-left-color: var(--type); box-shadow: 0 0 0 1px var(--blue); }
+/* A type without events keeps its definition readable; a dashed frame, not grey text, says it cannot be shown. */
+.type-card[disabled] { cursor: default; border-style: dashed; border-left-style: solid; background: var(--card-alt); }
+.type-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; }
+.type-card .type-n { display: block; font-size: 11.5px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--type); font-weight: 750; }
+.type-card .type-name { display: block; font-weight: 650; line-height: 1.25; }
+.type-glyph { height: 24px; flex: none; margin-top: 2px; }
+.type-glyph .tile { fill: var(--tile); stroke: var(--tile-line); } .type-glyph .spot { fill: var(--type, #ffb347); stroke: var(--ink); stroke-width: 1.1; }
+.type-meaning { font-size: 12.5px; line-height: 1.4; color: var(--ink-2); } .type-total { font-size: 12px; color: var(--muted); }
+.event-bar { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 6px; }
+.event-pick select { max-width: 340px; } .event-line { margin: 0; font-weight: 600; }
+.map-head { display: flex; align-items: baseline; gap: 12px; margin: 4px 0 6px; }
+.map-date { font-size: 20px; } .map-day { color: var(--muted); }
+.map-wrap { position: relative; line-height: 0; text-align: center; }
+svg.map { width: 100%; height: auto; max-height: 470px; border-radius: 6px; display: block; margin: 0 auto; }
+.map-sea { fill: var(--sea); } .map-land { fill: var(--land); stroke: var(--land-line); stroke-width: .8; stroke-linejoin: round; }
+.map-lake { fill: var(--sea); stroke: var(--lake-line); stroke-width: .5; } .map-state { fill: none; stroke: var(--state); stroke-width: .6; }
+.map .graticule path { stroke: var(--grat); stroke-width: .6; fill: none; }
+.map .graticule text { font: 10.5px "Segoe UI", -apple-system, "Helvetica Neue", Arial, sans-serif; fill: var(--grat-text); }
+.map .map-edge { fill: none; stroke: var(--land-line); stroke-width: 1; }
+.map .cell { stroke: var(--cell-gap); stroke-width: .55; } .map .cell.outside { fill: var(--noise); opacity: .8; }
+/* One screen pixel at every map size, drawn sharp so that it keeps its full colour. */
+.map .footprint { fill: none; stroke: var(--edge); stroke-width: 1px; stroke-linecap: square; vector-effect: non-scaling-stroke; shape-rendering: crispEdges; }
+/* Zoomed out below 100 %, that pixel is less than a screen pixel and would be painted pale: the line
+   is given the width that fills a whole screen pixel again. */
+@media (max-resolution: 0.99dppx) { .map .footprint { stroke-width: 1.5px; } }
+@media (max-resolution: 0.66dppx) { .map .footprint { stroke-width: 2px; } }
+@media (max-resolution: 0.49dppx) { .map .footprint { stroke-width: 3px; } }
+@media (max-resolution: 0.32dppx) { .map .footprint { stroke-width: 4px; } }
+.map .ellipse-halo { fill: none; stroke: #fff; stroke-width: 5; opacity: .85; }
+/* Inside the map the ellipses follow the study's snapshot figures for every type: black outline, axes
+   and centroid, and the fine mesh in #8B3F37 with black cell borders (snapshot_maps.py). */
+.map .ellipse, .map .axis { fill: none; stroke: #000; stroke-linecap: round; }
+.map .mesh path { fill: none; } .map .mesh-fine { stroke: #8b3f37; } .map .mesh-cell { stroke: #000; opacity: .92; }
+/* The fine mesh is one screen pixel wide at any map size, so that its colour shows over the cells; the
+   snapshots' own width (4 of 55.897 pixels a cell) is under a pixel on a map this small. */
+.map .mesh-fine { vector-effect: non-scaling-stroke; stroke-width: 1px !important; }
+.map .day.small .mesh-fine { stroke-width: .5px !important; }
+/* The mesh, the axes and the centroid never take the pointer: the map names what lies under it. */
+.map .mesh, .map .axis, .map .centroid, .map .ellipse, .map .ellipse-halo { pointer-events: none; }
+.map .ellipse { stroke-width: 2.1; } .map .axis.major { stroke-width: 1.9; } .map .axis.minor { stroke-width: 1.2; }
+.map .centroid { fill: #000; stroke: #fff; stroke-width: 1.3; }
+.map .day.small .cell { stroke: none; } .map .day.small .ellipse-halo { stroke-width: 11; } .map .day.small .ellipse { stroke-width: 5; }
+.map .day.entering { animation: scorch-in .28s ease-out; } .map .day.leaving { animation: scorch-out .28s ease-in forwards; }
+@keyframes scorch-in { from { opacity: 0; } } @keyframes scorch-out { to { opacity: 0; } }
+.map-tip { position: absolute; background: var(--ink); color: var(--paper); font-size: 12.5px; line-height: 1.3; padding: 4px 8px; border-radius: 4px; pointer-events: none; white-space: nowrap; z-index: 2; text-align: left; }
+.map-tip > * { display: block; } .map-tip strong { font-weight: 700; margin-bottom: 1px; }
+.controls { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin: 10px 0 8px; }
+.controls input[type="range"] { flex: 1 1 160px; min-width: 120px; accent-color: #d93a2b; }
+.controls .play { min-width: 104px; } .still-toggle[aria-pressed="true"] { background: var(--blue-soft); border-color: var(--blue); }
+.days { display: flex; flex-wrap: wrap; gap: 5px; list-style: none; padding: 0; margin: 0 0 10px; }
+.day-chip { background: var(--card); border: 1px solid var(--line); border-bottom: 4px solid var(--noise); border-radius: 6px; padding: 3px 7px 2px;
+  min-width: 58px; display: grid; justify-items: center; line-height: 1.2; color: var(--ink); font: inherit; cursor: pointer; }
+/* Every day of an event takes the colour of the event's type, whatever its own count; the text is
+   darkened from that colour so that it stays readable. */
+.days { --type-text: color-mix(in srgb, var(--event-type, var(--muted)) 70%, #000); }
+.day-chip, .day-chip.one, .day-chip.many, .day-chip.none { border-bottom-color: var(--event-type, var(--noise)); }
+.day-chip .day-date, .day-chip .day-word, .day-chip strong { color: var(--type-text); }
+.day-chip[aria-current="true"] { background: color-mix(in srgb, var(--event-type, var(--ink)) 16%, var(--card));
+  border-color: var(--ink); border-bottom-color: var(--event-type, var(--ink)); box-shadow: 0 0 0 1px var(--ink); }
+.day-date, .day-word { font-size: 11px; color: var(--muted); } .day-chip strong { font-size: 17px; }
+.type-tag { border-left: 6px solid var(--type); padding-left: 7px; color: var(--type); }
+/* The selected event: its type, the type's symbol from Figure 4 beside its values in Catalog 5.
+   The two stand side by side while there is room and one above the other when there is not. */
+.event-panel { border-top: 1px solid var(--line); margin-top: 4px; padding-top: 12px; }
+.scorch .event-panel h3 { font-size: 17px; font-weight: 700; margin: 0 0 10px; }
+.event-panel-body { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 24px; }
+.event-symbol { flex: 0 0 176px; margin: 0 auto; color: var(--ink); }
+.type-symbol { display: block; width: 176px; height: auto; overflow: visible; }
+.type-symbol .symbol-label { font: 17px "Cambria Math", Cambria, "Times New Roman", serif; fill: currentColor; }
+.type-symbol .symbol-sub { font-size: 12px; }
+.event-stats { flex: 1 1 280px; border-collapse: collapse; font-size: 14px; font-variant-numeric: tabular-nums; }
+.event-stats th, .event-stats td { padding: 6px 10px; border-bottom: 1px solid var(--line); vertical-align: baseline; }
+.event-stats tr:last-child th, .event-stats tr:last-child td { border-bottom: 0; }
+.event-stats th { font-weight: 600; color: var(--ink-2); text-align: left; }
+.event-stats td { text-align: right; font-weight: 650; color: var(--ink); white-space: nowrap; }
+.stills { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; margin: 10px 0; }
+.still { background: var(--card); border: 1px solid var(--line); border-radius: 6px; padding: 4px 4px 3px; font-size: 12px; color: var(--ink); cursor: pointer; }
+.still.is-current { border-color: var(--ink); box-shadow: 0 0 0 1px var(--ink); } .still span { display: block; padding-top: 2px; }
+.legend { border-top: 1px solid var(--line); margin-top: 12px; padding-top: 10px; display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); gap: 8px 26px; font-size: 13px; }
+.legend-title { display: block; color: var(--ink-2); font-weight: 600; text-align: center; margin-bottom: 4px; }
+.heat-scale { display: flex; list-style: none; padding: 0; margin: 0 0 18px; }
+.heat-scale li { flex: 1 1 0; height: 14px; position: relative; } .heat-scale li:first-child { border-radius: 3px 0 0 3px; } .heat-scale li:last-child { border-radius: 0 3px 3px 0; }
+.heat-scale span { position: absolute; top: 16px; left: 0; transform: translateX(-50%); font-size: 11.5px; color: var(--ink-2); white-space: nowrap; }
+.heat-scale li:first-child span { transform: none; }
+.heat-scale .heat-max { left: auto; right: 0; transform: none; }
+.legend-marks { list-style: none; padding: 0; margin: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px 14px; }
+.legend-marks li { display: flex; align-items: center; gap: 7px; }
+.swatch { flex: none; width: 22px; height: 14px; display: inline-block; position: relative; }
+.swatch.outside { background: var(--noise); opacity: .8; } .swatch.ring { border: 2px solid #000; border-radius: 50%; }
+/* A clustered cell as on the map: a red class of the heat scale inside the grey outline of the day's cells. */
+.swatch.cluster { background: #d93a2b; border: 1px solid var(--edge); }
+/* The two axes as the map draws them: black, the major one heavier than the minor one. */
+.swatch.axis-major::before, .swatch.axis-minor::before { content: ""; position: absolute; left: 0; right: 0; background: #000; }
+.swatch.axis-major::before { top: 6px; height: 2px; } .swatch.axis-minor::before { top: 6.5px; height: 1.25px; }
+.swatch.dot::before { content: ""; position: absolute; left: 6px; top: 2px; width: 10px; height: 10px; border-radius: 50%; background: #000; }
+
+/* File dialog */
+.modal-content { border-radius: 10px; background: var(--card); color: var(--ink); border-color: var(--line); }
+.modal-header, .modal-footer { border-color: var(--line); } .modal .close { color: var(--ink); text-shadow: none; opacity: .7; } .modal-title { font-weight: 650; font-size: 19px; }
+.chooser { display: grid; grid-template-columns: 158px minmax(0, 1fr); gap: 16px; color: var(--ink); }
+.chooser-places { display: flex; flex-direction: column; gap: 2px; border-right: 1px solid var(--line); padding-right: 10px; }
+.chooser-place, .chooser-crumb { background: none; border: 0; text-align: left; padding: 6px 8px; border-radius: 5px; color: var(--ink); font: inherit; cursor: pointer; }
+.chooser-place:hover, .chooser-crumb:hover { background: var(--well); } .chooser-place.is-current { background: var(--blue-soft); font-weight: 650; }
+.chooser-bar { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+.chooser-crumbs { flex: 1; display: flex; flex-wrap: wrap; align-items: center; min-width: 0; }
+.chooser-crumb { padding: 3px 5px; } .chooser-crumb + .chooser-crumb::before { content: "\203A"; color: var(--muted); margin-right: 8px; }
+.chooser-crumb[aria-current] { font-weight: 650; }
+.chooser-new { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 8px; } .chooser-new[hidden] { display: none; }
+.chooser-new label { margin: 0; font-weight: 600; } .chooser-new input { flex: 1 1 180px; width: auto; }
+.chooser-head, .chooser-row { display: grid; grid-template-columns: minmax(0, 1fr) 110px 86px 128px; gap: 0 10px; padding: 5px 10px; }
+.chooser-head { font-size: 12px; font-weight: 650; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; border-bottom: 1px solid var(--line); }
+/* The list gives up height in a short window, so that the dialog and its buttons fit. */
+.chooser-list { height: 286px; max-height: calc(100vh - 360px); min-height: 110px; overflow-y: auto; border: 1px solid var(--line); border-top: 0; border-radius: 0 0 6px 6px; background: var(--field-bg); }
+.chooser-row { cursor: default; font-size: 14px; user-select: none; } .chooser-row:hover { background: var(--hover); }
+/* The chosen row: a bar and a bold name as well as the tint. */
+.chooser-row[aria-selected="true"] { background: var(--blue-soft); box-shadow: inset 4px 0 0 var(--blue); }
+.chooser-row[aria-selected="true"] .chooser-name { font-weight: 650; }
+.chooser-row span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; } .chooser-row span + span { color: var(--muted); font-size: 13px; }
+.chooser-name::before { content: ""; display: inline-block; width: 17px; height: 13px; margin-right: 8px; vertical-align: -1px; border-radius: 2px; }
+.is-folder .chooser-name::before { background: #f0b541; box-shadow: inset 0 3px 0 #d99a1f; }
+.is-file .chooser-name::before { width: 12px; height: 15px; margin: 0 11px 0 2px; background: var(--card); border: 1.4px solid var(--muted-line); vertical-align: -2px; }
+.chooser-empty { color: var(--muted); padding: 14px 12px; margin: 0; }
+.chooser-path { display: flex; align-items: center; gap: 10px; margin: 10px 0 6px; } .chooser-path label { margin: 0; white-space: nowrap; font-weight: 600; }
+.chooser-path input { font: 13px Consolas, Menlo, monospace; }
+.chooser-hint { color: var(--muted); font-size: 13px; margin: 0 0 10px; }
+/* Cancel, Use this folder and Open stay at the bottom edge of a window too short for the dialog;
+   what they cover fades out above them, and a row chosen with the keyboard is scrolled clear of them. */
+.chooser-actions { display: flex; justify-content: flex-end; gap: 8px; position: sticky; bottom: 0; padding: 10px 0 8px; margin: -10px 0 -8px;
+  background: linear-gradient(transparent, var(--card) 10px); }
+.modal { scroll-padding-bottom: 56px; }
+
+/* Run progress */
+#shiny-notification-panel { width: 420px; max-width: 100%; }
+.shiny-notification { width: auto; font-size: 15px; padding: 12px 14px; border-radius: 8px; border: 1px solid var(--line); color: var(--ink); background: var(--card); opacity: 1; box-shadow: 0 6px 24px var(--shadow); }
+.shiny-notification .progress { background: var(--well); } .shiny-notification-close { color: var(--muted); }
+.shiny-notification .progress-bar { background: var(--heat); } .shiny-notification .progress-message { font-weight: 650; }
+body.scorch-busy .scorch > :not(.masthead):not(#running) { opacity: .5; pointer-events: none; }
+
+/* The running view replaces the page while a run is under way. */
+body.scorch-running .scorch > :not(.masthead):not(#running) { display: none !important; }
+.running { min-height: calc(100vh - 170px); display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: clamp(14px, 2.6vh, 24px); text-align: center; padding: clamp(12px, 4vh, 40px) 4px; }
+.running[hidden] { display: none; }
+.running-art { width: min(560px, 94%); }
+.running-grid { display: block; width: 100%; height: auto; overflow: visible; }
+.run-cell { fill: var(--well); transform-box: fill-box; transform-origin: center; }
+.run-cell.hot { opacity: 0; }
+.running[data-stage="0"] .run-cell { animation: run-wait 1.4s ease-in-out var(--delay) infinite alternate; }
+.running:not([data-stage="0"]) .run-cell.hot { animation: run-heat .55s ease-out var(--delay) both; }
+.run-ellipse { fill: none; stroke: var(--ink); stroke-width: 2.6; stroke-dasharray: 100; stroke-dashoffset: 100; transition: stroke-dashoffset 1.1s ease; }
+.run-centroid { fill: var(--ink); stroke: var(--card); stroke-width: 1.2; opacity: 0; transition: opacity .6s ease .6s; }
+.run-link { fill: none; stroke: var(--brand-red); stroke-width: 2.6; stroke-linecap: round; stroke-dasharray: 4 100; stroke-dashoffset: 104; transition: stroke-dashoffset 1s ease; }
+.running:is([data-stage="2"], [data-stage="3"], [data-stage="4"], [data-stage="5"]) .run-ellipse { stroke-dashoffset: 0; }
+.running:is([data-stage="2"], [data-stage="3"], [data-stage="4"], [data-stage="5"]) .run-centroid { opacity: 1; }
+.running:is([data-stage="3"], [data-stage="4"], [data-stage="5"]) .run-link { stroke-dasharray: 100; stroke-dashoffset: 0; }
+.running[data-stage="4"] .run-ellipse { animation: run-pulse 1.8s ease-in-out infinite; }
+@keyframes run-wait { from { opacity: .45; } to { opacity: 1; } }
+@keyframes run-heat { from { opacity: 0; transform: scale(.55); } to { opacity: 1; transform: none; } }
+@keyframes run-pulse { 50% { stroke-width: 4; } }
+.scorch .running-title { font-size: clamp(24px, 3.4vw, 34px); font-weight: 700; margin: 0; letter-spacing: .01em; }
+.running-stages { list-style: none; padding: 0; margin: 0; width: min(920px, 100%);
+  display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
+.running-stages li { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 14px 8px 12px;
+  border: 1px solid var(--line); border-radius: 10px; background: var(--card); color: var(--muted); font-weight: 600; font-size: 14px;
+  transition: border-color .3s, box-shadow .3s, color .3s; }
+.running-stages li.active { color: var(--ink); border-color: var(--brand-red); box-shadow: 0 0 0 2px color-mix(in srgb, var(--brand-red) 22%, transparent); }
+.running-stages li.done { color: var(--ink); }
+.stage-mark { width: 24px; height: 24px; border-radius: 50%; border: 2px solid var(--line); display: grid; place-items: center; }
+.running-stages li.active .stage-mark { border-color: var(--brand-red); background: radial-gradient(circle, var(--brand-red) 38%, transparent 42%);
+  animation: run-dot 1.2s ease-in-out infinite; }
+.running-stages li.done .stage-mark { background: #2e7d4f; border-color: #2e7d4f; }
+.running-stages li.done .stage-mark::after { content: "\2713"; color: #fff; font-size: 14px; font-weight: 800; line-height: 1; }
+@keyframes run-dot { 50% { transform: scale(1.15); } }
+.running-note { min-height: 1.5em; margin: 0; color: var(--muted); font-size: 15px; }
+.running-time { margin: 0; color: var(--muted); font-size: 14px; font-variant-numeric: tabular-nums; }
+.running-error { max-width: 640px; display: grid; gap: 12px; justify-items: center; }
+.running-error[hidden] { display: none; }
+@media (max-width: 700px) { .running-stages { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+/* Reduced motion: the same picture, still. Each stage shows its state at once. */
+@media (prefers-reduced-motion: reduce) {
+  .run-cell, .run-ellipse, .run-centroid, .run-link, .stage-mark, .running-stages li { animation: none !important; transition: none !important; }
+  .running:not([data-stage="0"]) .run-cell.hot { opacity: 1; }
+  .running[data-stage="0"] .run-cell.hot { opacity: .35; }
+}
+
+.scorch footer { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; color: var(--muted); font-size: 13px; padding: 6px 2px 0; }
+
+@media (max-width: 780px) {
+  .hero, .fields, .legend, .legend-marks, .explorer-grid { grid-template-columns: 1fr; } .type-counts { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .type-cards { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .facts { grid-template-columns: 1fr; gap: 0; } .facts dd { margin-bottom: 8px; }
+}
+/* Below 992px the dialog is 600px wide: places go above the list, and the name gets the room of size and date. */
+@media (max-width: 991px) {
+  .chooser { grid-template-columns: 1fr; } .chooser-places { flex-direction: row; flex-wrap: wrap; border-right: 0; padding-right: 0; }
+  .chooser-head, .chooser-row { grid-template-columns: minmax(0, 1fr) 96px; } .chooser-head span:nth-child(n+3), .chooser-row span:nth-child(n+3) { display: none; }
+  .chooser-list { max-height: calc(100vh - 412px); }
+}
+/* Form fields follow the display; Bootstrap draws them white. */
+.scorch .form-control, .modal .form-control { background-color: var(--field-bg); color: var(--ink); border-color: var(--field-line); }
+.scorch .form-control[disabled], .scorch .form-control[readonly], .modal .form-control[readonly] { background-color: var(--well); }
+.scorch .form-control::placeholder, .modal .form-control::placeholder { color: var(--placeholder); }
+@media (prefers-reduced-motion: reduce) {
+  .map .day.entering, .map .day.leaving { animation: none; } * { scroll-behavior: auto !important; transition: none !important; }
+}
+/* Windows contrast themes replace backgrounds and shadows: keep the colours of the key, and
+   mark the chosen row with the system's own selection colours. */
+@media (forced-colors: active) {
+  .heat-scale li, .swatch.outside, .swatch.cluster, .chooser-name::before, .type-symbol { forced-color-adjust: none; }
+  .heat-scale span { forced-color-adjust: auto; }
+  .swatch.axis-major::before, .swatch.axis-minor::before, .swatch.dot::before { background: CanvasText; }
+  .chooser-row[aria-selected="true"] { forced-color-adjust: none; background: Highlight; color: HighlightText; }
+  .chooser-row[aria-selected="true"] span { color: HighlightText; }
+  .chooser-actions { background: Canvas; }
+  /* A refused field loses its red border and shadow here: a dashed line marks it. */
+  .scorch [aria-invalid="true"] { outline: 2px dashed CanvasText; outline-offset: 2px; }
+  /* The pinned Review and run card loses its shadow: a heavier upper edge sets it off from the
+     cards that pass beneath it. */
+  .card.review { border-top: 3px solid CanvasText; }
+}

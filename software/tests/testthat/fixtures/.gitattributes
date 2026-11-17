@@ -1,0 +1,2 @@
+# Preserve the original archived CSV fixtures, including their line endings.
+*.csv -text

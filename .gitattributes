@@ -1,0 +1,7 @@
+# GitHub's language statistics describe the R package. The SCORCH window's
+# browser files (JavaScript and CSS in software/launcher/) and the browser test
+# that drives it are support files: they stay JavaScript and CSS, and are only
+# left out of the language count.
+software/launcher/*.js linguist-detectable=false
+software/launcher/*.css linguist-detectable=false
+software/tests/browser/*.cjs linguist-detectable=false

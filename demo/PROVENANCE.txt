@@ -1,0 +1,46 @@
+DEMO DATA PROVENANCE AND LICENCE
+
+File: input/north_america_processed_tmax.nc (installed as north_america_tmax.nc).
+This is an unmodified copy of SCORCH_NA_processed_1996_2025.nc from:
+ERA5 Hourly and Processed Daily Maximum Temperature for the scoRch.simulator
+North America Demonstration, April–September 1996–2025, version 1.0.0.
+Creators: Fawaz Bouhamad and Nasser Najibi, University of Florida.
+Dataset DOI: https://doi.org/10.5281/zenodo.24232552
+
+Coverage: 25–50 N and 130–58 W, April–September 1996–2025;
+1,800 one-degree cells, 5,490 dates and 9,882,000 Tmax values in Celsius.
+The authors calculated the maximum of 24 hourly 2-m temperatures per UTC
+day at each native 0.25-degree point, subtracted 273.15, then averaged each
+complete 4x4 block into a one-degree cell. Each point has equal weight 1/16.
+No latitude/area or temperature weighting is used for this aggregation.
+Points belong to [k,k+1) degree cells with centres k+0.5; the incomplete
+upper-edge cells beginning at 50 N and -58 E are excluded.
+Processing and output use float64, with no decimal rounding or integer packing.
+
+Processed file: SCORCH_NA_processed_1996_2025.nc
+Size: 33841054 bytes
+SHA-256: c9d577482f02ed76153d72217231e50c41b7f7d05abf44c51ec4a1d52c0ec335
+MD5: 77cad2b8cfe2e291f31c07a5173ebfca
+
+Accompanying hourly archive: SCORCH_NA_unprocessed_1996_2025.zip
+Size: 6333591973 bytes
+SHA-256: 07dc55b3a1f1a6464e54bee3515d5598261e5d310a58f4631499211767cd1d01
+MD5: 79046bdf1089d561cb0b5950d979ff0f
+ZIP64 archive with 30 original CDS ERA5 seasonal hourly NetCDF files,
+era5_t2m_us_YYYY_04-09.nc (1996–2025), in one folder. Extract before use.
+Source: Copernicus Climate Data Store, reanalysis-era5-single-levels,
+reanalysis, 2m_temperature (ECMWF parameter 167).
+Source DOI: https://doi.org/10.24381/cds.adbb2d47
+
+Contains modified Copernicus Climate Change Service information 2026.
+Neither the European Commission nor ECMWF is responsible for any use
+of the information. The authors' processing is CC BY 4.0; the ERA5 data
+retain their applicable Copernicus/CC BY 4.0 attribution terms.
+
+Reference: Hersbach et al. (2020), The ERA5 global reanalysis,
+Quarterly Journal of the Royal Meteorological Society 146, 1999–2049.
+https://doi.org/10.1002/qj.3803
+
+The workflow and event-typology artwork in software/figures is by Bouhamad
+and Najibi, CC BY 4.0. Software source is GPL-3.0-or-later; see LICENSE.txt.
+The original EMME study data (10.5281/zenodo.21717874) are a separate dataset.
