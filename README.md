@@ -2,7 +2,7 @@
 
 [![License: GPL-3.0-or-later](https://img.shields.io/badge/license-GPL--3.0--or--later-orange)](LICENSE.txt)
 [![R: 4.4 or newer](https://img.shields.io/badge/R-%E2%89%A54.4-blue)](#install-and-open)
-[![Version: 1.3.0](https://img.shields.io/badge/version-1.3.0-blue)](https://github.com/fawazbouhamad/scoRch.simulator/releases/tag/v1.3.0)
+[![Version: 1.4.0](https://img.shields.io/badge/version-1.4.0-blue)](https://github.com/fawazbouhamad/scoRch.simulator/releases/tag/v1.4.0)
 [![Software checks](https://github.com/fawazbouhamad/scoRch.simulator/actions/workflows/checks.yaml/badge.svg?branch=main)](https://github.com/fawazbouhamad/scoRch.simulator/actions/workflows/checks.yaml)
 
 An R package implementing **SCORCH: Spatiotemporal Classification of Regional
@@ -21,7 +21,7 @@ Console and press Enter. It installs the package once and then opens the SCORCH
 window.
 
 ```r
-source("https://raw.githubusercontent.com/fawazbouhamad/scoRch.simulator/v1.3.0/software/setup/install.R")
+source("https://raw.githubusercontent.com/fawazbouhamad/scoRch.simulator/v1.4.0/software/setup/install.R")
 install_scorch()
 ```
 
@@ -51,11 +51,13 @@ To move to a newer release, paste the block from that release's README.
 
 ## The SCORCH window
 
-<img src="software/figures/setup_window.png" width="720" alt="The SCORCH opening screen: Choose your own data, Use included example, and a map of heatwave cells with a fitted ellipse">
+<img src="software/figures/setup_window.png" width="720" alt="The SCORCH opening screen: Select Your Data, Use included example, and a demonstration map of heatwave cells with a fitted ellipse beside the four event types">
 
-**1. Choose.** The opening screen has two buttons.
+**1. Choose.** The opening screen has two buttons. In RStudio the window opens in
+a dialog of fixed size; **Open in browser** at the top right continues in a
+browser window that you can resize, with any finished run.
 
-- **Choose your own data** opens one file chooser. Browse to **Downloads** or any
+- **Select Your Data** opens one file chooser. Browse to **Downloads** or any
   other folder and select a prepared NetCDF, a raw ERA5 NetCDF or a ZIP, then
   click **Open**. For a folder of ERA5 files, open the folder and click
   **Use this folder**. SCORCH works out which of these you selected. Files are read
@@ -66,9 +68,11 @@ To move to a newer release, paste the block from that release's README.
 
 The map on the opening screen is a **demonstration** from that bundled dataset.
 Play, pause or step through the days of one event of each type to see which grid
-cells qualify, where SCORCH fits ellipses and why the event has its type. **Still
-view** shows every day side by side; it is the default when your system asks for
-reduced motion.
+cells qualify, where SCORCH fits ellipses and why the event has its type. Each
+type card carries its symbol from the study's Figure 4, and the selected event's
+values from Catalog 5 are listed below the map. Pointing at an ellipse shows its
+axis ratio, area and orientation. **Still view** shows every day side by side;
+it is the default when your system asks for reduced motion.
 
 **2. Check the settings that need a decision.** SCORCH reads the variable,
 coordinates, time axis and units from the file and shows the dataset name, its
@@ -77,8 +81,8 @@ stays in view at the lower edge of the window while you check them.
 
 - **Months** apply in every selected year. June through August of a file holding
   1996–2025 means those three months in each of the 30 years, and the window says
-  so, with the number of days. **Limit the analysis dates** sets the first and
-  the last date to analyze.
+  so, with the number of days. A new run covers every date of the data in those
+  months; the dates of a reused configuration still apply.
 - **Temperature** is always shown in °C. A file in Kelvin is converted once, when
   it is read.
 - **A question** appears only when the file leaves something open, for example
@@ -90,22 +94,25 @@ stays in view at the lower edge of the window while you check them.
   `output/SCORCH_run_001` under your R working directory.
 - **Advanced settings** are collapsed. They hold the heatwave definition,
   clustering and ellipse settings, bootstrap repetitions and random seeds, the
-  spatial model predictors, ERA5 preprocessing (for raw ERA5 input) and how the
-  file is read: its format, units, and variable and coordinate names. These stay
-  on automatic detection unless you change them; the variable SCORCH found is
-  named on the dataset card. **Reuse a saved configuration** fills the settings
-  from the `config.yaml` of an earlier run and keeps the dataset you selected.
-  Its advanced settings and results folder stay in use when you change the data
-  afterwards. The months, the date limit and how the file is read start again
-  with other data; reuse the file to apply its months and dates again.
+  spatial model predictors and ERA5 preprocessing (for raw ERA5 input). The
+  file's format, units, and variable and coordinate names are detected; a
+  question appears where the file leaves one open. **Reuse a saved configuration**
+  fills the settings from the `config.yaml` of an earlier run, including how its
+  file is read, and keeps the dataset you selected. Its advanced settings and
+  results folder stay in use when you change the data afterwards. The months,
+  the analysis dates and how the file is read start again with other data; reuse
+  the file to apply its months and dates again.
 
-**3. Run and read the result.** Click **Run analysis** and follow the progress.
-When it finishes, the window shows the number of events of each of the four types
-and the full results path, with **Open summary**, **Open results folder** and
-**Set up another run** directly below them. The dataset, the results of each
-stage and the settings are listed underneath, and the map now shows the events
-of your run. A reload of the window shows these results again, until you click
-**Set up another run**. Each run folder holds `Summary.txt`, the effective
+**3. Run and read the result.** Click **Run analysis**. A full-page running screen
+follows the four stages (Heatwave Detection, Heatwave Clustering, Heatwave
+Classification and Heatwave Modeling) with the elapsed time; it marks each stage
+as it is reached and finished, and shows no estimated finishing time. If the run
+stops, the screen says why and **Back to settings** returns to your settings.
+When the results are saved, the window shows the number of events of each of the
+four types and the full results path, with **Open summary**, **Open results
+folder** and **Set up another run** directly below them. The map then shows the
+events of your run: pick a type card, then an event from its list. A reload of
+the window shows these results again, until you click **Set up another run**. Each run folder holds `Summary.txt`, the effective
 `config.yaml`, the catalogs, model workbooks and figures. The configuration
 refers to the original input, including an original ZIP. To keep the result in R,
 start with `result <- scoRch.simulator::run_scorch()`.
@@ -373,7 +380,7 @@ Assemble a package with `Rscript software/setup/install.R .package`, then use
 `devtools::check(".package")`. The test suite compares runs bit for bit and must
 run against an installed build, as `R CMD check` does, not against
 `devtools::load_all()` or under `covr`, where the bit-for-bit comparisons are
-skipped. The installer defaults to stable `v1.3.0`;
+skipped. The installer defaults to stable `v1.4.0`;
 developers can request `install_scorch(ref = "main")`. `force = TRUE` reinstalls
 a release that is already installed and `open = FALSE` installs without opening
 the window. Dependency upgrades are disabled unless requested. A copy installed
