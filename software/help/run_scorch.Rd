@@ -10,7 +10,7 @@ run_scorch(config = NULL, tmax = NULL, trace_date = NULL)
 \item{config}{Path of a YAML configuration file (an edited copy from
 \code{\link[=write_scorch_config]{write_scorch_config()}} or \code{\link[=scorch_template]{scorch_template()}}), or a list with the same
 structure. With no arguments, an interactive session opens the SCORCH
-setup window. Choose your own data (a prepared NetCDF, a raw ERA5 NetCDF,
+setup window. Select Your Data (a prepared NetCDF, a raw ERA5 NetCDF,
 a ZIP or a folder of ERA5 files) or the included example, review the
 months and the results folder, then click Run analysis; nothing is
 analysed before that click, and every run gets its own numbered folder.
