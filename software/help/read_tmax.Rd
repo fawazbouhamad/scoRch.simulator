@@ -42,7 +42,11 @@ and keeps the warm-season dates to analyse.
 \details{
 The file needs one temperature variable with three dimensions: time,
 latitude and longitude, in any order. Longitudes and latitudes are cell
-centres with constant spacing. Time is \code{"days since YYYY-MM-DD"} (or
+centres with constant spacing. Coordinates stored in single precision
+(32-bit floating point) have that spacing only up to their rounding, such
+as 130.100006 for 130.1; where that rounding alone would stop the reading,
+they are read as the evenly spaced values between the first and the last
+of them. Time is \code{"days since YYYY-MM-DD"} (or
 hours, minutes or seconds since) in a standard Gregorian calendar; the file
 may hold every day of the year or only the warm-season days. Missing values
 are read from the file's \verb{_FillValue} or \code{missing_value} attribute. Cells

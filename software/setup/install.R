@@ -44,7 +44,7 @@ prepare_scorch_package <- function(root = ".", destination = tempfile("scoRch-pa
 #   lib    library folder to install into instead of R's first one
 #   force  reinstall a release that is already installed
 #   open   open the window afterwards (interactive sessions only)
-install_scorch <- function(path = NULL, ref = "v1.4.0", lib = NULL, upgrade = "never", force = FALSE,
+install_scorch <- function(path = NULL, ref = "v1.5.0", lib = NULL, upgrade = "never", force = FALSE,
                            open = interactive(), ...) {
   pkg <- "scoRch.simulator"
   reopen <- "scoRch.simulator::run_scorch()"

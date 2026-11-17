@@ -83,3 +83,26 @@ ncdf4::ncvar_put(nc, defined, array(295 + (seq_len(8L * 4L * 48L) %% 11), c(8L, 
 ncdf4::ncatt_put(nc, "t2m", "long_name", "2 metre temperature")
 ncdf4::nc_close(nc)
 cat(sprintf("Wrote %s (t2m, %d hours, %d by %d points)\n", file, length(hours), length(row_lon), length(row_lat)))
+
+# 6. Prepared daily maxima on a 0.1-degree grid near 250 E whose longitudes and
+# latitudes are stored in single precision, as many files store them. Beyond
+# 128 degrees the rounding of single precision makes the spacing uneven by more
+# than the readers allow on their own; they read such coordinates as the even
+# grid between the first and the last value, and the window must offer Run.
+float_lon <- 250 + (0:5) / 10
+float_lat <- 40 + (0:3) / 10
+axes <- list(ncdf4::ncdim_def("lon", "", seq_along(float_lon), create_dimvar = FALSE),
+             ncdf4::ncdim_def("lat", "", seq_along(float_lat), create_dimvar = FALSE),
+             ncdf4::ncdim_def("time", "days since 2001-06-01", 0:29, calendar = "standard"))
+defined <- ncdf4::ncvar_def("tmax", "degC", axes, missval = 1e30, prec = "double")
+stored <- list(ncdf4::ncvar_def("lon", "degrees_east", axes[1L], prec = "float"),
+               ncdf4::ncvar_def("lat", "degrees_north", axes[2L], prec = "float"))
+file <- file.path(folder, "single_precision.nc")
+nc <- ncdf4::nc_create(file, c(list(defined), stored))
+ncdf4::ncvar_put(nc, defined, array(25 + (seq_len(6L * 4L * 30L) %% 13), c(6L, 4L, 30L)))
+ncdf4::ncvar_put(nc, stored[[1L]], float_lon)
+ncdf4::ncvar_put(nc, stored[[2L]], float_lat)
+ncdf4::ncatt_put(nc, "tmax", "cell_methods", "time: maximum")
+ncdf4::nc_close(nc)
+cat(sprintf("Wrote %s (tmax, 30 days, %d by %d cells, coordinates in single precision)\n", file,
+            length(float_lon), length(float_lat)))

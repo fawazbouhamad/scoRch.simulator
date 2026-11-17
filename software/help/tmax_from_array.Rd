@@ -22,7 +22,10 @@ tmax_from_array(
 \item{dates}{Dates (class \code{Date}) of the first array dimension.}
 
 \item{lon, lat}{Longitudes and latitudes (degrees) of the cell centres along
-the third and second array dimensions, evenly spaced.}
+the third and second array dimensions, evenly spaced. Values that are
+evenly spaced only up to the rounding of single precision (such as
+130.100006 for 130.1), and would be refused for that alone, are replaced
+by the evenly spaced values between the first and the last of them.}
 
 \item{units}{\code{"degC"} or \code{"K"}.}
 

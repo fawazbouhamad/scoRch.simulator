@@ -137,7 +137,87 @@ test_that("several ERA5 files, a folder, older CDS files and expver are read", {
   expect_error(read_era5(tempfile()), "does not exist")
   empty <- tempfile("empty")
   dir.create(empty)
-  expect_error(read_era5(empty), "contains no .nc files")
+  expect_error(read_era5(empty),
+               "The input folder contains no NetCDF (.nc or .nc4) files, and neither do the folders directly inside it",
+               fixed = TRUE)
+})
+
+test_that("a folder may hold .nc4 files, or its files in the folders directly inside it", {
+  set.seed(4)
+  lon <- c(30, 31, 32)
+  lat <- c(41, 40)
+  seconds <- hourly_seconds("2010-05-30", 4)
+  values <- array(285 + 20 * runif(96 * 2 * 3), c(96, 2, 3))
+  days <- function(path, which) {
+    steps <- rep((which - 1) * 24, each = 24) + 1:24
+    write_era5(path, values[steps, , , drop = FALSE], seconds[steps], lon, lat, prec = "double")
+  }
+  root <- withr::local_tempdir()
+  folder <- function(...) {
+    path <- file.path(root, ...)
+    dir.create(path, recursive = TRUE)
+    path
+  }
+  whole <- suppressMessages(read_era5(days(file.path(root, "whole.nc"), 1:4), months = 5:6, cell_size = NULL))
+  same <- c("dates", "cells", "tmax", "grid")
+  read <- function(files) suppressMessages(read_era5(files, months = 5:6, cell_size = NULL))
+  nothing <- "The input folder contains no NetCDF (.nc or .nc4) files, and neither do the folders directly inside it: "
+
+  # A folder of .nc4 files only (MERRA-2 and other NASA files end in .nc4).
+  nc4 <- folder("nc4")
+  days(file.path(nc4, "second.nc4"), 3:4)
+  days(file.path(nc4, "first.NC4"), 1:2)
+  file.create(file.path(nc4, "notes.txt"))
+  expect_identical(input_files(nc4), file.path(nc4, c("first.NC4", "second.nc4")))
+  expect_identical(read(nc4)[same], whole[same])
+  # With .nc files of its own a folder is read as before: only these.
+  mixed <- folder("mixed")
+  days(file.path(mixed, "a.nc"), 1:2)
+  days(file.path(mixed, "b.nc4"), 3:4)
+  days(file.path(folder("mixed", "deeper"), "c.nc"), 3:4)
+  expect_identical(input_files(mixed), file.path(mixed, "a.nc"))
+  expect_identical(read(mixed)$dates, whole$dates[1:2])
+  # Its own .nc4 files come before the files of the folders inside it.
+  own <- folder("own")
+  days(file.path(own, "a.nc4"), 1:2)
+  days(file.path(folder("own", "deeper"), "c.nc"), 3:4)
+  expect_identical(input_files(own), file.path(own, "a.nc4"))
+
+  # One folder per month, each with a file of the same name, as unpacked downloads are.
+  months <- folder("months")
+  days(file.path(folder("months", "2010-06"), "data.nc"), 3:4)
+  days(file.path(folder("months", "2010-05"), "data.nc"), 1:2)
+  expect_identical(input_files(months), file.path(months, c("2010-05", "2010-06"), "data.nc"))
+  expect_identical(read(months)[same], whole[same])
+  expect_match(read(months)$source, "2 ERA5 files")
+  # One kind of file for all of these folders: .nc where any of them has such files.
+  kinds <- folder("kinds")
+  days(file.path(folder("kinds", "b"), "late.nc4"), 3:4)
+  days(file.path(folder("kinds", "a"), "early.nc"), 1:2)
+  days(file.path(kinds, "a", "ignored.nc4"), 3:4)
+  expect_identical(input_files(kinds), file.path(kinds, "a", "early.nc"))
+  expect_identical(read(kinds)$dates, whole$dates[1:2])
+  # A folder whose name ends like a file is a folder.
+  named <- folder("named")
+  days(file.path(folder("named", "grids.nc4"), "a.nc"), 1:2)
+  expect_identical(input_files(named), file.path(named, "grids.nc4", "a.nc"))
+
+  # Nothing deeper is looked at, and a folder without files says where it looked.
+  deep <- folder("deep")
+  days(file.path(folder("deep", "one", "two"), "a.nc"), 1:2)
+  expect_error(input_files(deep), paste0(nothing, deep), fixed = TRUE)
+  hollow <- folder("hollow")
+  folder("hollow", "2010")
+  folder("hollow", "2011")
+  expect_error(read_era5(hollow), paste0(nothing, hollow), fixed = TRUE)
+  expect_error(read_era5(folder("empty")), paste0(nothing, file.path(root, "empty")), fixed = TRUE)
+
+  # Several paths at once: files and folders, each by the rule of its kind.
+  alone <- file.path(root, "whole.nc")
+  expect_identical(input_files(c(months, alone, nc4)),
+                   c(file.path(months, c("2010-05", "2010-06"), "data.nc"), alone, file.path(nc4, c("first.NC4", "second.nc4"))))
+  expect_error(input_files(c(alone, hollow)), paste0(nothing, hollow), fixed = TRUE)
+  expect_identical(read(c(file.path(mixed, "a.nc"), file.path(months, "2010-06")))[same], whole[same])
 })
 
 test_that("raw ERA5 named in the configuration gives the same analysis as its daily maxima", {

@@ -7,7 +7,11 @@
 #'
 #' The file needs one temperature variable with three dimensions: time,
 #' latitude and longitude, in any order. Longitudes and latitudes are cell
-#' centres with constant spacing. Time is `"days since YYYY-MM-DD"` (or
+#' centres with constant spacing. Coordinates stored in single precision
+#' (32-bit floating point) have that spacing only up to their rounding, such
+#' as 130.100006 for 130.1; where that rounding alone would stop the reading,
+#' they are read as the evenly spaced values between the first and the last
+#' of them. Time is `"days since YYYY-MM-DD"` (or
 #' hours, minutes or seconds since) in a standard Gregorian calendar; the file
 #' may hold every day of the year or only the warm-season days. Missing values
 #' are read from the file's `_FillValue` or `missing_value` attribute. Cells
@@ -82,7 +86,10 @@ read_tmax <- function(file, variable = "tmax", lon = "lon", lat = "lat",
 #' @param tmax Numeric array with dimensions time, latitude, longitude.
 #' @param dates Dates (class `Date`) of the first array dimension.
 #' @param lon,lat Longitudes and latitudes (degrees) of the cell centres along
-#'   the third and second array dimensions, evenly spaced.
+#'   the third and second array dimensions, evenly spaced. Values that are
+#'   evenly spaced only up to the rounding of single precision (such as
+#'   130.100006 for 130.1), and would be refused for that alone, are replaced
+#'   by the evenly spaced values between the first and the last of them.
 #' @param units `"degC"` or `"K"`.
 #' @param source Optional description of the data origin for the run summary.
 #' @inheritParams read_tmax
@@ -92,6 +99,10 @@ tmax_from_array <- function(tmax, dates, lon, lat, units = "degC", months = 1:12
                             start = NULL, end = NULL, source = "array") {
   lon <- as.numeric(lon)
   lat <- as.numeric(lat)
+  # Coordinates that are evenly spaced only to the rounding of single precision
+  # become the even grid between their first and last value.
+  lon <- even_coordinates(lon)$values
+  lat <- even_coordinates(lat)$values
   dates <- as.Date(dates)
   if (length(dim(tmax)) != 3 ||
       !all(dim(tmax) == c(length(dates), length(lat), length(lon)))) {
@@ -213,6 +224,33 @@ grid_step <- function(values, name) {
     fail(sprintf("The %s values are not evenly spaced (steps from %g to %g).", name, min(steps), max(steps)))
   }
   steps[1]
+}
+
+# Coordinates stored in single precision are rounded by up to 2^-24 of their
+# size, so the steps of an even grid then differ by up to 2^-21 of the largest
+# value: more than grid_step() allows on a fine grid far from zero (0.1
+# degrees beyond 128, 0.05 degrees beyond 64). Such coordinates become the
+# even grid between their first and last value, and `slack` is how far, in
+# degrees, a point of that grid may lie from the true coordinate. Coordinates
+# that grid_step() accepts are used as they are (slack 0), and so are those
+# that differ by more than the rounding, which grid_step() then refuses.
+# A reader that measures the coordinates in another order or by a further
+# rule says in `accepted` whether it takes them as they are
+# (raw_coordinates()).
+even_coordinates <- function(values, accepted = NULL) {
+  values <- as.numeric(values)
+  as_given <- list(values = values, slack = 0)
+  if (length(values) < 3 || !all(is.finite(values))) return(as_given)
+  steps <- diff(values)
+  uneven <- max(abs(steps - steps[1]))
+  if (is.null(accepted)) accepted <- uneven <= 1e-4 * abs(steps[1])
+  # Each value is rounded by at most 2^-24 of its size, so two steps differ by
+  # at most 2^-22 of the largest. Only values that are single-precision numbers
+  # can owe their unevenness to that rounding.
+  rounding <- 2^-22 * max(abs(values))
+  single <- all(values == readBin(writeBin(values, raw(), size = 4L), "double", size = 4L, n = length(values)))
+  if (any(steps == 0) || accepted || !single || uneven > rounding) return(as_given)
+  list(values = seq(values[1], values[length(values)], length.out = length(values)), slack = rounding)
 }
 
 # Dates from CF time values such as "days since 1940-01-01". Work in

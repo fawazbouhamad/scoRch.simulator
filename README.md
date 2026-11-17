@@ -2,7 +2,7 @@
 
 [![License: GPL-3.0-or-later](https://img.shields.io/badge/license-GPL--3.0--or--later-orange)](LICENSE.txt)
 [![R: 4.4 or newer](https://img.shields.io/badge/R-%E2%89%A54.4-blue)](#install-and-open)
-[![Version: 1.4.0](https://img.shields.io/badge/version-1.4.0-blue)](https://github.com/fawazbouhamad/scoRch.simulator/releases/tag/v1.4.0)
+[![Version: 1.5.0](https://img.shields.io/badge/version-1.5.0-blue)](https://github.com/fawazbouhamad/scoRch.simulator/releases/tag/v1.5.0)
 [![Software checks](https://github.com/fawazbouhamad/scoRch.simulator/actions/workflows/checks.yaml/badge.svg?branch=main)](https://github.com/fawazbouhamad/scoRch.simulator/actions/workflows/checks.yaml)
 
 An R package implementing **SCORCH: Spatiotemporal Classification of Regional
@@ -21,7 +21,7 @@ Console and press Enter. It installs the package once and then opens the SCORCH
 window.
 
 ```r
-source("https://raw.githubusercontent.com/fawazbouhamad/scoRch.simulator/v1.4.0/software/setup/install.R")
+source("https://raw.githubusercontent.com/fawazbouhamad/scoRch.simulator/v1.5.0/software/setup/install.R")
 install_scorch()
 ```
 
@@ -59,8 +59,8 @@ browser window that you can resize, with any finished run.
 
 - **Select Your Data** opens one file chooser. Browse to **Downloads** or any
   other folder and select a prepared NetCDF, a raw ERA5 NetCDF or a ZIP, then
-  click **Open**. For a folder of ERA5 files, open the folder and click
-  **Use this folder**. SCORCH works out which of these you selected. Files are read
+  click **Open**. For a folder of ERA5 files, or a folder that holds one folder
+  of files per year, open it and click **Use this folder**. SCORCH works out which of these you selected. Files are read
   where they are; a ZIP is extracted into temporary local storage with progress.
   The hourly Zenodo ZIP below needs about 6.4 GB of free temporary space.
 - **Use included example** goes straight to the settings of the bundled North
@@ -164,8 +164,16 @@ To use another configuration, run
 `scoRch.simulator::run_scorch("C:/analysis/config.yaml")`.
 
 **Accepted input:** a regular longitude-latitude NetCDF grid, in Celsius or
-Kelvin, with complete daily Tmax in every retained cell. ERA5 input can be one
-NetCDF file, a folder of NetCDF files or a YAML list of files. Hourly files need
+Kelvin, with complete daily Tmax in every retained cell. Coordinates stored in
+single precision, which are evenly spaced only up to their rounding (130.100006
+for 130.1), are read as the even grid between their first and last value. ERA5
+input can be one NetCDF file, a YAML list of files, or a folder: its `.nc`
+files; in a folder without any, its `.nc4` files; and in a folder without
+either, the files of the folders directly inside it, such as one unpacked
+download per year. A ZIP file is read the same way. Several files of daily
+values that are not ERA5 (one MERRA-2 file per day, for example) are read
+together as ERA5 input: set `format: era5` in the configuration and run it
+with `scoRch.simulator::run_scorch()`. Hourly files need
 complete UTC days on the same grid without overlapping dates. Daily ERA5 maxima
 are also accepted; daily means are not daily Tmax. Obtain your local files
 first; the software does not download ERA5 or require an API key.
@@ -189,6 +197,13 @@ has a fourth dimension, and when the files of one selection name the variable or
 the coordinates differently. A time axis counted from before 1582-10-15 in the
 standard calendar is refused by the window and by scripted runs alike; re-encode
 it from a later origin, such as `days since 1900-01-01`.
+
+On Windows, unless long paths are switched on, no file path may have 260
+characters or more, and a run writes files about 70 characters deeper than its
+results folder. A results folder with a longer path is named before
+**Run analysis** in the window, and a scripted run stops at its start, before it
+reads any data, with the longest path the results folder may have there. Choose
+a results folder with a shorter path.
 
 Hourly processing takes each native point's maximum over 24 UTC hours, converts
 Kelvin to Celsius, then averages complete blocks into the configured cell size.
@@ -380,7 +395,7 @@ Assemble a package with `Rscript software/setup/install.R .package`, then use
 `devtools::check(".package")`. The test suite compares runs bit for bit and must
 run against an installed build, as `R CMD check` does, not against
 `devtools::load_all()` or under `covr`, where the bit-for-bit comparisons are
-skipped. The installer defaults to stable `v1.4.0`;
+skipped. The installer defaults to stable `v1.5.0`;
 developers can request `install_scorch(ref = "main")`. `force = TRUE` reinstalls
 a release that is already installed and `open = FALSE` installs without opening
 the window. Dependency upgrades are disabled unless requested. A copy installed

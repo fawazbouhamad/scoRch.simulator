@@ -297,7 +297,7 @@ test_that("numbers that cannot be air temperature stop the selection", {
   factors <- c("10 K", "1e-1 degC", "K/10", "degrees Celsius x 10", "degC x 10", "degC \u00d7 10", "tenths of degrees C")
   for (i in seq_along(factors)) {
     expect_error(detect_input(stored(paste0("factor-", i), celsius * 10, units = factors[i])),
-                 "not whole degrees.*choose the temperature units under Advanced settings", info = factors[i])
+                 "not whole degrees.*set 'units' [(]degC or K[)] in a configuration file", info = factors[i])
   }
   # Any other number is none, and the units are read as they were before.
   harmless <- c("degrees Celsius at 2 m", "Celsius (2m)", "degree_Celsius (ITS-90)", "1 degC")
@@ -388,7 +388,7 @@ test_that("selections that the readers could not read stop before the run", {
   expect_identical(detect_input(tall, format = "era5")$format, "era5")
   versions <- write_layout(file.path(folder, "expver.nc"), axes[c("lon", "lat", "expver", "time")], list(mx2t = list(
     dims = c("lon", "lat", "expver", "time"), units = "K", values = array(300, c(4, 3, 2, 4)))))
-  expect_error(detect_input(versions), "extra dimension 'expver'.*data format to ERA5 temperature")
+  expect_error(detect_input(versions), "extra dimension 'expver'.*'format: era5' in a configuration file")
 
   # Both readers need constant spacing. Longitudes are judged in the order the
   # ERA5 reader gives them, so a region across 180 degrees stays regular.
@@ -430,7 +430,7 @@ test_that("selections that the readers could not read stop before the run", {
                fixed = TRUE)
 })
 
-test_that("unevenly spaced coordinates are refused with the remedy for their cause", {
+test_that("coordinates regular to single precision are read, and uneven ones are refused with the remedy", {
   folder <- withr::local_tempdir()
   refusal <- function(file) tryCatch(detect_input(file), error = conditionMessage)
   daily <- function(name, lon, lat = grid_lat, ...) {
@@ -449,29 +449,26 @@ test_that("unevenly spaced coordinates are refused with the remedy for their cau
   }
 
   # A regular 0.1 degree grid at 130 E loses its even spacing in single
-  # precision, for the readers too. Rounded and saved in double precision, as
-  # the refusal says, the coordinates that the file holds are read.
-  advice <- "regular only to single precision.*longitude values are not evenly spaced.*in double precision, rounded"
+  # precision. The window, like the readers, takes it as the even grid
+  # between its first and last value.
   lon <- 130 + 0:3 / 10
   lat <- -30 + 0:2 / 10
   single <- daily("single.nc", lon, lat, coordinates = "float")
-  expect_match(refusal(single), advice)
-  expect_error(read_tmax(single), "longitude values are not evenly spaced")
   expect_gt(max(abs(kept(single, "lon") - lon)), 1e-6)
-  double <- daily("double.nc", round(kept(single, "lon"), 1), round(kept(single, "lat"), 1))
-  info <- detect_input(double)
+  info <- detect_input(single)
   expect_length(info$questions, 0L)
-  expect_equal(as.numeric(info$lon), lon, tolerance = 1e-12)
-  expect_equal(suppressMessages(read_tmax(double))$grid$lon_step, 0.1, tolerance = 1e-9)
+  read <- suppressMessages(read_tmax(single))
+  double <- suppressMessages(read_tmax(daily("double.nc", lon, lat)))
+  expect_identical(read$tmax, double$tmax)
+  expect_equal(read$grid$lon, lon, tolerance = 1e-5)
+  expect_equal(read$grid$lon_step, 0.1, tolerance = 1e-4)
   # The rounding grows with the longitude, not with the step: at 300 E the
   # steps of a 0.01 degree grid differ by three thousandths of a step.
-  expect_match(refusal(daily("single-fine.nc", 300 + 0:3 / 100, lat, coordinates = "float")), advice)
+  expect_length(detect_input(daily("single-fine.nc", 300 + 0:3 / 100, lat, coordinates = "float"))$questions, 0L)
   # The reader of hourly data counts 355 E as 5 W, with the rounding of 355.
   single <- hourly("era5-single.nc", 355 + 0:3 / 10, coordinates = "float")
-  expect_match(refusal(single), advice)
-  double <- hourly("era5-double.nc", round(kept(single, "longitude"), 1))
-  expect_length(detect_input(double)$questions, 0L)
-  expect_s3_class(suppressMessages(read_era5(double, months = 7, cell_size = NULL)), "scorch_tmax")
+  expect_length(detect_input(single)$questions, 0L)
+  expect_s3_class(suppressMessages(read_era5(single, months = 7, cell_size = NULL)), "scorch_tmax")
 
   # A region across 180 degrees with longitudes from -180 to 180 is regular
   # once they are stored as 0 to 360, for prepared and for hourly data.

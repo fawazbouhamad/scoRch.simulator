@@ -5,7 +5,7 @@
 CHOOSER_KINDS <- list(
   data = list(title = "Choose your temperature data", files = "[.](nc|nc4|zip)$",
               hint = paste("Select a NetCDF or ZIP file and click Open.",
-                           "For a folder of ERA5 files, open the folder and click Use this folder.")),
+                           "For a folder of ERA5 files, or of one folder per year, open it and click Use this folder.")),
   config = list(title = "Reuse a saved configuration", files = "[.]ya?ml$",
                 hint = "Every results folder holds the config.yaml of its run. Select one and click Open."),
   output = list(title = "Choose where results are saved", files = NULL,
@@ -116,7 +116,8 @@ chooser_listing <- function(folder, kind, limit = 2000L) {
     ifelse(grepl("[.]zip$", rows$name, ignore.case = TRUE), "ZIP archive",
       ifelse(grepl("[.]ya?ml$", rows$name, ignore.case = TRUE), "Configuration", "NetCDF data")))
   list(rows = rows, hidden = max(0L, length(shown) - limit),
-       netcdf = sum(!is_folder & grepl("[.]nc$", name, ignore.case = TRUE)))
+       netcdf = sum(!is_folder & grepl("[.]nc$", name, ignore.case = TRUE)),
+       nc4 = sum(!is_folder & grepl("[.]nc4$", name, ignore.case = TRUE)), folders = sum(is_folder))
 }
 
 file_size_label <- function(bytes) {
@@ -180,29 +181,20 @@ holds_files <- function(folder, ending) {
   FALSE
 }
 
-# Which of these folders hold NetCDF files: the positions of the first four,
-# to name three and to know of more. There can be thousands of folders, or a
-# slow drive: the first 200 are looked into, each up to its first file, and
-# for no longer than a second.
-netcdf_subfolders <- function(folders, most = 200L, seconds = 1) {
-  found <- integer()
+# Whether a folder without NetCDF files of its own has some in the folders
+# directly inside it, which the reader then takes (folder_netcdf()). A home
+# folder or a share can hold thousands of folders: the first 200 are looked
+# into, each up to its first file, for no longer than a second. The results
+# folders of SCORCH runs are not data.
+netcdf_below <- function(folder, most = 200L, seconds = 1) {
+  inside <- list.dirs(folder, full.names = TRUE, recursive = FALSE)
+  inside <- inside[!grepl("^SCORCH_run_[0-9]+$", basename(inside))]
   started <- proc.time()[["elapsed"]]
-  for (i in seq_len(min(length(folders), most))) {
-    if (holds_files(folders[i], "[.]nc$")) found <- c(found, i)
-    if (length(found) > 3L || proc.time()[["elapsed"]] - started > seconds) break
+  for (path in utils::head(inside, most)) {
+    if (holds_files(path, "[.]nc4?$")) return(TRUE)
+    if (proc.time()[["elapsed"]] - started > seconds) break
   }
-  found
-}
-
-# The answer to a folder whose NetCDF files are in the folders inside it.
-# SCORCH reads the files of one folder, and a ZIP file with all its folders.
-in_subfolders <- function(names) {
-  one <- length(names) == 1L
-  listed <- paste0(paste(utils::head(names, 3L), collapse = ", "), if (length(names) > 3L) " and others")
-  paste0("This folder has no NetCDF (.nc) files of its own. They are in its subfolder", if (!one) "s", ": ", listed, ". ",
-         if (one) "Open it and click Use this folder." else
-           paste("Open one of them and click Use this folder. To analyze them together, put the subfolders",
-                 "into one ZIP file, or the files into one folder, each under its own name."))
+  FALSE
 }
 
 # Whether two texts are the same but for the blanks at their ends, which the
@@ -222,9 +214,16 @@ chooser_body <- function(now, places) {
     tags$button(type = "button", class = paste("btn", class), `data-do` = do,
                 disabled = if (disabled) NA, label, ...)
   }
+  # What Use this folder reads (folder_netcdf()): the folder's own .nc files,
+  # else its own .nc4 files, else the files of the folders directly inside it.
+  nc4 <- if (is.null(now$nc4)) 0L else now$nc4
   status <- if (now$kind == "data" && now$netcdf > 0L) {
-    sprintf("This folder has %d NetCDF file%s. Use this folder analyzes %s as one ERA5 dataset.",
-            now$netcdf, plural(now$netcdf), if (now$netcdf == 1L) "it" else "them together")
+    paste0(sprintf("This folder has %d NetCDF file%s. Use this folder analyzes %s as one ERA5 dataset.",
+                   now$netcdf, plural(now$netcdf), if (now$netcdf == 1L) "it" else "them together"),
+           if (nc4 > 0L || isTRUE(now$folders > 0L)) " Only its own .nc files are read.")
+  } else if (now$kind == "data" && nc4 > 0L) {
+    sprintf("This folder has %d .nc4 file%s. Use this folder analyzes %s as one ERA5 dataset.",
+            nc4, plural(nc4), if (nc4 == 1L) "it" else "them together")
   } else kind$hint
   # An entry whose details could not be read has no size and no date.
   sizes <- ifelse(rows$folder, "", file_size_label(rows$size))
@@ -345,25 +344,12 @@ scorch_chooser <- function(input, output, session, selected) {
       # The open folder was counted when it was listed and is not read again.
       # Files can have arrived since then: a count of none is looked into once more.
       found <- (identical(target, here$folder) && here$netcdf > 0L) || holds_files(target, "[.]nc$")
+      # Otherwise the reader's own rule decides: .nc4 files, or files one level down.
+      if (!found) found <- holds_files(target, "[.]nc4$") || netcdf_below(target)
       if (!found) {
-        nc4 <- holds_files(target, "[.]nc4$")
-        show(here$kind, target, if (nc4) {
-          paste("This folder has no NetCDF (.nc) files, only .nc4 files. SCORCH reads .nc files from folders.",
-                "A single .nc4 file can be opened directly: select it and click Open.")
-        } else {
-          paste("This folder has no NetCDF (.nc) files. Open the folder that holds your",
-                "ERA5 files, or select one file and click Open.")
-        })
-        # The files may be one level down, as with downloads unpacked into a
-        # folder each. The folders are in the list that was just made, so the
-        # folder is not read a second time to find them.
-        shown <- now()
-        inside <- shown$rows[shown$rows$folder, ]
-        within <- if (!nc4 && identical(shown$folder, target)) inside$name[netcdf_subfolders(inside$path)]
-        if (length(within)) {
-          shown$problem[1L] <- in_subfolders(within)
-          now(shown)
-        }
+        show(here$kind, target, paste("This folder has no NetCDF (.nc or .nc4) files, and neither do the folders",
+                                      "directly inside it. Open the folder that holds your ERA5 files, or select",
+                                      "one file and click Open."))
         return()
       }
     }

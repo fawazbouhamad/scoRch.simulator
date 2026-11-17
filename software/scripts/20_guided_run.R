@@ -166,6 +166,10 @@ guided_settings <- function(base, form, path, info, dest, answers = list()) {
     }
   }
   cfg$output$directory <- dest
+  # A results folder whose path is too long for Windows is named before Run,
+  # in the words with which a run would stop at its start.
+  unwritable <- output_path_problem(dest)
+  if (!is.null(unwritable)) fail(unwritable)
   # A refused setting is named as the window labels it, not by its YAML key.
   checked <- tryCatch(read_config(cfg, input_required = FALSE),
                       error = function(e) form_problem(conditionMessage(e)))
@@ -184,19 +188,17 @@ guided_settings <- function(base, form, path, info, dest, answers = list()) {
 # before Run instead of after it.
 check_cell_size <- function(info, size) {
   file <- if (length(info$file)) basename(info$file[[1L]]) else "the selected data"
-  axes <- list(longitude = wrap_longitudes(as.numeric(info$lon))$lon, latitude = sort(as.numeric(info$lat)))
+  # The coordinates as the reader takes them (raw_coordinates()), and its own
+  # rule for the cells of each axis (cell_axis()), in the words of the window.
+  coordinates <- raw_coordinates(info$lon, info$lat, size)
+  axes <- list(longitude = coordinates$lon, latitude = coordinates$lat)
   complete <- c(longitude = 0L, latitude = 0L)
   for (name in names(axes)) {
-    step <- abs(grid_step(axes[[name]], name))
-    n <- size / step
-    if (n < 1 - 1e-6 || abs(n - round(n)) > 1e-6) {
-      fail_advanced(sprintf("The ERA5 %s spacing (%g degrees) in %s does not divide '%s' (%g).",
-                            name, step, file, SETTING_LABELS[["era5_cell_size_deg"]], size))
-    }
-    complete[[name]] <- sum(table(floor(axes[[name]] / size + 1e-6)) == round(n))
-    if (!complete[[name]]) {
-      fail_advanced(sprintf("The ERA5 grid in %s is too small for one %g-degree cell.", file, size))
-    }
+    cells <- tryCatch(cell_axis(axes[[name]], name, size, file, coordinates$slack[[name]]), error = function(e) {
+      fail_advanced(sub("era5_cell_size_deg", sprintf("'%s'", SETTING_LABELS[["era5_cell_size_deg"]]),
+                        conditionMessage(e), fixed = TRUE))
+    })
+    complete[[name]] <- length(cells$ids)
   }
   # The reader then needs two cells along each axis, to measure their spacing
   # (tmax_from_array()). What it says there does not name this setting.

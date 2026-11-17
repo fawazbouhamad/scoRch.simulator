@@ -98,7 +98,7 @@ test_that("Use this folder takes the folder written in the dialog", {
     act("use", empty)
     expect_null(taken())
     expect_identical(dialog()$folder, empty)
-    expect_match(dialog()$problem, "This folder has no NetCDF (.nc) files. Open the folder", fixed = TRUE)
+    expect_match(dialog()$problem, "This folder has no NetCDF (.nc or .nc4) files, and neither do the folders", fixed = TRUE)
 
     # The results dialog has no other confirming button.
     open("output", shown)
@@ -132,102 +132,61 @@ test_that("a results folder typed in the window's dialog becomes the destination
   })
 })
 
-test_that("a folder of .nc4 files is explained, and one .nc4 file opens", {
+test_that("a folder of .nc4 files is taken as the reader reads it, and one .nc4 file opens", {
   root <- test_folder()
   merra <- file.path(root, "merra2")
   dir.create(merra)
   file.create(file.path(merra, c("MERRA2_400.20010601.nc4", "MERRA2_400.20010602.NC4")))
   listing <- chooser_listing(merra, "data")
   expect_identical(listing$rows$type, c("NetCDF data", "NetCDF data"))
-  # Folders and ZIPs are read for .nc files only.
   expect_identical(listing$netcdf, 0L)
-  expect_true(holds_files(merra, "[.]nc4$"))
-  expect_false(holds_files(merra, "[.]nc$"))
+  expect_identical(listing$nc4, 2L)
+  expect_identical(folder_netcdf(merra), sort(file.path(merra, c("MERRA2_400.20010601.nc4", "MERRA2_400.20010602.NC4"))))
   shiny::testServer(chooser_server(), {
-    open("data", root)
+    open("data", merra)
+    expect_match(output$chooser$html, "This folder has 2 .nc4 files. Use this folder analyzes them together", fixed = TRUE)
     act("use", merra)
-    expect_null(taken())
-    expect_identical(dialog()$folder, merra)
-    expect_match(dialog()$problem, "no NetCDF (.nc) files, only .nc4 files", fixed = TRUE)
-    expect_match(dialog()$problem, "SCORCH reads .nc files from folders", fixed = TRUE)
-    expect_match(dialog()$problem, "A single .nc4 file can be opened directly", fixed = TRUE)
+    expect_identical(taken(), list(kind = "data", path = merra))
+    open("data", merra)
     act("go", file.path(merra, "MERRA2_400.20010601.nc4"))
     expect_identical(taken(), list(kind = "data", path = file.path(merra, "MERRA2_400.20010601.nc4")))
   })
+  # A folder with .nc files of its own is read for those only, and says so.
+  file.create(file.path(merra, "extra.nc"))
+  shiny::testServer(chooser_server(), {
+    open("data", merra)
+    expect_match(output$chooser$html, "This folder has 1 NetCDF file. Use this folder analyzes it as one ERA5 dataset. Only its own .nc files are read.", fixed = TRUE)
+  })
 })
 
-test_that("a folder whose NetCDF files are in its subfolders is answered with what works", {
+test_that("a folder whose NetCDF files are in its subfolders is taken as the reader reads it", {
   root <- test_folder()
   # Downloads unpacked into a folder each, all under the one file name.
   yearly <- file.path(root, "yearly downloads")
-  years <- file.path(yearly, 2001:2005)
+  years <- file.path(yearly, 2001:2003)
   for (year in years) {
     dir.create(year, recursive = TRUE)
     file.create(file.path(year, "data_stream-oper_stepType-instant.nc"))
   }
-  # A folder without NetCDF files of its own is not named, whatever lies deeper in it.
   notes <- file.path(yearly, "1999 notes")
-  dir.create(file.path(notes, "deeper"), recursive = TRUE)
-  file.create(file.path(notes, "readme.txt"), file.path(notes, "deeper", "old.nc"))
-
-  # The first four are found, to name three and to know of more.
-  expect_identical(netcdf_subfolders(c(notes, years), seconds = Inf), 2:5)
-  # No more folders than asked are looked into, and none once the time is up.
-  expect_identical(netcdf_subfolders(c(notes, years), most = 3L, seconds = Inf), 2:3)
-  expect_identical(netcdf_subfolders(c(notes, years), seconds = -1), integer())
-  expect_identical(netcdf_subfolders(years, seconds = -1), 1L)
-  expect_identical(netcdf_subfolders(character()), integer())
-  expect_identical(in_subfolders(c("a b", "c")), paste(
-    "This folder has no NetCDF (.nc) files of its own. They are in its subfolders: a b, c. Open one of them and click",
-    "Use this folder. To analyze them together, put the subfolders into one ZIP file, or the files into one folder,",
-    "each under its own name."))
-
-  open_one <- "Open one of them and click Use this folder."
-  together <- paste("To analyze them together, put the subfolders into one ZIP file,",
-                    "or the files into one folder, each under its own name.")
-  # The dialog of this test notes the folders it lists and looks into subfolders for as long
-  # as that takes on a busy computer: the limit of a second is tried above.
-  listed <- character()
-  counting <- with_stand_ins(scorch_chooser, chooser_listing = function(folder, kind, limit = 2000L) {
-    listed <<- c(listed, folder)
-    chooser_listing(folder, kind, limit)
-  }, netcdf_subfolders = function(folders) netcdf_subfolders(folders, seconds = Inf))
-  shiny::testServer(chooser_server(counting), {
-    # Highlighted or typed while the folder above is open, and as the open folder itself.
+  dir.create(notes)
+  file.create(file.path(notes, "readme.txt"))
+  expect_identical(folder_netcdf(yearly), file.path(years, "data_stream-oper_stepType-instant.nc"))
+  shiny::testServer(chooser_server(), {
     for (from in c(root, yearly)) {
       open("data", from)
-      before <- length(listed)
       act("use", yearly)
-      expect_null(taken())
-      expect_identical(dialog()$folder, yearly)
-      expect_identical(dialog()$problem, paste(
-        "This folder has no NetCDF (.nc) files of its own. They are in its subfolders: 2001, 2002, 2003 and others.",
-        open_one, together))
-      # The folder is read once, for the list that is shown with the answer.
-      expect_identical(listed[seq_along(listed) > before], yearly)
+      expect_identical(taken(), list(kind = "data", path = yearly))
     }
-    expect_match(output$chooser$html, "They are in its subfolders: 2001, 2002, 2003 and others.", fixed = TRUE)
-    # What the answer says works: one of the named folders is taken.
-    act("use", years[1L])
-    expect_identical(taken(), list(kind = "data", path = years[1L]))
-
-    # Three or fewer are all named.
-    unlink(years[4:5], recursive = TRUE)
+    # Only one level down: files deeper than that are not looked for.
+    deep <- file.path(root, "deep")
+    dir.create(file.path(deep, "a", "b"), recursive = TRUE)
+    file.create(file.path(deep, "a", "b", "old.nc"))
     open("data", root)
-    act("use", yearly)
-    expect_identical(dialog()$problem, paste(
-      "This folder has no NetCDF (.nc) files of its own. They are in its subfolders: 2001, 2002, 2003.", open_one, together))
-    # With one such folder there is nothing to put together.
-    unlink(years[2:3], recursive = TRUE)
-    act("use", yearly)
-    expect_identical(dialog()$problem, paste("This folder has no NetCDF (.nc) files of its own.",
-                                             "They are in its subfolder: 2001. Open it and click Use this folder."))
-    # Subfolders are looked into, not what they hold in folders of their own.
-    unlink(years[1L], recursive = TRUE)
-    act("use", yearly)
+    act("use", deep)
     expect_null(taken())
-    expect_identical(dialog()$folder, yearly)
-    expect_match(dialog()$problem, "This folder has no NetCDF (.nc) files. Open the folder", fixed = TRUE)
+    expect_identical(dialog()$folder, deep)
+    expect_match(dialog()$problem, "This folder has no NetCDF (.nc or .nc4) files, and neither do the folders directly inside it.", fixed = TRUE)
   })
 })
 
@@ -472,7 +431,7 @@ test_that("Use this folder takes a folder whose NetCDF files arrived after it wa
     act("use", empty)
     expect_null(taken())
     expect_identical(dialog()$folder, empty)
-    expect_match(dialog()$problem, "This folder has no NetCDF (.nc) files. Open the folder", fixed = TRUE)
+    expect_match(dialog()$problem, "This folder has no NetCDF (.nc or .nc4) files, and neither do the folders", fixed = TRUE)
   })
 })
 
@@ -740,4 +699,15 @@ test_that("the dialog names itself, its list and every row for assistive technol
   unread <- as.character(chooser_body(now, chooser_places(known = character())))
   expect_false(grepl(">NA<", unread, fixed = TRUE))
   expect_false(grepl("NA bytes", unread, fixed = TRUE))
+})
+
+test_that("Use this folder looks into a limited number of subfolders, and not into results of runs", {
+  root <- withr::local_tempdir()
+  dir.create(file.path(root, "SCORCH_run_001"))
+  file.create(file.path(root, "SCORCH_run_001", "prepared_tmax.nc"))
+  expect_false(netcdf_below(root))
+  dir.create(file.path(root, "2001"))
+  file.create(file.path(root, "2001", "data.nc4"))
+  expect_true(netcdf_below(root))
+  expect_false(netcdf_below(root, most = 0L))
 })
