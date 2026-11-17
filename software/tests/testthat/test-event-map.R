@@ -162,11 +162,30 @@ test_that("the bundled demonstration is what the package computes from the examp
                       ellipses(fresh, c("outline", "major", "minor", "centroid")))), 0.01)
   expect_lte(max(abs(ellipses(shipped, c("area_km2", "major_km", "minor_km")) -
                        ellipses(fresh, c("area_km2", "major_km", "minor_km")))), 1)
-  # The selected events' catalog statistics are stored unrounded; a platform's floating
-  # point (macOS on ARM) can differ in the last digit, so they are compared to 1e-9.
-  statistics <- function(x) unlist(lapply(x$events, `[[`, "stats"))
-  expect_identical(names(statistics(shipped)), names(statistics(fresh)))
-  expect_equal(statistics(shipped), statistics(fresh), tolerance = 1e-9)
+  # The event panel's Catalog 5 values. Counts are compared exactly. The continuous values are
+  # stored unrounded and a platform's floating point (macOS on ARM) can differ in their last
+  # digit, so each is compared on its own, in its own units, to a fixed absolute tolerance
+  # far below what the window shows (3 decimals for the ratio, 1 for area and azimuth):
+  #   mean_axis_ratio         1e-12 (dimensionless, between 0 and 1)
+  #   mean_area_km2           1e-6 km2 (one square metre; areas are near 1e6 km2)
+  #   axial_mean_azimuth_deg  1e-9 degrees
+  # Which events and fields there are, and which values are missing (null), must match exactly.
+  stats_of <- function(x) lapply(x$events, `[[`, "stats")
+  expect_identical(lapply(stats_of(shipped), names), lapply(stats_of(fresh), names))
+  expect_identical(lapply(stats_of(shipped), function(s) vapply(s, is.null, TRUE)),
+                   lapply(stats_of(fresh), function(s) vapply(s, is.null, TRUE)))
+  field <- function(x, name) lapply(stats_of(x), `[[`, name)
+  for (name in c("duration_days", "total_clusters")) {
+    expect_identical(field(shipped, name), field(fresh, name), info = name)
+  }
+  tolerance <- c(mean_axis_ratio = 1e-12, mean_area_km2 = 1e-6, axial_mean_azimuth_deg = 1e-9)
+  for (name in names(tolerance)) {
+    present <- !vapply(field(shipped, name), is.null, TRUE)
+    a <- unlist(field(shipped, name)[present])
+    b <- unlist(field(fresh, name)[present])
+    expect_identical(length(a), sum(present), info = name)
+    expect_lte(max(abs(a - b), 0), tolerance[[name]], label = paste("largest difference in", name))
+  }
   counted <- function(x) {
     x$frames <- lapply(x$frames, function(days) lapply(days, function(day) {
       day$ellipses <- lapply(day$ellipses, `[[`, "cells")
