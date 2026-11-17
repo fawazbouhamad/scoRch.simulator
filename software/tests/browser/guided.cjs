@@ -60,7 +60,7 @@ async function run() {
     // Open a file by its path: in the dialog that is open, or from the opening screen.
     async function openData(file, dialogIsOpen = false) {
       if (!dialogIsOpen) {
-        await button("Choose your own data").click();
+        await button("Select Your Data").click();
         await chooser.waitFor();
       }
       await chooser.locator("#chooser_path").fill(file);
@@ -87,11 +87,24 @@ async function run() {
     // 1. The opening screen: the name spelled out, two choices, nothing running.
     await hero.waitFor();
     assert.equal(await page.evaluate(() => document.documentElement.lang), "en");
-    assert.match(await page.locator(".masthead").innerText(), /Spatiotemporal Classification of Regional Compound Heatwaves/);
-    assert.deepEqual(await hero.getByRole("button").allInnerTexts(), ["Choose your own data", "Use included example"]);
-    assert.match(await button("Choose your own data").getAttribute("class"), /btn-primary/);
+    assert.match(await page.locator(".masthead").innerText(), /Spatiotemporal Classification Of Regional Compound Heatwaves/);
+    assert.deepEqual(await hero.getByRole("button").allInnerTexts(), ["Select Your Data", "Use included example"]);
+    assert.match(await button("Select Your Data").getAttribute("class"), /btn-primary/);
     assert.doesNotMatch(await button("Use included example").getAttribute("class"), /btn-primary/);
     assert.equal(await page.locator("#start:visible").count(), 0);
+    // One light display: no switch, and neither a dark system appearance nor a dark choice
+    // saved by an earlier version changes it.
+    assert.equal(await page.locator("#theme-toggle").count(), 0);
+    assert.equal(await page.getByRole("button", { name: /dark mode/i }).count(), 0);
+    await page.emulateMedia({ colorScheme: "dark" });
+    await page.evaluate(() => localStorage.setItem("scorch-theme", "dark"));
+    await page.reload();
+    await until(() => window.Shiny?.shinyapp?.isConnected());
+    await hero.waitFor();
+    assert.equal(await page.evaluate(() => document.documentElement.getAttribute("data-theme")), null);
+    assert.equal(await page.evaluate(() => getComputedStyle(document.body).backgroundColor), "rgb(246, 244, 238)");
+    assert.equal(await page.evaluate(() => localStorage.getItem("scorch-theme")), null);
+    await page.emulateMedia({ colorScheme: "light" });
     assert.equal(fs.existsSync(path.join(dir, "output")), false);
     assert.equal(fs.existsSync(output), false, "SCORCH_UI_PROJECT must be a folder that no earlier run of this test has used");
     // Without its key the address is no window: one plain sentence and status 403.
@@ -106,15 +119,19 @@ async function run() {
     const demo = page.locator("#explorer-demo");
     await demo.locator("svg.map").first().waitFor();
     assert.match(await demo.locator(".explorer-head").innerText(), /demonstration/i);
-    assert.match(await demo.locator(".explorer-head").innerText(), /Bundled North America example.*not your data/s);
+    assert.match(await demo.locator(".explorer-head").innerText(), /How SCORCH works.*space-time typologies/s);
     assert.equal(await demo.locator(".type-card").count(), 4);
     for (const name of ["Widespread (Isolated)", "Spatially Clustered", "Temporally Clustered", "Compound Clustering (Multi-Type)"]) {
       assert.match(await demo.locator(".type-cards").innerText(), new RegExp(name.replace(/[()]/g, "\\$&")));
     }
-    assert.match(await demo.locator(".legend").innerText(), /daily maximum temperature \(°C\)/);
+    assert.match(await demo.locator(".legend-title").innerText(), /^Daily maximum temperature \(°C\)$/);
+    // The key starts with the clustered cells, then the noise, and holds no "What the map shows" section.
+    assert.deepEqual((await demo.locator(".legend-marks li > span:nth-child(2)").allTextContents()).slice(0, 2), ["Heatwave Cluster", "Heatwave Noise"]);
+    assert.equal(await demo.locator(".terms").count(), 0);
     assert.equal(await demo.locator(".map-day").innerText(), "Day 1 of 7");
     // The demonstration is drawn 720 units wide, and its longitudes read as the example holds them.
-    assert.equal(await demo.locator(".map-wrap svg.map").getAttribute("viewBox"), "0 0 720 250.0");
+    // The frame keeps a margin of context around the region, and room for the coordinates outside it.
+    assert.equal(await demo.locator(".map-wrap svg.map").getAttribute("viewBox"), "0 0 720 293.1");
     assert.deepEqual(await demo.locator(".map-wrap .graticule text").allTextContents(),
                      ["120°W", "105°W", "90°W", "75°W", "60°W", "30°N", "45°N"]);
     assert.equal(await demo.locator(".stills .still").count(), 7);
@@ -160,21 +177,24 @@ async function run() {
     await page.keyboard.press("Enter");
     await page.keyboard.press("Enter");
     assert.equal(await demo.locator(".map-day").innerText(), "Day 5 of 7");
-    assert.match(await demo.locator(".rule").innerText(), /one cluster on every day.*Type 3: Temporally Clustered/s);
+    assert.equal(await demo.locator(".event-panel h3").innerText(), "Type 3: Temporally Clustered");
+    assert.doesNotMatch(await demo.innerText(), /consecutive regionally extensive days|a regionally extensive day needs/);
+    assert.equal(await demo.locator(".event-line").innerText(), "Event 7, 28 June to 4 July 2012: 7 days, 7 heatwaves");
     assert.ok(await demo.locator(".map .cell").count() > 0);
     assert.equal(await demo.locator(".map .frame .day:not(.leaving) .ellipse").count(), 1);
     // One outline surrounds the heatwave cells of a day, so the palest classes do not vanish into the land.
     assert.equal(await demo.locator(".map .frame .day:not(.leaving) .footprint").count(), 1);
-    // The white line between cells is given as a share of the cell (0.55 of a ten-unit cell here),
+    // The white line between cells is given as a share of the cell (a cell is 8.6 units in the padded view),
     // so that it does not wash the colours out of the small cells of a fine grid.
-    assert.equal(await demo.locator(".map .frame .day:not(.leaving) .cell").first().getAttribute("style"), "stroke-width:0.550");
+    assert.equal(await demo.locator(".map .frame .day:not(.leaving) .cell").first().getAttribute("style"), "stroke-width:0.479");
     // A single-day event is one frame without playback.
     await demo.locator(".type-card").first().click();
     assert.equal(await demo.locator(".map-day").innerText(), "Single-day event");
     assert.equal(await demo.locator(".play").isVisible(), false);
     assert.equal(await demo.getByRole("button", { name: "Next day" }).isVisible(), false);
-    assert.match(await demo.locator(".rule").innerText(), /One regionally extensive day with one cluster.*Type 1/s);
-    // The tooltip names the cell under the pointer, and its cluster as the catalogs number it, from 0.
+    assert.equal(await demo.locator(".event-panel h3").innerText(), "Type 1: Widespread (Isolated)");
+    assert.equal(await demo.locator(".day-chip").first().getAttribute("aria-label"), "20 July 2011: 1 heatwave");
+    // Only an ellipse has a tooltip: its heatwave, numbered from 1 on the day, with its values in Catalog 4.
     // Where on the screen a point of the map is, and how wide the map is drawn inside its element.
     const onScreen = (x, y) => demo.locator(".map-wrap svg.map").evaluate((svg, [x, y]) => {
       svg.scrollIntoView({ block: "center" });
@@ -183,24 +203,30 @@ async function run() {
       const on = at.matrixTransform(svg.getScreenCTM());
       return { x: on.x, y: on.y, drawn: 720 * svg.getScreenCTM().a, element: svg.getBoundingClientRect().width };
     }, [x, y]);
-    const cell = await onScreen(235, 25);   // 47.5°N 106.5°W on this map of 72 by 25 one-degree cells
+    const cell = await onScreen(267.3, 53.4);   // 47.5°N 106.5°W: a cell of the heatwave, just outside its ellipse
     await page.mouse.move(cell.x, cell.y);
-    await shows(demo.locator(".map-tip"), "cluster");
-    assert.equal(await demo.locator(".map-tip").innerText(), "37.9 °C · 47.5°N 106.5°W · cluster 0");
-    assert.match(await demo.locator(".terms").textContent(), /Catalogs 3 and 4 \(dbscan_label, cluster_number_in_day\)/);
+    await page.waitForTimeout(200);
+    assert.equal(await demo.locator(".map-tip").isVisible(), false, "a cell outside the ellipse has no tooltip");
+    const centre = await onScreen(418.7, 102.3);   // the centroid of the ellipse of 20 July 2011
+    await page.mouse.move(centre.x, centre.y);
+    await shows(demo.locator(".map-tip"), "Axis ratio");
+    assert.equal(await demo.locator(".map-tip").innerText(),
+                 "Heatwave 1\nAxis ratio (L2/L1): 0.611\nArea (km²): 1,679,118.4\nOrientation (°): -88.27");
     await page.mouse.move(5, 5);
     // A region taller than wide is drawn narrower than its element, with blank bands beside it.
-    // Squeezed into that shape, this map must still name the cell under the pointer.
+    // Squeezed into that shape, this map must still name the ellipse under the pointer.
     const squeeze = await page.addStyleTag({ content: "#explorer-demo .map-wrap svg.map { max-height: 150px; }" });
-    const banded = await onScreen(235, 25);
+    const banded = await onScreen(418.7, 102.3);
     assert.ok(banded.element - banded.drawn > 100, "the squeezed map is drawn narrower than its element");
     await page.mouse.move(banded.x, banded.y);
-    await shows(demo.locator(".map-tip"), "cluster");
-    assert.equal(await demo.locator(".map-tip").innerText(), "37.9 °C · 47.5°N 106.5°W · cluster 0");
+    await shows(demo.locator(".map-tip"), "Axis ratio");
+    assert.match(await demo.locator(".map-tip").innerText(), /^Heatwave 1\n/);
     await page.mouse.move(5, 5);
     await squeeze.evaluate(style => style.remove());
     await demo.locator(".type-card").nth(3).click();
-    assert.match(await demo.locator(".rule").innerText(), /a mix of one-cluster and several-cluster days.*Type 4/s);
+    assert.equal(await demo.locator(".event-panel h3").innerText(), "Type 4: Compound Clustering (Multi-Type)");
+    // The panel shows the five values of Catalog 5 for the whole event.
+    assert.deepEqual(await demo.locator(".event-stats td").allInnerTexts(), ["6", "18", "0.489", "746,185.6", "77.50"]);
 
     // 3. The window belongs to the page that holds its key. Another client gets no session, and
     // its leaving does not close the window; a reload keeps the window too.
@@ -227,7 +253,7 @@ async function run() {
 
     // 4. The first data of a session. A file that holds July and August only starts from those
     // months, not from the April to September of the study.
-    await button("Choose your own data").click();
+    await button("Select Your Data").click();
     await chooser.waitFor();
     assert.deepEqual(await chooser.locator(".chooser-actions").getByRole("button").allInnerTexts(),
                      ["Cancel", "Use this folder", "Open"]);
@@ -241,7 +267,7 @@ async function run() {
       await shows(page.locator("#period_note"), "July–August 2012: 62 days.");
       assert.equal(await page.getByLabel("First month each year").inputValue(), "7");
       assert.equal(await page.getByLabel("Last month each year").inputValue(), "8");
-      assert.match(await selection.innerText(), /Prepared daily maximum temperature \(variable tmax\)/);
+      assert.match(await selection.innerText(), /Contains\s+daily maximum temperature/);
       assert.match(await selection.innerText(), /2012-07-01 to 2012-08-31: 62 days, July–August/);
       await page.locator("#start:visible").waitFor();
       await button("Change data").click();
@@ -333,23 +359,25 @@ async function run() {
     assert.match(await selection.innerText(), /included example/i);
     assert.match(await selection.innerText(), /North America example/);
     assert.match(await selection.innerText(), /1996-04-01 to 2025-09-30: 5,490 days, April–September/);
-    assert.match(await selection.innerText(), /°C in the file/);
+    assert.match(await selection.innerText(), /Temperature\s+°C/);
     await shows(page.locator("#period_note"), "April–September in every selected year: 30 years (1996–2025), 5,490 days.");
     assert.equal(await page.locator("details.advanced").getAttribute("open"), null);
     assert.equal(await page.getByLabel("Bootstrap repetitions").isVisible(), false);
-    // How the file is read stays on automatic detection; the variable that was found is named on
-    // the dataset card, not in those fields.
-    for (const id of ["input_format", "input_units", "input_variable", "input_time", "input_longitude", "input_latitude"]) {
-      assert.equal(await page.locator("#" + id).inputValue(), "auto", id);
+    // How the file is read is detected: the window has no fields for it and no date limit, and the
+    // card names the data plainly.
+    for (const id of ["input_format", "input_units", "input_variable", "input_time", "input_longitude", "input_latitude",
+                      "limit_dates"]) {
+      assert.equal(await page.locator("#" + id).count(), 0, id);
     }
-    assert.match(await selection.innerText(), /\(variable tmax\)/);
+    assert.equal(await page.getByText("How the file is read").count(), 0);
+    assert.doesNotMatch(await selection.innerText(), /variable tmax|first time step|Prepared/);
     assert.match(await page.locator("#destination").innerText(), /output[\\/]SCORCH_run_001$/);
     await shot("settings", { fullPage: true });
 
     // 6. One chooser for files and folders: type or browse to the folder, select the file, Open.
     await button("Change data").click();
     await hero.waitFor();
-    await button("Choose your own data").click();
+    await button("Select Your Data").click();
     await chooser.waitFor();
     await goTo(path.dirname(nc), path.basename(nc));
     // The list is named after its folder, and every row carries its whole name.
@@ -410,7 +438,7 @@ async function run() {
     await shows(selection, "arrived.nc");
     await button("Change data").click();
     await hero.waitFor();
-    await button("Choose your own data").click();
+    await button("Select Your Data").click();
     await chooser.waitFor();
     // A folder that disappears while the dialog shows it: a message, and the window stays.
     const unplugged = path.join(dir, "unplugged");
@@ -436,15 +464,21 @@ async function run() {
     await page.locator("#start:visible").waitFor();
     assert.match(await selection.innerText(), /your data/i);
     assert.match(await selection.innerText(), new RegExp(path.basename(nc).replace(/[.]/g, "\\.")));
-    assert.match(await selection.innerText(), /Prepared daily maximum temperature \(variable tmax\)/);
+    assert.match(await selection.innerText(), /Contains\s+daily maximum temperature/);
 
     // 7. June to August of a file that holds other months: stated for every selected year.
     await page.getByLabel("First month each year").selectOption("6");
     await page.getByLabel("Last month each year").selectOption("8");
     await shows(page.locator("#period_note"), "June–August in every selected year: 30 years (1996–2025), 2,760 days.");
     await shows(page.locator("#period_note"), "This file also holds April–May, September. Those months are not analyzed.");
-    await page.getByLabel("Limit the analysis dates").check();
-    await analysisDates("2012-01-01", "2012-12-31");
+    // A saved configuration with explicit dates limits the run to them; the summary names the period.
+    const limited = path.join(dir, "limited.yaml");
+    fs.writeFileSync(limited, ["period:", "  warm_season_months: [6, 7, 8]", "  start_date: '2012-01-01'",
+                               "  end_date: '2012-12-31'", ""].join("\n"));
+    await button("Reuse a saved configuration").click();
+    await chooser.waitFor();
+    await goTo(dir, "limited.yaml");
+    await chooser.locator(".chooser-row").filter({ hasText: "limited.yaml" }).first().dblclick();
     await shows(page.locator("#period_note"), "June–August 2012: 92 days.");
     await shows(page.locator("#review"), "92 selected dates");
 
@@ -580,9 +614,19 @@ async function run() {
     await shows(page.locator("#review"), "92 selected dates");
 
     // 10. Run: progress, then the summary in the window and the files on disk.
+    // The running view takes the page: its heading, the four stages, then the results once saved.
     await button("Run analysis").click();
-    await page.locator(".shiny-notification").filter({ hasText: "Running SCORCH" }).waitFor();
+    await page.locator("#running").waitFor();
+    assert.equal(await page.locator("#running .running-title").innerText(), "Running scoRch.simulator");
+    assert.deepEqual(await page.locator("#running .stage-label").allInnerTexts(),
+                     ["Stage 1: Heatwave Detection", "Stage 2: Heatwave Clustering", "Stage 3: Heatwave Classification",
+                      "Stage 4: Heatwave Modeling"]);
+    // A second click cannot start a second run: the settings, and their button, are hidden.
+    assert.equal(await page.locator("#start").isVisible(), false);
     await button("Open results folder").waitFor({ timeout: 300000 });
+    await page.locator("#running").waitFor({ state: "hidden" });
+    // Reading, the four stages in order, then saving: the run's own messages, nothing estimated.
+    assert.match(await page.locator("#running").getAttribute("data-seen"), /^0+1+2+3+4+5+$/);
     const completion = page.locator("#completion");
     const run = (await completion.locator(".outcome .path").innerText()).trim();
     assert.equal(real(run), real(path.join(output, "SCORCH_run_001")));
@@ -597,18 +641,10 @@ async function run() {
     assert.equal(await completion.locator("section.card.outcome .actions button").count(), 3);
     assert.ok(await top(completion.locator(".outcome .type-counts")) < await top(completion.locator(".outcome .path")));
     assert.ok(await top(completion.locator(".outcome .path")) < await top(page.locator("#open_summary")));
-    assert.ok(await top(page.locator("#again")) < await top(completion.locator("section.card.summary h2")));
-    // Apart from the ten bootstrap repetitions asked for above, the run records the study's settings.
-    const summary = await completion.locator(".summary").innerText();
-    for (const expected of [path.basename(nc), "92 dates from 2012-06-01 to 2012-08-31", "June–August 2012",
-                            "at least 3 consecutive days with at least 3 of them at or above the cell's 95th percentile",
-                            "reaches the 97.5th percentile of all days",
-                            "eps candidates 1, 1.5, 2, 2.5, 3, 3.5, 4 grid cells, min_samples candidates 4, 5, 6, 7, 8, 9, 10, 11, 12;",
-                            "scaled by 1.25, centroids weighted by temperature",
-                            "10 bootstrap repetitions (seeds 20261020 for daily maxima, 20261120 for event maxima)",
-                            "covariates lon, lat, mean_tmax, std_tmax; 25 km raster; 80 km window margin."]) {
-      assert.ok(summary.includes(expected), expected);
-    }
+    // What was analyzed is not on the page; Summary.txt records it, with the repetitions asked for above.
+    assert.equal(await completion.locator(".summary").count(), 0);
+    assert.doesNotMatch(await completion.innerText(), /What was analyzed|Results by stage/);
+    assert.match(fs.readFileSync(path.join(run, "Summary.txt"), "utf8"), /10 bootstrap repetitions/);
     for (const file of ["Summary.txt", "config.yaml", "Heatwave_Statistics.xlsx", "catalogs/05_compound_heatwave_events.xlsx",
                         "modeling/Power_Law_Model.xlsx", "figures/geometry/Ellipses_by_type.png"]) {
       assert.ok(fs.existsSync(path.join(run, file)), file);
@@ -630,7 +666,11 @@ async function run() {
     assert.equal(await page.locator("#results-title").getAttribute("tabindex"), "-1");
     assert.match(await mine.locator(".explorer-head").innerText(), /this run/i);
     assert.doesNotMatch(await mine.locator(".explorer-head").innerText(), /demonstration/i);
-    assert.match(await mine.locator(".explorer-head").innerText(), new RegExp(path.basename(nc).replace(/[.]/g, "\\.")));
+    // No heading, file name or event caption: the dropdown names each event.
+    assert.equal(await mine.locator(".explorer-head h2, .explorer-source, .event-line").count(), 0);
+    assert.doesNotMatch(await mine.innerText(), /Events from this run/);
+    assert.doesNotMatch(await mine.innerText(), new RegExp(path.basename(nc).replace(/[.]/g, "\\.")));
+    assert.ok(await mine.locator(".event-pick select").isVisible());
     assert.match(await mine.locator(".type-cards").innerText(), /3 events over 3 days/);
     assert.equal(await mine.locator(".type-card[disabled]").count(), 3);
     // Types without events keep their definitions readable, and the temperature classes of this
@@ -659,8 +699,8 @@ async function run() {
     await shows(page.locator("#review"), "92 selected dates");
     assert.equal(await page.getByLabel("First month each year").inputValue(), "6");
     await shows(page.locator("#loaded"), "Settings loaded from config.yaml: the advanced settings and the results folder " +
-                                         "stay in use when you change the data. The months, the date limit and " +
-                                         "'How the file is read' start again with other data; reuse the file to apply " +
+                                         "stay in use when you change the data. The months, the analysis dates and " +
+                                         "how the file is read start again with other data; reuse the file to apply " +
                                          "its months and dates again.");
     // The same file reused brings its values back. A month and the repetitions are changed by hand,
     // then the file is loaded a second time: it holds the settings already in use, and the form
@@ -677,10 +717,9 @@ async function run() {
     await shows(page.locator("#review"), "92 selected dates");
     assert.equal(await page.getByLabel("First month each year").inputValue(), "6");
     assert.equal(await page.getByLabel("Bootstrap repetitions").inputValue(), "10");
-    assert.equal(await page.getByLabel("Limit the analysis dates").isChecked(), true);
     await button("Change data").click();
     await hero.waitFor();
-    await button("Choose your own data").click();
+    await button("Select Your Data").click();
     await chooser.waitFor();
     // In double quotes, as "Copy as path" in Windows copies a file.
     await chooser.locator("#chooser_path").fill('"' + path.join(dir, "temperatures.zip") + '"');
@@ -690,12 +729,16 @@ async function run() {
     // configuration's, the record is the whole of the new data until it is limited again.
     await shows(page.locator("#loaded"), "Settings loaded from config.yaml: the advanced settings and the results folder " +
                                          "stay in use when you change the data.");
-    await until(() => !document.getElementById("limit_dates").checked);
+    await shows(page.locator("#review"), "2,760 selected dates");
     assert.equal(await page.getByLabel("First month each year").inputValue(), "6");
     assert.equal(await page.getByLabel("Last month each year").inputValue(), "8");
     await shows(page.locator("#destination"), /[\\/]reviewer results[\\/]SCORCH_run_002$/);
-    await page.getByLabel("Limit the analysis dates").check();
-    await analysisDates("2012-01-01", "2012-12-31");
+    // Reused again, the configuration brings its dates back for these data.
+    await button("Reuse a saved configuration").click();
+    await chooser.waitFor();
+    await goTo(run, "config.yaml");
+    await chooser.locator(".chooser-row").filter({ hasText: "config.yaml" }).first().dblclick();
+    await shows(selection, "temperatures.zip");
     await page.getByText("Advanced settings", { exact: true }).click();
     assert.equal(await page.getByLabel("Bootstrap repetitions").inputValue(), "10");
     await shows(page.locator("#review"), "92 selected dates");

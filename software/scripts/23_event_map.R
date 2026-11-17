@@ -2,12 +2,29 @@
 # every day of a compound event, as plain lists that the browser reads. The
 # same functions prepare the bundled demonstration and the events of a run.
 
-# The four types in plain language. Each sentence restates classify_event().
+# The four types as the study defines them, shown on the type cards of the
+# window only (the workbooks and figures do not use them). classify_event()
+# also gives Type 4 to an event with a day that keeps no cluster; the
+# "Compound event" entry under "What the map shows" says so.
 TYPE_MEANINGS <- c(
-  "One regionally extensive day whose heatwave cells form a single cluster, so SCORCH fits one ellipse.",
-  "One regionally extensive day whose heatwave cells form several separate clusters, each with its own ellipse.",
-  "Several consecutive days with the same pattern every day: always one cluster, or always several clusters.",
-  "Several consecutive days whose pattern changes: one-cluster and several-cluster days are mixed, or a day forms no cluster.")
+  paste("Extreme heatwave events are classified as Type 1 if a single heatwave exclusively spans a broad",
+        "geographical area on a single day."),
+  paste("Extreme heatwave events are classified as Type 2 if multiple heatwaves occur at distinct locations",
+        "simultaneously on a single day."),
+  paste("Extreme heatwave events are classified as Type 3 if they span two or more consecutive days, exhibiting",
+        "the spatial configuration of either Type 1 or Type 2 throughout the event duration."),
+  paste("Extreme heatwave events are classified as Type 4 if they span two or more consecutive days, exhibiting",
+        "spatial configurations of both Type 1 and Type 2 throughout the event duration."))
+
+# The columns of the compound event catalog (Catalog 5) that the event panel
+# of the window shows, in its order.
+EVENT_PANEL_COLUMNS <- c("duration_days", "total_clusters", "mean_axis_ratio", "mean_area_km2",
+                         "axial_mean_azimuth_deg")
+
+# The explanation of an event's type under "What the map shows", with the
+# case the definitions above leave out.
+EVENT_TERM <- paste("Compound event: consecutive regionally extensive days. Its type follows the number of clusters",
+                    "on each day. An event of two or more days in which a day keeps no cluster is also Type 4.")
 
 # Why an event has its type, from the number of clusters on each of its days.
 event_type_reason <- function(counts) {
@@ -55,6 +72,20 @@ basemap_layers <- function(extent) {
        states = if (overlaps_us_states(extent)) layer("state", fill = FALSE) else list())
 }
 
+# What the window's map shows around the analyzed region: a margin of geographical
+# context, larger above and below, so that the cells at the edge of the region do
+# not touch the frame. Only the view grows; the region and its cells stay as they are.
+map_view <- function(extent) {
+  across <- extent[2] - extent[1]
+  down <- extent[4] - extent[3]
+  side <- 0.04 * across
+  ends <- 0.12 * down
+  # A file that counts longitudes from 0 to 360 keeps that range.
+  low <- if (extent[2] > 180) 0 else -180
+  c(max(low, extent[1] - side), min(low + 360, extent[2] + side),
+    max(-90, extent[3] - ends), min(90, extent[4] + ends))
+}
+
 # Daily maximum temperature of every heatwave cell of every selected day, in
 # the row order of the cluster-cell table.
 cluster_cell_tmax <- function(result, tmax) {
@@ -87,7 +118,15 @@ event_frames <- function(result, cell_tmax, id) {
            list(outline = flat(ellipse_outline(e[i, ], n = 73)), major = flat(axes$major), minor = flat(axes$minor),
                 centroid = I(round(c(e$centroid_lon_weighted[i], e$centroid_lat_weighted[i]), 3)),
                 cells = e$n_member_cells[i], area_km2 = round(e$area_km2[i]),
-                major_km = round(e$major_axis_km[i]), minor_km = round(e$minor_axis_km[i]))
+                major_km = round(e$major_axis_km[i]), minor_km = round(e$minor_axis_km[i]),
+                # The window names the heatwaves of one day "Heatwave 1", "Heatwave 2" ... in the
+                # order of the ellipse catalog. The number is for display only: it does not follow a
+                # heatwave from day to day. `label` is the catalog's cluster_number_in_day, which
+                # is the dbscan_label of the ellipse's cells.
+                number = i, label = e$cluster_number_in_day[i],
+                # The ellipse's own values in the ellipse catalog (Catalog 4), not rounded.
+                stats = list(axis_ratio = e$axis_ratio[i], area_km2 = e$area_km2[i],
+                             azimuth_north_cw_deg = e$azimuth_north_cw_deg[i]))
          }))
   })
 }
@@ -100,6 +139,7 @@ event_overview <- function(result, cell_tmax, title, source, demonstration = FAL
   events <- result$events$events
   days <- result$events$event_days
   extent <- map_extent(result)
+  view <- map_view(extent)
   # The map prints the coordinate of a cell as first + column * step. The step
   # is therefore the mean over the whole axis: the first difference of
   # coordinates stored in single precision is off in the sixth digit, which
@@ -109,7 +149,7 @@ event_overview <- function(result, cell_tmax, title, source, demonstration = FAL
     title = title, source = source, demonstration = demonstration,
     grid = list(lon = grid$lon[1], lat = grid$lat[1], lon_step = mean_step(grid$lon), lat_step = mean_step(grid$lat),
                 columns = length(grid$lon), rows = length(grid$lat)),
-    extent = I(extent), basemap = basemap_layers(extent),
+    extent = I(extent), view = I(view), basemap = basemap_layers(view),
     domain_cells = nrow(result$input$cells), threshold_cells = result$regional$threshold_cells,
     breaks = I(pretty(range(cell_tmax), n = 7)),
     types = lapply(1:4, function(type) {
@@ -121,7 +161,13 @@ event_overview <- function(result, cell_tmax, title, source, demonstration = FAL
       list(id = events$compound_event_id[i], type = events$event_type[i],
            start = format(events$start_date[i]), end = format(events$end_date[i]),
            counts = I(as.integer(counts)), ellipses = events$total_clusters[i],
-           reason = event_type_reason(counts))
+           reason = event_type_reason(counts),
+           # The event panel shows these columns of Catalog 5 as they are; nothing is recomputed here.
+           # An undefined value (no axial mean, for example) is sent as missing and shown as a dash.
+           stats = lapply(stats::setNames(nm = EVENT_PANEL_COLUMNS), function(column) {
+             value <- events[[column]][i]
+             if (is.null(value) || !is.finite(value)) NA else unname(value)
+           }))
     }),
     terms = list(
       cell = sprintf(paste("Heatwave cell: a grid cell inside a local heatwave that day, a run of at least %g days",
@@ -131,12 +177,13 @@ event_overview <- function(result, cell_tmax, title, source, demonstration = FAL
                           "the %gth percentile of all analyzed days."),
                     result$regional$threshold_cells, nrow(result$input$cells), cfg$regional_days$percentile),
       # The map prints dbscan_label as it is, so a cell can be looked up in the catalogs.
-      cluster = paste("Cluster: neighbouring heatwave cells grouped by DBSCAN. Cells it leaves out stay grey.",
+      cluster = paste("Cluster: neighbouring heatwave cells grouped by DBSCAN. Cells it leaves out stay grey",
+                      "(Heatwave Noise); the outline around all heatwave cells of the day is marked Heatwave Cluster.",
                       "Point at a cell to see its cluster number: it is the number in Catalogs 3 and 4",
                       "(dbscan_label, cluster_number_in_day), which count each day's clusters from 0."),
       ellipse = sprintf(paste("Ellipse: the principal axes of a cluster, each %g standard deviations long from the centre,",
                               "drawn around the temperature-weighted centroid."), cfg$ellipses$scale_factor),
-      event = "Compound event: consecutive regionally extensive days. Its type follows the number of clusters on each day."))
+      event = EVENT_TERM))
 }
 
 # Stages 1-5 on prepared temperature, arranged like the result of a run. Used

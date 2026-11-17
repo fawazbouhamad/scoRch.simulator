@@ -18,6 +18,31 @@ stale_session <- function() {
   invisible(NULL)
 }
 
+# The run's own steps, as its messages begin, and the label the window's progress shows for each:
+# four stages, with reading the data and saving the results unnumbered. The pipeline and its
+# messages are unchanged.
+PROGRESS_STAGES <- c("Reading " = "Reading the selected data",
+                     "Stage 1:" = "Stage 1: Heatwave Detection", "Stage 2:" = "Stage 1: Heatwave Detection",
+                     "Stage 3:" = "Stage 2: Heatwave Clustering", "Stage 4:" = "Stage 2: Heatwave Clustering",
+                     "Stage 5:" = "Stage 3: Heatwave Classification",
+                     "Power-law fits" = "Stage 4: Heatwave Modeling", "Log-Gaussian" = "Stage 4: Heatwave Modeling",
+                     "Writing the result" = "Saving the results", "Plot " = "Saving the results")
+
+# Which of those steps a message of the run announces, or NA.
+progress_stage <- function(message) {
+  line <- sub("^[0-9:]+ ", "", trimws(message))
+  stage <- which(startsWith(line, names(PROGRESS_STAGES)))
+  if (length(stage)) stage[1L] else NA_integer_
+}
+
+# The part of a run a step belongs to, for the running view: "prep" for reading the data, 1 to 4
+# for the stages, "saving" for writing the results.
+run_phase <- function(stage) {
+  label <- unname(PROGRESS_STAGES[stage])
+  k <- match(label, RUN_STAGES)
+  if (!is.na(k)) k else if (identical(label, "Saving the results")) "saving" else "prep"
+}
+
 # A secret for the address of one window. It is drawn without touching the
 # session's random numbers: their state is put aside first, so a set.seed()
 # of the user neither fixes the token nor is moved on by it.
@@ -83,6 +108,9 @@ scorch_page <- function(page, token, seen = NULL) {
 # another, does not close the window.
 scorch_app <- function(token, kept, quit = shiny::stopApp, grace = 2, seen = new.env(parent = emptyenv()),
                        patience = 20) {
+  # This app's own way to stop, fixed now: the launcher may already be running a later app
+  # when a window of this one closes.
+  force(quit)
   windows <- 0L
   # Every arrival and departure is counted, so a departure that has waited can
   # tell whether anything happened in the meantime.
@@ -126,9 +154,12 @@ scorch_launcher <- function() {
   # A window that goes after this call has returned must not stop a later one.
   running <- TRUE
   on.exit(running <- FALSE, add = TRUE)
-  seen <- new.env(parent = emptyenv())
-  app <- scorch_app(token, kept, quit = function() if (running) shiny::stopApp(), seen = seen)
-  viewer <- shiny::dialogViewer("SCORCH | Regional compound heatwaves", width = 1060, height = 860)
+  # RStudio shows the window as a dialog inside its own window: RStudio sets its size,
+  # and its edges cannot be dragged. "Open in browser" in that dialog ends it with
+  # stopApp(), which closes a Shiny gadget's dialog, and the loop below opens the same
+  # SCORCH again in a web browser window, which can be resized and maximized. A
+  # finished run is kept in `kept`, so the browser window shows it too.
+  kept$host <- if (is.null(getOption("shinygadgets.showdialog"))) "browser" else "dialog"
   message("Opening the SCORCH window. Nothing is analyzed until you click Run analysis.")
   on.exit(message("The SCORCH window is closed. To open it again, run scoRch.simulator::run_scorch()\n",
                   "The package stays installed; do not run the installation block again."), add = TRUE)
@@ -143,34 +174,56 @@ scorch_launcher <- function() {
   # A window of an earlier version that was closed in this session may have
   # left its own "stop the app" waiting. It runs now, before there is an app.
   try(later::run_now(), silent = TRUE)
-  # RStudio closes its dialog by interrupting R. The last finished analysis is returned all the same.
-  # quiet: Shiny's own "Listening on" line gives the address without its key.
-  tryCatch(shiny::runApp(app, host = "127.0.0.1", display.mode = "normal", quiet = TRUE,
-    launch.browser = function(url) {
-      address <- paste0(url, "/?token=", token)
-      # Outside RStudio the window is a browser tab, and only this address opens it.
-      printed <- is.null(getOption("shinygadgets.showdialog"))
-      if (printed) message("If no browser opens, paste this address into one on this computer: ", address)
-      viewer(address)
-      # A viewer that passed the address on without its key shows the notice,
-      # not the window, and one that shows nothing leaves no window at all.
-      # Say how to reach the window instead of leaving a dead end.
-      asked <- Sys.time()
-      watch <- function() {
-        if (!running || isTRUE(seen$opened)) return()
-        if (isTRUE(seen$refused)) {
-          return(message("The window was asked for without the key in its address, so it shows a notice instead of SCORCH.\n",
-                         "To use SCORCH now, paste this address into a web browser on this computer:\n  ", address))
+  round <- 0L
+  repeat {
+    kept$to_browser <- FALSE
+    seen <- new.env(parent = emptyenv())
+    # The dialog's app, once stopped, still checks a moment later whether its last window has
+    # gone; that check must not stop the browser's app that has replaced it.
+    round <- round + 1L
+    quit <- local({
+      mine <- round
+      function() if (running && identical(mine, round)) shiny::stopApp()
+    })
+    app <- scorch_app(token, kept, quit = quit, seen = seen)
+    viewer <- if (identical(kept$host, "dialog")) shiny::dialogViewer(WINDOW_TITLE, width = 1060, height = 860)
+              else utils::browseURL
+    # RStudio closes its dialog by interrupting R. The last finished analysis is returned all the same.
+    # quiet: Shiny's own "Listening on" line gives the address without its key.
+    tryCatch(shiny::runApp(app, host = "127.0.0.1", display.mode = "normal", quiet = TRUE,
+      launch.browser = function(url) {
+        address <- paste0(url, "/?token=", token)
+        # Outside RStudio the window is a browser tab, and only this address opens it.
+        printed <- !identical(kept$host, "dialog")
+        if (printed) message("If no browser opens, paste this address into one on this computer: ", address)
+        viewer(address)
+        # A viewer that passed the address on without its key shows the notice,
+        # not the window, and one that shows nothing leaves no window at all.
+        # Say how to reach the window instead of leaving a dead end.
+        asked <- Sys.time()
+        watch <- function() {
+          if (!running || isTRUE(seen$opened)) return()
+          if (isTRUE(seen$refused)) {
+            return(message("The window was asked for without the key in its address, so it shows a notice instead of SCORCH.\n",
+                           "To use SCORCH now, paste this address into a web browser on this computer:\n  ", address))
+          }
+          if (!printed && as.numeric(difftime(Sys.time(), asked, units = "secs")) >= 30) {
+            return(message("No SCORCH window has opened yet. If none appears, paste this address into a web browser ",
+                           "on this computer:\n  ", address))
+          }
+          later::later(watch, delay = 2)
         }
-        if (!printed && as.numeric(difftime(Sys.time(), asked, units = "secs")) >= 30) {
-          return(message("No SCORCH window has opened yet. If none appears, paste this address into a web browser ",
-                         "on this computer:\n  ", address))
-        }
-        later::later(watch, delay = 2)
-      }
-      later::later(watch, delay = 8)
-    }),
-    interrupt = function(e) NULL)
+        later::later(watch, delay = 8)
+      }),
+      interrupt = function(e) NULL)
+    if (!isTRUE(kept$to_browser)) break
+    kept$host <- "browser"
+    # RStudio interrupts R as it closes its dialog. That interrupt is let pass here, so
+    # that it does not end the browser window as soon as it opens.
+    tryCatch(Sys.sleep(2), interrupt = function(e) NULL)
+    message("SCORCH continues in your web browser, where its window can be resized. ",
+            "Closing that browser tab, or pressing Esc here, ends SCORCH.")
+  }
   invisible(kept$result)
 }
 
@@ -197,6 +250,9 @@ scorch_server <- function(input, output, session, kept = new.env(parent = emptye
                                  error = NULL, finished = kept$finished, busy = FALSE, answers = list(), fresh = FALSE,
                                  form = 0L, opened = 0L, waiting = FALSE, failed = NULL, unanswered = FALSE)
   report <- function(e) state$error <- conditionMessage(e)
+  # The explicit analysis dates of the configuration in use, if it has any. Newly chosen data
+  # start from their whole record; a reused configuration brings its own dates.
+  bounds <- shiny::reactiveVal(period_bounds(shiny::isolate(base())$period))
   reset_input_names <- function() {
     state$answers <- list()
     for (name in c("format", "units")) shiny::updateSelectInput(session, paste0("input_", name), selected = "auto")
@@ -261,6 +317,7 @@ scorch_server <- function(input, output, session, kept = new.env(parent = emptye
           cfg$input[keys] <- input_controls(input, base()$input)[keys]
         }
         base(cfg)
+        bounds(period_bounds(cfg$period))
         # The same file holds the same settings, which by itself would change
         # nothing on the page. Every load rebuilds the form, so that the
         # values of the file return and make its data readable again.
@@ -346,6 +403,7 @@ scorch_server <- function(input, output, session, kept = new.env(parent = emptye
     shiny::updateSelectInput(session, "month_from", selected = limits[1L])
     shiny::updateSelectInput(session, "month_to", selected = limits[2L])
     shiny::updateCheckboxInput(session, "limit_dates", value = FALSE)
+    bounds(NULL)
   })
   output$screen <- shiny::reactive({
     if (!is.null(state$finished)) "results" else if (!is.null(state$source)) "settings" else "welcome"
@@ -412,7 +470,7 @@ scorch_server <- function(input, output, session, kept = new.env(parent = emptye
   output$loaded <- shiny::renderUI({
     if (!is.null(state$loaded)) tags$p(class = "fine", "Settings loaded from ", tags$strong(state$loaded, .noWS = "after"),
       ": the advanced settings and the results folder stay in use when you change the data. ",
-      "The months, the date limit and 'How the file is read' start again with other data; ",
+      "The months, the analysis dates and how the file is read start again with other data; ",
       "reuse the file to apply its months and dates again.")
   })
   dest <- shiny::reactive({
@@ -426,7 +484,11 @@ scorch_server <- function(input, output, session, kept = new.env(parent = emptye
     if (length(info$questions)) return(simpleError("Answer the question about this file to continue."))
     # Wait for the form, not for its values: an emptied field is reported, not passed over.
     shiny::req(!is.null(input$month_from), !is.null(input$clustering_eps_values))
-    tryCatch(guided_settings(base(), input, state$path, info, dest(), state$answers), error = identity)
+    # The window has no date fields: a run covers the whole record in the chosen months, or the
+    # explicit dates of a reused configuration (`bounds`). A form that still sends limit_dates
+    # (scripted sessions) keeps deciding by itself.
+    form <- if (is.null(input$limit_dates)) c(shiny::reactiveValuesToList(input), list(bounds = bounds())) else input
+    tryCatch(guided_settings(base(), form, state$path, info, dest(), state$answers), error = identity)
   })
   # A refused advanced setting is also shown where that section begins: the
   # Review card can be far below the field being edited.
@@ -467,16 +529,13 @@ scorch_server <- function(input, output, session, kept = new.env(parent = emptye
     # A start that fails (the results folder cannot be created) is reported in
     # the Review card, where the click was made, not on the dataset card.
     tryCatch({
-      progress <- shiny::Progress$new(session)
-      on.exit(progress$close(), add = TRUE)
-      progress$set(message = "Running SCORCH", value = 0, detail = "Reading the selected data")
-      steps <- c("Reading ", "Stage 1:", "Stage 2:", "Stage 3:", "Stage 4:", "Stage 5:",
-                 "Power-law fits", "Log-Gaussian", "Writing the result", "Plot ")
+      # The running view of the page follows the run's own messages: preparation, the four
+      # stages, then the saving of the results. Nothing is estimated.
+      session$sendCustomMessage("scorch-run", list(state = "start"))
       finished <- withCallingHandlers(execute_guided_run(p, state$parent, state$source),
         message = function(m) {
-          line <- sub("^[0-9:]+ ", "", trimws(conditionMessage(m)))
-          stage <- which(startsWith(line, steps))
-          if (length(stage)) progress$set(value = stage[1] / (length(steps) + 1), detail = line)
+          stage <- progress_stage(conditionMessage(m))
+          if (!is.na(stage)) session$sendCustomMessage("scorch-run", list(state = "stage", phase = run_phase(stage)))
         })
       finished$dataset <- dataset()
       finished$period <- p$period
@@ -487,7 +546,12 @@ scorch_server <- function(input, output, session, kept = new.env(parent = emptye
       # A reload opens a new session of this window, which starts from this run.
       kept$finished <- finished
       state$finished <- finished
-    }, error = function(e) state$failed <- conditionMessage(e))
+      # Sent once the results are saved; the page shows them when they arrive.
+      session$sendCustomMessage("scorch-run", list(state = "done"))
+    }, error = function(e) {
+      state$failed <- conditionMessage(e)
+      session$sendCustomMessage("scorch-run", list(state = "failed", message = conditionMessage(e)))
+    })
   })
   output$completion <- shiny::renderUI({
     finished <- state$finished
@@ -520,6 +584,14 @@ scorch_server <- function(input, output, session, kept = new.env(parent = emptye
     kept$finished <- NULL
   })
   shiny::observeEvent(input$done, shiny::stopApp())
+  # Only the RStudio dialog offers to move to a browser window; a browser window is resizable already.
+  output$in_dialog <- shiny::reactive(identical(kept$host, "dialog"))
+  shiny::outputOptions(output, "in_dialog", suspendWhenHidden = FALSE)
+  shiny::observeEvent(input$open_browser, {
+    if (!identical(kept$host, "dialog")) return()
+    kept$to_browser <- TRUE
+    shiny::stopApp()
+  })
   session$onSessionEnded(function() shiny::isolate(close_temperature_source(state$source)))
   shiny::reactive({
     state$finished

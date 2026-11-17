@@ -90,6 +90,12 @@ period_summary <- function(dates, months, available) {
        unused = month_runs(setdiff(in_file, months)), absent = month_runs(setdiff(months, in_file)))
 }
 
+# The explicit start and end dates of a configuration's period, or NULL when it has neither.
+period_bounds <- function(period) {
+  if (is.null(period$start_date) && is.null(period$end_date)) return(NULL)
+  list(start_date = period$start_date, end_date = period$end_date)
+}
+
 # How the file is read: the fields of the window, then the answers given to
 # its questions for anything still left to detection.
 input_controls <- function(input, base, answers = list()) {
@@ -140,6 +146,12 @@ guided_settings <- function(base, form, path, info, dest, answers = list()) {
     if (length(form$dates) != 2L || anyNA(form$dates)) fail("Choose both analysis dates.")
     cfg$period$start_date <- as.character(form$dates[1])
     cfg$period$end_date <- as.character(form$dates[2])
+  } else if (is.null(form$limit_dates) && length(form$bounds)) {
+    # The window has no date fields; the explicit dates of a reused configuration apply as they are.
+    # A configuration that was read holds them as dates; a run is given them as YYYY-MM-DD, like the fields gave them.
+    for (key in c("start_date", "end_date")) {
+      cfg$period[key] <- list(if (is.null(form$bounds[[key]])) NULL else as.character(as.Date(form$bounds[[key]])))
+    }
   }
   for (section in c("heatwaves", "regional_days", "clustering", "ellipses", "power_law", "lgcp")) {
     for (key in names(base[[section]])) {

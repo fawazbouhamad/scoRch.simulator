@@ -296,7 +296,9 @@ test_that("a guided run reports all four types and keeps every run in its own fo
   for (type in 1:4) expect_match(page, sprintf(">Type %d<", type), fixed = TRUE)
   for (name in scoRch.simulator:::TYPE_NAMES) expect_match(page, name, fixed = TRUE)
   expect_match(page, first$folder, fixed = TRUE)
-  expect_match(page, "June\u2013July 2012", fixed = TRUE)
+  # What was analyzed is in Summary.txt, not on the page.
+  expect_false(grepl("What was analyzed", page, fixed = TRUE))
+  expect_false(grepl("June\u2013July 2012", page, fixed = TRUE))
   for (label in c("Open summary", "Open results folder", "Set up another run")) expect_match(page, label, fixed = TRUE)
   events <- first$result$events$events
   expect_match(page, sprintf("%d compound events from %d ellipses", nrow(events), nrow(first$result$ellipses)), fixed = TRUE)
@@ -313,8 +315,7 @@ test_that("a guided run reports all four types and keeps every run in its own fo
   expect_false(grepl("<dt>Temperature</dt>", page, fixed = TRUE))
   chosen <- "Variable tasmin, as you chose. The file does not identify it as daily maximum temperature."
   noted <- as.character(completion_ui(c(first, list(dataset = "prepared.nc", period = settings$period, temperature = chosen))))
-  expect_match(gsub("[[:space:]]+", " ", noted),
-               sprintf("<dt>Dataset</dt> <dd>prepared.nc</dd> <dt>Temperature</dt> <dd>%s</dd>", chosen), fixed = TRUE)
+  expect_false(grepl("<dt>Dataset</dt>", noted, fixed = TRUE))
 
   # The saved settings replay through the scripted command (compared at the end of this test).
   replay <- yaml::read_yaml(file.path(first$folder, "config.yaml"))
@@ -478,9 +479,10 @@ test_that("every setting the window shows starts at the value of its configurati
       }
     }
     expect_identical(c(shown$month_from, shown$month_to), as.character(season_limits(cfg$period$warm_season_months)))
-    expect_identical(shown$limit_dates, !is.null(cfg$period$start_date) || !is.null(cfg$period$end_date))
-    for (key in c("format", "units", "variable", "time", "longitude", "latitude")) {
-      expect_identical(shown[[paste0("input_", key)]], cfg$input[[key]], info = key)
+    # The window has no date limit and no fields for how the file is read: detection, questions and
+    # the explicit entries of a configuration decide those.
+    for (id in c("limit_dates", paste0("input_", c("format", "units", "variable", "time", "longitude", "latitude")))) {
+      expect_false(id %in% names(shown), info = id)
     }
     expect_identical(shown$native_grid, is.null(cfg$input$era5_cell_size_deg))
     # A configuration that keeps the input grid has no cell size: its hidden field holds the study's.
@@ -547,8 +549,6 @@ test_that("a refused setting is named as the window labels it, and marked when i
     }
   }
   expect_identical(refused(outcome(list(lgcp_covariates = NULL)), "lgcp_covariates"), "Tick at least one of the 'Predictors'.")
-  same <- refused(outcome(list(input_longitude = "lat", input_latitude = "lat")), "input_longitude")
-  expect_match(same, sprintf("'%s' and '%s'", label_of("input_latitude"), label_of("input_time")), fixed = TRUE)
 
   # A problem with the months or dates is worded for the window too, but is not an advanced setting.
   order <- outcome(list(limit_dates = TRUE, dates = as.Date(c("2012-08-01", "2011-08-01"))))
@@ -562,7 +562,7 @@ test_that("a refused setting is named as the window labels it, and marked when i
   advanced <- substring(html, regexpr("<details", html, fixed = TRUE))
   labels <- regmatches(advanced, gregexpr('<label[^>]*for="[^"]*"[^>]*>[^<]*</label>', advanced))[[1L]]
   labels <- sub("</label>$", "", sub("^<label[^>]*>", "", labels))
-  expect_gte(length(labels), 20L)
+  expect_gte(length(labels), 13L)
   expect_identical(setdiff(labels, SETTING_LABELS), character())
   expect_match(advanced, sprintf("<span>%s</span>", SETTING_LABELS[["input: processed_file"]]), fixed = TRUE)
 })
@@ -714,8 +714,8 @@ test_that("the dataset card describes the grid and the temperature that the run 
                fixed = TRUE)
 
   # A variable that was accepted without being identified is not called the daily maximum.
-  expect_identical(prepared[["Contains"]], "Prepared daily maximum temperature (variable tmax)")
-  expect_identical(facts()[["Contains"]], "Raw 2 m temperature, 24 values per day (variable t2m)")
+  expect_identical(prepared[["Contains"]], "daily maximum temperature")
+  expect_identical(facts()[["Contains"]], "Raw 2 m temperature, 24 values per day")
   expect_identical(facts(list(identified = TRUE))[["Contains"]], facts()[["Contains"]])
   daily <- facts(list(format = "daily_tmax", variable = "tasmin", per_day = 1L, identified = FALSE))[["Contains"]]
   expect_identical(daily, "Daily temperature (variable tasmin, not identified as daily maximum temperature)")
@@ -919,7 +919,7 @@ test_that("a loaded configuration keeps its dates, and its note stays when the d
     expect_identical(base()$period$warm_season_months, 6:8)
     expect_match(gsub("[[:space:]]+", " ", output$loaded$html),
                  paste("Settings loaded from <strong>config.yaml</strong>: the advanced settings and the results folder",
-                       "stay in use when you change the data. The months, the date limit and"), fixed = TRUE)
+                       "stay in use when you change the data. The months, the analysis dates and"), fixed = TRUE)
     # The page sets the fields that describe a file back to detection, as it is told to for new data.
     session$setInputs(input_format = "auto", input_units = "auto", input_variable = "auto", input_time = "auto",
                       input_longitude = "auto", input_latitude = "auto")
@@ -1039,8 +1039,8 @@ test_that("every load of a configuration rebuilds the form, and dates picked by 
     expect_gt(built[["form"]], before[["form"]])
     expect_gt(built[["dates"]], before[["dates"]])
     shown <- shown_in(output$settings$html)
-    expect_identical(shown[c("month_from", "month_to", "limit_dates", "power_law_bootstrap_repetitions")],
-                     list(month_from = "6", month_to = "8", limit_dates = TRUE, power_law_bootstrap_repetitions = "10"))
+    expect_identical(shown[c("month_from", "month_to", "power_law_bootstrap_repetitions")],
+                     list(month_from = "6", month_to = "8", power_law_bootstrap_repetitions = "10"))
     expect_match(output$date_fields$html, "2012-01-01", fixed = TRUE)
     page_reports(month_from = "6", month_to = "8", limit_dates = TRUE, dates = as.Date(c("2012-01-01", "2012-12-31")))
     expect_length(plan()$dates, 92L)
@@ -1260,4 +1260,20 @@ test_that("a start that fails is reported beside the Run button until another re
     expect_false(grepl("Could not create", output$review$html, fixed = TRUE))
     expect_false(dir.exists(file.path(project, "results")))
   })
+})
+
+test_that("the window's progress shows the run's steps as four stages", {
+  # The messages of run_scorch() in their order (17_run.R), with the time it puts before each.
+  said <- paste("12:00:00", c("Input: Bundled North America example", "Reading example.nc", "1800 cells, 92 dates from 2012-06-01 to 2012-08-31",
+                              "Stage 1: local heatwaves", "Stage 2: regionally extensive days", "Stage 3: DBSCAN clustering of 3 selected days",
+                              "Stage 4: ellipses of 8 clusters", "Stage 5: compound events", "Power-law fits with 10 bootstrap repetitions",
+                              "Log-Gaussian Cox process of 8 centroids", "Writing the result workbooks to out",
+                              "Plot events/Type_2/Event_001.png", "COMPLETE in 0.2 minutes"))
+  stages <- vapply(said, progress_stage, 1L, USE.NAMES = FALSE)
+  expect_true(is.na(stages[1L]) && is.na(stages[3L]) && is.na(stages[length(stages)]))
+  shown <- unique(unname(PROGRESS_STAGES[stages[!is.na(stages)]]))
+  expect_identical(shown, c("Reading the selected data", "Stage 1: Heatwave Detection", "Stage 2: Heatwave Clustering",
+                            "Stage 3: Heatwave Classification", "Stage 4: Heatwave Modeling", "Saving the results"))
+  # The bar only moves forward.
+  expect_false(is.unsorted(stages[!is.na(stages)]))
 })

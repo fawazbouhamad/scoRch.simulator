@@ -1,6 +1,6 @@
 Package: scoRch.simulator
 Title: Spatiotemporal Classification of Regional Compound Heatwaves
-Version: 1.3.0
+Version: 1.4.0
 Authors@R: c(
     person("Fawaz", "Bouhamad", email = "fawawaz@hotmail.com",
            role = c("aut", "cre"), comment = c(ORCID = "0009-0009-4138-6126")),

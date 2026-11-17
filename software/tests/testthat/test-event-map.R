@@ -40,7 +40,17 @@ test_that("the event map shows the cells, clusters and ellipses of the run", {
   expect_identical(vapply(overview$types, `[[`, "", "name"), scoRch.simulator:::TYPE_NAMES)
   expect_equal(vapply(overview$events, `[[`, 1, "id"), events$compound_event_id)
   expect_identical(vapply(overview$events, function(e) paste(e$counts, collapse = "-"), ""), events$daily_cluster_counts)
+  # The event panel shows the catalog's own values, the axial mean of the azimuths among them.
+  for (column in scoRch.simulator:::EVENT_PANEL_COLUMNS) {
+    shown <- vapply(overview$events, function(e) as.numeric(e$stats[[column]]), 1)
+    expect_identical(shown, ifelse(is.finite(events[[column]]), as.numeric(events[[column]]), NA_real_), info = column)
+  }
   expect_equal(unclass(overview$extent), c(min(window$lon) - 0.5, max(window$lon) + 0.5, min(window$lat) - 0.5, max(window$lat) + 0.5))
+  # The map shows a margin of context around the region, more above and below; the region is unchanged.
+  view <- unclass(overview$view)
+  e <- unclass(overview$extent)
+  expect_true(view[1] < e[1] && view[2] > e[2] && view[3] < e[3] && view[4] > e[4])
+  expect_gt((e[3] - view[3]) / (e[4] - e[3]), (e[1] - view[1]) / (e[2] - e[1]))
   # A grid with exact coordinates is sent the step the reader found, and where it starts.
   expect_identical(overview$grid, list(lon = min(window$lon), lat = min(window$lat), lon_step = tmax$grid$lon_step,
                                        lat_step = tmax$grid$lat_step, columns = 12L, rows = 10L))
@@ -92,6 +102,13 @@ test_that("the event map shows the cells, clusters and ellipses of the run", {
         expect_equal(colMeans(outline[-1, ]), unclass(drawn$centroid), tolerance = 1e-2)
         expect_equal(drawn$area_km2, round(ellipses$area_km2[i]))
         expect_equal(drawn$cells, ellipses$n_member_cells[i])
+        # The window calls it "Heatwave <number>", counted from 1 in catalog order on this day, and
+        # shows the ellipse's own values in Catalog 4 unchanged.
+        expect_identical(drawn$number, i)
+        expect_identical(drawn$label, ellipses$cluster_number_in_day[i])
+        expect_identical(drawn$stats$axis_ratio, ellipses$axis_ratio[i])
+        expect_identical(drawn$stats$area_km2, ellipses$area_km2[i])
+        expect_identical(drawn$stats$azimuth_north_cw_deg, ellipses$azimuth_north_cw_deg[i])
       }
     }
   }
@@ -145,11 +162,36 @@ test_that("the bundled demonstration is what the package computes from the examp
                       ellipses(fresh, c("outline", "major", "minor", "centroid")))), 0.01)
   expect_lte(max(abs(ellipses(shipped, c("area_km2", "major_km", "minor_km")) -
                        ellipses(fresh, c("area_km2", "major_km", "minor_km")))), 1)
+  # The event panel's Catalog 5 values. Counts are compared exactly. The continuous values are
+  # stored unrounded and a platform's floating point (macOS on ARM) can differ in their last
+  # digit, so each is compared on its own, in its own units, to a fixed absolute tolerance
+  # far below what the window shows (3 decimals for the ratio, 1 for area and azimuth):
+  #   mean_axis_ratio         1e-12 (dimensionless, between 0 and 1)
+  #   mean_area_km2           1e-6 km2 (one square metre; areas are near 1e6 km2)
+  #   axial_mean_azimuth_deg  1e-9 degrees
+  # Which events and fields there are, and which values are missing (null), must match exactly.
+  stats_of <- function(x) lapply(x$events, `[[`, "stats")
+  expect_identical(lapply(stats_of(shipped), names), lapply(stats_of(fresh), names))
+  expect_identical(lapply(stats_of(shipped), function(s) vapply(s, is.null, TRUE)),
+                   lapply(stats_of(fresh), function(s) vapply(s, is.null, TRUE)))
+  field <- function(x, name) lapply(stats_of(x), `[[`, name)
+  for (name in c("duration_days", "total_clusters")) {
+    expect_identical(field(shipped, name), field(fresh, name), info = name)
+  }
+  tolerance <- c(mean_axis_ratio = 1e-12, mean_area_km2 = 1e-6, axial_mean_azimuth_deg = 1e-9)
+  for (name in names(tolerance)) {
+    present <- !vapply(field(shipped, name), is.null, TRUE)
+    a <- unlist(field(shipped, name)[present])
+    b <- unlist(field(fresh, name)[present])
+    expect_identical(length(a), sum(present), info = name)
+    expect_lte(max(abs(a - b), 0), tolerance[[name]], label = paste("largest difference in", name))
+  }
   counted <- function(x) {
     x$frames <- lapply(x$frames, function(days) lapply(days, function(day) {
       day$ellipses <- lapply(day$ellipses, `[[`, "cells")
       day
     }))
+    x$events <- lapply(x$events, function(event) { event$stats <- NULL; event })
     x
   }
   expect_identical(counted(shipped), counted(fresh))
