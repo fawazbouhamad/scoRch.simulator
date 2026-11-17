@@ -162,11 +162,17 @@ test_that("the bundled demonstration is what the package computes from the examp
                       ellipses(fresh, c("outline", "major", "minor", "centroid")))), 0.01)
   expect_lte(max(abs(ellipses(shipped, c("area_km2", "major_km", "minor_km")) -
                        ellipses(fresh, c("area_km2", "major_km", "minor_km")))), 1)
+  # The selected events' catalog statistics are stored unrounded; a platform's floating
+  # point (macOS on ARM) can differ in the last digit, so they are compared to 1e-9.
+  statistics <- function(x) unlist(lapply(x$events, `[[`, "stats"))
+  expect_identical(names(statistics(shipped)), names(statistics(fresh)))
+  expect_equal(statistics(shipped), statistics(fresh), tolerance = 1e-9)
   counted <- function(x) {
     x$frames <- lapply(x$frames, function(days) lapply(days, function(day) {
       day$ellipses <- lapply(day$ellipses, `[[`, "cells")
       day
     }))
+    x$events <- lapply(x$events, function(event) { event$stats <- NULL; event })
     x
   }
   expect_identical(counted(shipped), counted(fresh))
